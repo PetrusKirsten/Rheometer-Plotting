@@ -35,6 +35,32 @@ def powerLaw(gP, kPrime, nPrime):
     return kPrime * (gP ** nPrime)
 
 
+def arraySplit(xArr, yArr, startValue, endValue):
+    startIndex, endIndex = np.where(xArr >= startValue)[0][0], np.where(xArr <= endValue)[0][-1]
+
+    return xArr[startIndex:endIndex], yArr[startIndex:endIndex]
+
+
+def exportFit(
+        sample,
+        data, err,
+        table
+):
+    keys = ("k'", "n'")
+    values = (data, err)
+
+    dictData = {'Sample': sample}
+    iParams = 0
+    for key, value in zip(keys, range(len(values[0]))):
+        dictData[f'{key}'] = values[0][iParams]
+        dictData[f'± {key}'] = values[1][iParams]
+        iParams += 1
+
+    table.append(dictData)
+
+    return table
+
+
 def getCteMean(values, tolerance=100):
     """
     :param values: to be analysed
@@ -159,7 +185,8 @@ def plotFreqSweeps(sampleName,
                    ax, x, yP, yD, yPerr, yDerr,
                    axTitle, yLabel, yLim, xLabel, xLim,
                    curveColor,
-                   individualData=False, logScale=True):
+                   individualData=False, logScale=True,
+                   startVal=0, endVal=31, tableData=None):
     def legendLabel():
         """Applies consistent styling to legends in plots."""
         legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
@@ -197,6 +224,14 @@ def plotFreqSweeps(sampleName,
 
     configPlot()
 
+    x_toFit, y_toFit = arraySplit(x, yP, startVal, endVal)
+    params, covariance = curve_fit(powerLaw, x_toFit, y_toFit)  # p0=(y_mean[0], y_mean[-1], 100))
+    errors = np.sqrt(np.diag(covariance))
+    tableData = exportFit(
+        f'{sampleName}',
+        params, errors,
+        tableData)
+
     ax.errorbar(
         x[:-3], yP[:-3], yPerr[:-3],
         color=curveColor, alpha=.65,
@@ -212,6 +247,8 @@ def plotFreqSweeps(sampleName,
     #     fmt=markerStyle, markersize=7, mfc='w', mec=curveColor, mew=0.75,
     #     capsize=3, lw=0.75, linestyle=':',
     #     zorder=3)
+
+    return tableData
 
 
 def plotInsetMean(data, dataErr, keys, colors, ax, recovery=None):
@@ -251,6 +288,37 @@ def plotInsetMean(data, dataErr, keys, colors, ax, recovery=None):
     return data, dataErr
 
 
+def plotBars(ax, title, data, colors):
+    ax.set_title(title, size=9, color='crimson')
+    # Extracting data for plotting
+    samples = [d['Sample'] for d in data]
+    slopes = [d["k'"] for d in data]
+    slope_errs = [d["± k'"] for d in data]
+
+    ax.tick_params(axis='both', labelsize=8, length=0)
+    ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+    ax.spines[['top', 'bottom', 'left', 'right']].set_color('dimgrey')
+
+    ax.set_xticks([])
+    # ax.set_xticklabels(samples)
+    # ax_inset.yaxis.tick_right()
+    # ax_inset.yaxis.set_label_position('right')
+    ax.set_yticks([])
+    ax.set_ylim(0, 2000)
+    x = np.arange(len(data))
+
+    for i in range(len(slopes)):
+        ax.bar(x[i], height=slopes[i], yerr=0, width=0.4,
+               color=colors[i], edgecolor='#303030', alpha=0.75, linewidth=0.75)
+
+        ax.errorbar(x=x[i], y=slopes[i], yerr=slope_errs[i], alpha=.85,
+                    color='#303030', linestyle='', capsize=4, linewidth=0.75)
+        # TODO: add k'
+        ax.text(x[i], slopes[i] + slope_errs[i] + 50,
+                f'{slopes[i]:.0f} ± {slope_errs[i]:.0f} Pa',
+                size=8, ha='center', va='bottom', color='black')
+
+
 def midAxis(color, ax):
     ax[0].spines['right'].set_color(color)
     ax[1].spines['left'].set_color(color)
@@ -262,7 +330,10 @@ def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
 
-    fig, axes = plt.subplots(figsize=(18, 9), facecolor='snow', ncols=2, nrows=1)
+    fig, axes = plt.subplots(
+        figsize=(18, 7), ncols=3, nrows=1,
+        gridspec_kw={'width_ratios': [2, 2, 1]}, facecolor='snow')
+    axBars = axes[2]
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
     yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (10**(-2), 5 * 10 ** 3)
@@ -298,6 +369,7 @@ def main(dataPath, fileName):
 
     meanBefore, meanAfter = [], []
     meanBeforeErr, meanAfterErr = [], []
+    dataFittingBef, dataFittingAft = [], []
 
     for key, (x, gP, gD) in listBefore.items():
         x.append(data[f'{key}_freq'])
@@ -313,16 +385,16 @@ def main(dataPath, fileName):
         gP, gD = np.mean(listBefore[k_a][1], axis=1)[0], np.mean(listBefore[k_a][2], axis=1)[0]
         gPerr, gDerr = np.std(listBefore[k_a][1], axis=1)[0], np.std(listBefore[k_a][2], axis=1)[0]
 
-        meanStorage, storageMeanErr, _, _ = getCteMean(gP)
+        meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
         meanBefore.append(meanStorage)
         meanBeforeErr.append(storageMeanErr)
 
-        plotFreqSweeps(  # Before axes
+        dataFittingBef = plotFreqSweeps(  # Before axes
             sampleName=k_a,
             ax=axes[0], x=np.mean(listBefore[k_a][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='Before breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-            curveColor=c, logScale=True)
+            axTitle='Before breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
+            logScale=True, startVal=fitStart, endVal=fitEnd, tableData=dataFittingBef)
 
         gP, gD = np.mean(listAfter[k_a][1], axis=1)[0], np.mean(listAfter[k_a][2], axis=1)[0]
         gPerr, gDerr = np.std(listAfter[k_a][1], axis=1)[0], np.std(listAfter[k_a][2], axis=1)[0]
@@ -331,12 +403,12 @@ def main(dataPath, fileName):
         meanAfter.append(meanStorage)
         meanAfterErr.append(storageMeanErr)
 
-        plotFreqSweeps(  # After axes
+        dataFittingAft = plotFreqSweeps(  # After axes
             sampleName=k_a,
             ax=axes[1], x=np.mean(listAfter[k_a][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='After breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-            curveColor=c, logScale=True)
+            axTitle='After breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
+            logScale=True, startVal=fitStart, endVal=fitEnd, tableData=dataFittingAft)
 
     midAxis('#303030', axes)
 
@@ -346,10 +418,14 @@ def main(dataPath, fileName):
     plotInsetMean(
         data=meanAfter, dataErr=meanAfterErr,
         keys=listBefore.keys(), colors=colorSamples, ax=axes[1],
-        recovery=meanBefore
-    )
+        recovery=meanBefore)
 
-    plt.subplots_adjust(wspace=0.0, top=0.91, bottom=0.1, left=0.05, right=0.95)
+    plotBars(axBars, 'Power law fitting', dataFittingBef, colorSamples)
+
+    plt.subplots_adjust(
+        wspace=0.0,
+        top=0.91, bottom=0.1,
+        left=0.05, right=0.99)
     plt.show()
 
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])

@@ -120,7 +120,6 @@ def plotCompression(nSamples, sampleName,
 
 def main(dataPath):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
-    # samplesQuantities = list(samplesValues.keys())
 
     fileName = '10pct_0WSt_and_Car-DynamicCompression'
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
@@ -129,7 +128,7 @@ def main(dataPath):
     axHeight = axForce.twinx()
 
     plt.style.use('seaborn-v0_8-ticks')
-    fig.suptitle(f'Compression modulus')
+    fig.suptitle(f'Oscilatory compression')
     forceColor, strainColor = 'tomato', 'mediumseagreen'
 
     st5_nSamples, st10_nSamples, ic10_nSamples, kc10_nSamples = 0, 0, 0, 1

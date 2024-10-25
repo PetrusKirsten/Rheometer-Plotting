@@ -255,7 +255,10 @@ def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
 
-    fig, axes = plt.subplots(figsize=(18, 8), ncols=3, gridspec_kw={'width_ratios': [3, 2, 2]}, facecolor='snow')
+    fig, axes = plt.subplots(
+        figsize=(18, 8), ncols=3,
+        gridspec_kw={'width_ratios': [3, 2, 2]}, facecolor='snow')
+
     axComplete, axFit, axBars = axes[0], axes[1], axes[2]
     fig.suptitle(f'Compression modulus')
 

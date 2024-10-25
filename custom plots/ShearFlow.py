@@ -36,7 +36,7 @@ def fonts(folder_path, s=10, m=12):
 def exportFit(
         sample,
         data, err,
-        rows, modHB=False):
+        table, modHB=False):
     keys = ('eta0', 'tau0', 'tau_od', 'gammaDot_od', 'visc_K', 'visc_n', 'etaInf') if modHB \
         else ('K', 'n', 'sigmaZero')
     values = (data, err)
@@ -48,9 +48,9 @@ def exportFit(
         dictData[f'{key} err'] = values[1][iParams]
         iParams += 1
 
-    rows.append(dictData)
+    table.append(dictData)
 
-    return rows
+    return table
 
 
 def funcHB(sigma, k, n, sigmaZero):
