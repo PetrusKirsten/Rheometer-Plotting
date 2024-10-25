@@ -152,7 +152,7 @@ def plotCompression(sampleName,
             ax.set_yticklabels(y_tick_labels)
 
     if linearFitting:
-        # configs to split the values at the linear elastic region
+        # configs to split the values at the linear elastic region - TODO: adjust linear region for 0St/CL
         x_toFit, y_toFit = arraySplit(x, y, startVal, endVal)
         (slope, intercept), covariance = curve_fit(fitLinear, x_toFit, y_toFit)  # p0=(y_mean[0], y_mean[-1], 100))
         (slopeErr, interceptErr) = np.sqrt(np.diag(covariance))
@@ -240,8 +240,8 @@ def plotBars(ax, title, data, colors):
                color=colors[i], edgecolor='#303030', alpha=0.75, linewidth=0.75)
 
         ax.errorbar(x=x[i], y=slopes[i], yerr=slope_errs[i], alpha=.85,
-                    color='#303030', linestyle='', capsize=5, linewidth=0.75)
-
+                    color='#303030', linestyle='', capsize=4, linewidth=0.75)
+        # TODO: add tensile stress
         ax.text(x[i], slopes[i] + slope_errs[i] + 50,
                 f'{slopes[i]:.0f} ± {slope_errs[i]:.0f} Pa',
                 size=8, ha='center', va='bottom', color='black')
@@ -255,7 +255,7 @@ def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
 
-    fig, axes = plt.subplots(figsize=(18, 8), ncols=3, gridspec_kw={'width_ratios': [3, 2, 2]}, facecolor='aliceblue')
+    fig, axes = plt.subplots(figsize=(18, 8), ncols=3, gridspec_kw={'width_ratios': [3, 2, 2]}, facecolor='snow')
     axComplete, axFit, axBars = axes[0], axes[1], axes[2]
     fig.suptitle(f'Compression modulus')
 

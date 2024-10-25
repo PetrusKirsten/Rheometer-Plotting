@@ -122,8 +122,8 @@ def getSamplesData(
         }
 
     samples = {
-        '10%-0St': [], '10%-0St + kCar': [], '10%-0St + iCar': [],
-        '10%-0St/CL': [], '10%-0St + iCar/CL': [],
+        '0St': [], '0St + kCar': [], '0St + iCar': [],
+        '0St/CL': [], '0St + iCar/CL': [],
         'kCar': [], 'kCar/CL': []
     }
     sample_keys = list(samples.keys())
@@ -262,7 +262,7 @@ def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
 
-    fig, axes = plt.subplots(figsize=(18, 9), facecolor='w', ncols=2, nrows=1)
+    fig, axes = plt.subplots(figsize=(18, 9), facecolor='snow', ncols=2, nrows=1)
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
     yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (10**(-2), 5 * 10 ** 3)
