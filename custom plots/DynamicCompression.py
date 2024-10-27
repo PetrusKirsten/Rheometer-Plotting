@@ -4,7 +4,7 @@ from pathlib import Path
 
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
-from matplotlib import pyplot as plt, ticker
+from matplotlib import pyplot as plt, ticker, gridspec
 from matplotlib.ticker import MultipleLocator
 from matplotlib.font_manager import FontProperties
 
@@ -122,7 +122,7 @@ def plotCompression(sampleName,
         ax.set_xlabel(f'{xLabel}')
         # ax.set_xscale('log' if logScale else 'linear')
         ax.set_xlim(xLim)
-        ax.xaxis.set_minor_locator(MultipleLocator(1))
+        ax.xaxis.set_minor_locator(MultipleLocator(2))
 
         ax.set_ylabel(f'{yLabel}', color=axisColor)
         ax.set_yscale('log' if logScale else 'linear')
@@ -152,23 +152,169 @@ def plotCompression(sampleName,
         ax.errorbar(
             x, y, 0,
             color=curveColor, alpha=.35,
-            fmt=markerStyle, markersize=3.5, mfc=markerFColor, mec=markerFColor, mew=markerEWidth,
+            fmt=markerStyle, markersize=3.5, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
             capsize=0, lw=.5, linestyle=lineStyle,
             label=f'{sampleName}',
             zorder=4)
         legendLabel()
 
 
+def plotCycles(sampleName,
+               ax, y, yErr,
+               axTitle, yLabel, yLim, xLabel, xLim, axisColor,
+               curveColor, markerFColor, markerEColor, markerEWidth=0.5,
+               strain=False, lineStyle='', logScale=False):
+    def legendLabel():
+        legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+        legend.get_frame().set_facecolor('w')
+        legend.get_frame().set_edgecolor('whitesmoke')
+
+    def configPlot():
+        ax.set_title(axTitle, size=10, color='crimson')
+        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+        # ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color='silver', alpha=0.5)
+
+        ax.set_xlabel(f'{xLabel}')
+        # ax.set_xscale('log' if logScale else 'linear')
+        ax.set_xlim(xLim)
+        ax.xaxis.set_minor_locator(MultipleLocator(1))
+
+        ax.set_ylabel(f'{yLabel}', color=axisColor)
+        ax.set_yscale('log' if logScale else 'linear')
+        ax.set_ylim(yLim)
+        ax.tick_params(axis='y', colors=axisColor, which='both')
+
+    target_size = 29 * (1121 // 29)
+    y, yErr = y[:target_size], yErr[:target_size]
+    y, yErr = y.reshape(29, -1), yErr.reshape(29, -1)
+
+    listYmax, listYmaxErr = [], []
+    listYmin, listYminErr = [], []
+
+    for cycle in range(len(y)):
+        yMax, yMin = y[cycle][np.argmax(y[cycle])], y[cycle][np.argmin(y[cycle])]
+        yMaxErr, yMinErr = yErr[cycle][np.argmax(y[cycle])], yErr[cycle][np.argmin(y[cycle])]
+
+        listYmax.append(yMax), listYmaxErr.append(yMaxErr)
+        listYmin.append(yMin), listYminErr.append(yMinErr)
+
+    x_values = np.arange(1, len(listYmax) + 1)
+    yMax_values, yMin_values = np.array(listYmax) / (35 / 1000) + 7.5, np.array(listYmin) / (35 / 1000) + 7.5
+    yMax_errors, yMin_errors = np.array(listYmaxErr) / (35 / 1000), np.array(listYminErr) / (35 / 1000)
+    print(yMax_values)
+    configPlot()
+
+    ax.errorbar(
+        x_values, yMax_values, yMax_errors,
+        color=curveColor, alpha=.65,
+        fmt='^', markersize=7, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
+        capsize=2.5, lw=.75, linestyle=lineStyle,
+        label=f'{sampleName}',
+        zorder=4)
+
+    # ax.errorbar(
+    #     x_values, yMin_values, yMin_errors,
+    #     color=curveColor, alpha=.65,
+    #     fmt='v', markersize=5, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
+    #     capsize=2.5, lw=.75, linestyle=lineStyle,
+    #     label=f'{sampleName}',
+    #     zorder=4)
+
+
+def plotBars(title, axes, data, keys, colors, a, h, z):
+    def configPlot(ax, yTitle, yLim):
+        if title == '':
+            ax.grid(which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
+            ax.grid(which='minor', axis='y', linestyle='--', linewidth=.5, color='lightgray', alpha=0.5, zorder=-1)
+
+        ax.tick_params(axis='x', labelsize=10, length=4)
+        ax.tick_params(axis='y', which='both', direction='out', pad=1)
+
+        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+        ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+        # ax.yaxis.set_label_position('right')
+        ax.set_xticks([])
+        ax.set_xlim([-1.5, 18])
+        # ax.set_xticklabels(samples)
+        # ax_inset.yaxis.tick_right()
+        # ax_inset.yaxis.set_label_position('right')
+        # ax.set_yticks([])
+        ax.set_ylabel(yTitle)
+        ax.set_ylim(yLim)
+
+        ax.yaxis.set_major_locator(MultipleLocator(0.5))
+        ax.yaxis.set_minor_locator(MultipleLocator(0.1))
+
+    # axes2 = axes.twinx()
+    # axes2.set_title(title, size=10, color='k')
+
+    configPlot(axes, "Mean gap height (mm)", (.0, 3.5))
+
+    samples = keys
+    dataBySample, dataBySampleErr = [np.mean(d) for d in data], [np.std(d) for d in data]
+
+    w, s = 1, 2.75
+    x = np.arange(s * len(samples))
+
+    for i in range(len(dataBySample)):
+        axes.bar(
+            s * x[i] - w / 1.75,
+            height=dataBySample[i], yerr=0,
+            color=colors[i], edgecolor='#383838',
+            width=w, hatch=h, alpha=a, linewidth=.5,
+            zorder=z)
+        axes.errorbar(
+            x=s * x[i] - w / 1.75, y=dataBySample[i], yerr=dataBySampleErr[i],
+            color=colors[i], alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            zorder=3)
+
+    # posList, labelsList = [], []
+    # scaleFactor = 10  # to fit kCar bar in scale
+    # if recoveryData is None:
+    #     recoveryData = np.zeros(len(nPrime))
+    # else:
+    #     axes2.text(x[14] + w / 2, (nPrime[5] + nPrime_err[5] + .05) / scaleFactor,
+    #                '$10\\times$',
+    #                size=9, ha='left', va='bottom',
+    #                rotation=0, color=colors[5])
+    #
+    # for i in range(len(nPrime)):
+    #     axes2.bar(
+    #         s * x[i] + w / 1.75,
+    #         height=nPrime[i] - recoveryData[i] if i != 5 else (nPrime[i] - recoveryData[i]) / scaleFactor,
+    #         yerr=0,
+    #         bottom=recoveryData[i] if i != 5 else recoveryData[i] / scaleFactor,
+    #         color=colors[i], edgecolor='#383838',
+    #         width=w, hatch=h, alpha=a, linewidth=.5,
+    #         zorder=z)
+    #     axes2.errorbar(
+    #         x=s * x[i] + w / 1.75,
+    #         y=nPrime[i] if i != 5 else (nPrime[i]) / scaleFactor,
+    #         yerr=nPrime_err[i] if i != 5 else nPrime_err[i] / scaleFactor,
+    #         color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+    #         zorder=3)
+    #
+    #     posList.append(s * x[i] - w / 1.75), posList.append(s * x[i] + w / 1.75)
+    #     labelsList.append("$G_0'$"), labelsList.append("$n'$")
+    #
+    # axes2.set_xticks(posList)
+    # axes2.set_xticklabels(labelsList)
+
+
 def main(dataPath):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
-    fig, axForce = plt.subplots(
-        figsize=(18, 8), ncols=1,
-        gridspec_kw={'width_ratios': [1.]}, facecolor='snow')
+
+    fig, gs = (plt.figure(figsize=(12, 10), facecolor='snow'),
+               gridspec.GridSpec(2, 2, height_ratios=[1, 1.5], width_ratios=[1, 1]))
+
+    axStress, axCycles, axBars = fig.add_subplot(gs[0, :]), fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
 
     fig.suptitle(f'Oscilatory compression')
-    fTitle, fLimits = f'Stress (Pa)', (0, 210)
-    xTitle, xLimits = f'Time (s)', (0, 75)
+    s1Title, s1Limits = f'Stress (Pa)', (0, 210)
+    s2Title, s2Limits = f'Stress (Pa)', (0, 210)
+    x1Title, x1Limits = f'Time (s)', (0, 75)
+    x2Title, x2Limits = f'Cycle', (0, 30)
 
     nSamples, colorSamples = getSamplesInfos(
         3, 2, 5,
@@ -199,16 +345,30 @@ def main(dataPath):
         means_hMax.append(hMax_mean.tolist())
 
         plotCompression(
-            ax=axForce, axisColor='#303030',
+            ax=axStress, axisColor='#303030',
             x=np.mean(time, axis=0), y=stressMean / (35 / 1000) + 7.5, yErr=stressErrMean / (35 / 1000),
-            axTitle='', yLabel=fTitle, yLim=fLimits, xLabel=xTitle, xLim=xLimits,
-            curveColor=c, markerStyle='o', markerFColor=c, markerEColor='k',
+            axTitle='', yLabel=s1Title, yLim=s1Limits, xLabel=x1Title, xLim=x1Limits,
+            curveColor=c, markerStyle='o', markerFColor=c, markerEColor=c,
             sampleName=f'{key}')
+
+        plotCycles(
+            ax=axCycles, axisColor='#303030',
+            y=stressMean, yErr=stressErrMean,
+            axTitle='', yLabel=s2Title, yLim=s2Limits, xLabel=x2Title, xLim=x2Limits,
+            curveColor=c, markerFColor=c, markerEColor=c,
+            sampleName=f'{key}')
+
     print(means_hMax)
+
+    plotBars(
+        '',
+        axBars, means_hMax, labels,
+        colorSamples, a=.75, h='', z=2)
+
     plt.subplots_adjust(
-        wspace=0.175,
-        top=0.890, bottom=0.14,
-        left=0.05, right=0.95)
+        hspace=0.2, wspace=0.2,
+        top=0.94, bottom=0.09,
+        left=0.06, right=0.95)
     plt.show()
 
     fileName = '0St_Car_CL-DynamicCompression'
