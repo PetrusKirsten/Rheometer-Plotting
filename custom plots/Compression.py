@@ -317,8 +317,8 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
 
     filesPath = [
         # 0St/CL
