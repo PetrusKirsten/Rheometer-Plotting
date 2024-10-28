@@ -11,7 +11,7 @@ from matplotlib.font_manager import FontProperties
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
-def fonts(folder_path, s=11, m=13):
+def fonts(folder_path, s=12, m=14):
     """Configures font properties for plots."""
     font_path = folder_path + 'HelveticaNeueThin.otf'
     helvetica_thin = FontProperties(fname=font_path)
@@ -299,9 +299,9 @@ def plotInset(data, dataErr, keys, colors, ax, recovery=None):
 
 def plotBars(title, axes, data, colors, a, h, z, recoveryData):
     def configPlot(ax, yTitle, yLim):
-        if title == '':
-            ax.grid(which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
-            ax.grid(which='minor', axis='y', linestyle='--', linewidth=.5, color='lightgray', alpha=0.5, zorder=-1)
+        if yTitle == "Proportionality coefficient $G_0'$ (Pa)":
+            ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
+            ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
 
         ax.tick_params(axis='x', labelsize=10, length=4)
         ax.tick_params(axis='y', which='both', direction='out', pad=1)
@@ -480,7 +480,7 @@ def main(dataPath, fileName):
     #     recovery=meanBefore)
 
     nPrime_recovery = plotBars(
-        'Power law fitting',
+        "Power law fitting: $ G'(\omega) = G'_0 \omega^{n'} $",
         axBars, dataFittingBef,
         colorSamples, a=.65, h='', recoveryData=None, z=1)
     _ = plotBars(
@@ -500,8 +500,8 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
 
     filePath = [
 

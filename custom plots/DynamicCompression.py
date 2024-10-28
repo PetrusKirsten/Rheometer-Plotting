@@ -32,6 +32,10 @@ def fonts(folder_path, s=11, m=13):
     plt.rc('figure', titlesize=m)  # fontsize of the figure title
 
 
+def funcRelaxation(t, sigma_0, sigma_e, time_cte):
+    return sigma_e + (sigma_0 - sigma_e) * np.exp(- t / time_cte)
+
+
 def getSamplesInfos(
         # quantites
         stCL_n, st_kcCL_n, st_icCL_n,
@@ -162,8 +166,8 @@ def plotCompression(sampleName,
 def plotCycles(sampleName,
                ax, y, yErr,
                axTitle, yLabel, yLim, xLabel, xLim, axisColor,
-               curveColor, markerFColor, markerEColor, markerEWidth=0.5,
-               strain=False, lineStyle='', logScale=False):
+               curveColor, markerFColor, markerEColor, paramsList, markerEWidth=0.5,
+               lineStyle='', logScale=False):
     def legendLabel():
         legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
@@ -201,7 +205,19 @@ def plotCycles(sampleName,
     x_values = np.arange(1, len(listYmax) + 1)
     yMax_values, yMin_values = np.array(listYmax) / (35 / 1000) + 7.5, np.array(listYmin) / (35 / 1000) + 7.5
     yMax_errors, yMin_errors = np.array(listYmaxErr) / (35 / 1000), np.array(listYminErr) / (35 / 1000)
-    print(yMax_values)
+
+    # Fitting
+    params, covariance = curve_fit(
+        funcRelaxation, x_values, yMax_values,
+        p0=(yMax_values[0], yMax_values[-1], 5))  # method='trf')  # method='dogbox', maxfev=5000)
+    errors = np.sqrt(np.diag(covariance))
+
+    stress_0, stress_e, t_cte = params
+    x_fit = np.linspace(0, 30, 120)
+    y_fit = funcRelaxation(x_fit, stress_0, stress_e, t_cte)
+
+    paramsList.append([params.tolist(), errors.tolist()])
+
     configPlot()
 
     ax.errorbar(
@@ -210,8 +226,11 @@ def plotCycles(sampleName,
         fmt='^', markersize=7, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
         capsize=2.5, lw=.75, linestyle=lineStyle,
         label=f'{sampleName}',
-        zorder=4)
+        zorder=3)
 
+    ax.plot(
+        x_fit, y_fit, color=curveColor, linestyle='-.', linewidth=.75,
+        zorder=4)
     # ax.errorbar(
     #     x_values, yMin_values, yMin_errors,
     #     color=curveColor, alpha=.65,
@@ -219,11 +238,12 @@ def plotCycles(sampleName,
     #     capsize=2.5, lw=.75, linestyle=lineStyle,
     #     label=f'{sampleName}',
     #     zorder=4)
+    return paramsList
 
 
 def plotBars(title, axes, data, keys, colors, a, h, z):
     def configPlot(ax, yTitle, yLim):
-        if title == '':
+        if yTitle == 'Initial stress peak / Equilibrim stress peak (Pa)':
             ax.grid(which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
             ax.grid(which='minor', axis='y', linestyle='--', linewidth=.5, color='lightgray', alpha=0.5, zorder=-1)
 
@@ -234,7 +254,7 @@ def plotBars(title, axes, data, keys, colors, a, h, z):
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
         # ax.yaxis.set_label_position('right')
         ax.set_xticks([])
-        ax.set_xlim([-1.5, 18])
+        ax.set_xlim([-2, 12.5])
         # ax.set_xticklabels(samples)
         # ax_inset.yaxis.tick_right()
         # ax_inset.yaxis.set_label_position('right')
@@ -242,63 +262,63 @@ def plotBars(title, axes, data, keys, colors, a, h, z):
         ax.set_ylabel(yTitle)
         ax.set_ylim(yLim)
 
-        ax.yaxis.set_major_locator(MultipleLocator(0.5))
-        ax.yaxis.set_minor_locator(MultipleLocator(0.1))
+        ax.yaxis.set_major_locator(MultipleLocator(yLim[-1] / 4))
+        ax.yaxis.set_minor_locator(MultipleLocator(yLim[-1] / 16))
 
-    # axes2 = axes.twinx()
-    # axes2.set_title(title, size=10, color='k')
+    axes2 = axes.twinx()
 
-    configPlot(axes, "Mean gap height (mm)", (.0, 3.5))
+    configPlot(axes, "Initial stress peak / Equilibrim stress peak (Pa)", (0, 200))
+    configPlot(axes2, "Time decay constant (1/cycle)", (0, 12))
 
+    posList, labelsList = [], []
+
+    w, s = 1, 3.5
     samples = keys
-    dataBySample, dataBySampleErr = [np.mean(d) for d in data], [np.std(d) for d in data]
-
-    w, s = 1, 2.75
     x = np.arange(s * len(samples))
 
-    for i in range(len(dataBySample)):
+    for i in range(len(samples)):
+        initialStress, initialStress_err = data[i][0][0], data[i][1][0]
+        equilibStress, equilibStress_err = data[i][0][1], data[i][1][1]
+        timeCte, timeCte_err = data[i][0][2], data[i][1][2]
         axes.bar(
-            s * x[i] - w / 1.75,
-            height=dataBySample[i], yerr=0,
+            s * x[i] - w,
+            height=initialStress, yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch=h, alpha=a, linewidth=.5,
+            width=w, hatch='\\\\\\', alpha=a, linewidth=.5,
             zorder=z)
         axes.errorbar(
-            x=s * x[i] - w / 1.75, y=dataBySample[i], yerr=dataBySampleErr[i],
+            x=s * x[i] - w, y=initialStress, yerr=initialStress_err,
             color=colors[i], alpha=.99, linewidth=1, capsize=4, capthick=1.05,
             zorder=3)
 
-    # posList, labelsList = [], []
-    # scaleFactor = 10  # to fit kCar bar in scale
-    # if recoveryData is None:
-    #     recoveryData = np.zeros(len(nPrime))
-    # else:
-    #     axes2.text(x[14] + w / 2, (nPrime[5] + nPrime_err[5] + .05) / scaleFactor,
-    #                '$10\\times$',
-    #                size=9, ha='left', va='bottom',
-    #                rotation=0, color=colors[5])
-    #
-    # for i in range(len(nPrime)):
-    #     axes2.bar(
-    #         s * x[i] + w / 1.75,
-    #         height=nPrime[i] - recoveryData[i] if i != 5 else (nPrime[i] - recoveryData[i]) / scaleFactor,
-    #         yerr=0,
-    #         bottom=recoveryData[i] if i != 5 else recoveryData[i] / scaleFactor,
-    #         color=colors[i], edgecolor='#383838',
-    #         width=w, hatch=h, alpha=a, linewidth=.5,
-    #         zorder=z)
-    #     axes2.errorbar(
-    #         x=s * x[i] + w / 1.75,
-    #         y=nPrime[i] if i != 5 else (nPrime[i]) / scaleFactor,
-    #         yerr=nPrime_err[i] if i != 5 else nPrime_err[i] / scaleFactor,
-    #         color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
-    #         zorder=3)
-    #
-    #     posList.append(s * x[i] - w / 1.75), posList.append(s * x[i] + w / 1.75)
-    #     labelsList.append("$G_0'$"), labelsList.append("$n'$")
-    #
-    # axes2.set_xticks(posList)
-    # axes2.set_xticklabels(labelsList)
+        axes.bar(
+            s * x[i],
+            height=equilibStress, yerr=0,
+            color=colors[i], edgecolor='#383838',
+            width=w, hatch='....', alpha=a, linewidth=.5,
+            zorder=z)
+        axes.errorbar(
+            x=s * x[i], y=equilibStress, yerr=equilibStress_err,
+            color=colors[i], alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            zorder=3)
+
+        axes2.bar(
+            s * x[i] + w,
+            height=timeCte, yerr=0,
+            color=colors[i], edgecolor='#383838',
+            width=w, hatch=h, alpha=a, linewidth=.5,
+            zorder=z)
+        axes2.errorbar(
+            x=s * x[i] + w, y=timeCte, yerr=timeCte_err,
+            color=colors[i], alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            zorder=3)
+
+        if i != 4:
+            posList.append(s * x[i] - w), posList.append(s * x[i]), posList.append(s * x[i] + w)
+            labelsList.append('Initial'), labelsList.append('Eq'), labelsList.append('$\\tau$')
+
+    axes.set_xticks(posList)
+    axes.set_xticklabels(labelsList, rotation=45)
 
 
 def main(dataPath):
@@ -332,7 +352,7 @@ def main(dataPath):
         labels[4]: ([], [], [])
     }
 
-    means_hMax = []
+    means_hMax, fitParams = [], []
 
     for key, (x, height, f) in dataList.items():
         x.append(data[f'{key} time'])
@@ -351,19 +371,17 @@ def main(dataPath):
             curveColor=c, markerStyle='o', markerFColor=c, markerEColor=c,
             sampleName=f'{key}')
 
-        plotCycles(
+        fitParams = plotCycles(
             ax=axCycles, axisColor='#303030',
             y=stressMean, yErr=stressErrMean,
             axTitle='', yLabel=s2Title, yLim=s2Limits, xLabel=x2Title, xLim=x2Limits,
             curveColor=c, markerFColor=c, markerEColor=c,
-            sampleName=f'{key}')
-
-    print(means_hMax)
+            paramsList=fitParams, sampleName=f'{key}')
 
     plotBars(
         '',
-        axBars, means_hMax, labels,
-        colorSamples, a=.75, h='', z=2)
+        axBars, fitParams, labels,
+        colorSamples, a=.65, h='', z=2)
 
     plt.subplots_adjust(
         hspace=0.2, wspace=0.2,
@@ -378,8 +396,8 @@ def main(dataPath):
 
 
 if __name__ == '__main__':
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     # filePath = [
     #     folderPath + "/old/200924/7PSt_2_Compression.xlsx"
     # ]
