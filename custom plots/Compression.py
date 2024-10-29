@@ -265,8 +265,8 @@ def main(dataPath, fileName):
     nSamples, colorSamples = getSamplesInfos(
         3, 2, 5,
         4, 2,
-        'chocolate', 'mediumvioletred', 'steelblue',
-        'lightcoral', 'crimson')
+        'darkgray', 'crimson', 'mediumblue',
+        'mediumorchid', 'rebeccapurple')
 
     raw_data, labels = getSamplesData(dataPath, nSamples)
 
@@ -317,8 +317,8 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
 
     filesPath = [
         # 0St/CL

@@ -1,12 +1,17 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
+
+from matplotlib.gridspec import GridSpec
+from matplotlib.patches import Rectangle
+from matplotlib.ticker import MultipleLocator
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 
-def fonts(folder_path, s=11, m=13):
+def fonts(folder_path, s=12, m=14):
     """Configures font properties for plots."""
     font_path = folder_path + 'HelveticaNeueThin.otf'
     helvetica_thin = FontProperties(fname=font_path)
@@ -29,7 +34,37 @@ def fonts(folder_path, s=11, m=13):
     plt.rc('figure', titlesize=m)  # fontsize of the figure title
 
 
-def getCteMean(values, tolerance=50):
+def powerLaw(omega, kPrime, nPrime):
+    return kPrime * (omega ** nPrime)
+
+
+def arraySplit(xArr, yArr, startValue, endValue):
+    startIndex, endIndex = np.where(xArr >= startValue)[0][0], np.where(xArr <= endValue)[0][-1]
+
+    return xArr[startIndex:endIndex], yArr[startIndex:endIndex]
+
+
+def exportFit(
+        sample,
+        data, err,
+        table
+):
+    keys = ("k'", "n'")
+    values = (data, err)
+
+    dictData = {'Sample': sample}
+    iParams = 0
+    for key, value in zip(keys, range(len(values[0]))):
+        dictData[f'{key}'] = values[0][iParams]
+        dictData[f'± {key}'] = values[1][iParams]
+        iParams += 1
+
+    table.append(dictData)
+
+    return table
+
+
+def getCteMean(values, tolerance=100):
     """
     :param values: to be analysed
     :param tolerance: the difference betweem two points data
@@ -64,236 +99,283 @@ def getCteMean(values, tolerance=50):
     mean = np.mean(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
     stddev = np.std(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
 
+    mean = round(mean, -1)
+    stddev = round(stddev, -1)
+
     return mean, stddev, iStart, iEnd
 
 
-def getSamplesData(dataPath, n5st, n10St, nIc, nKc):
-    """
-    Reads multiple sample files and categorizes the data into 'cteRate' and 'stepsRate' dictionaries.
-    """
+def getSamplesInfos(
+        # quantity
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_kcCL_n, st_icCL_n,
+        kc_n, kcCL_n,
+        # colors
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_kcCL_color, st_icCL_color,
+        kc_color, kcCL_color
+):
+    number_samples = [
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_kcCL_n, st_icCL_n,
+        kc_n, kcCL_n]
+
+    colors_samples = [
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_kcCL_color, st_icCL_color,
+        kc_color, kcCL_color]
+
+    return number_samples, colors_samples
+
+
+def getSamplesData(
+        dataPath,
+        number_samples
+):
     def getSegments(dataframe):
-        """
-        Extracts freq, shear rate, shear stress, and delta segments from the dataframe.
-        Returns tuples of constant and step segments.
-        """
         freq = dataframe['f in Hz'].to_numpy()
         elastic = dataframe["G' in Pa"].to_numpy()
         loss = dataframe['G" in Pa'].to_numpy()
-        delta = dataframe['tan(δ) in -'].to_numpy()
 
         # Identifying segments in the data
-        seg2, seg3 = (dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1'])
+        seg2, seg3 = (
+            dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1'])
 
         # Slice segments
-        segments = lambda arr: (arr[seg2:seg3])  # Returns (constant segment, step segment)
+        segments = lambda arr: (arr[seg2:seg3])
 
         return {
             'freq': segments(freq),
             'storage': segments(elastic),
-            'loss': segments(loss),
-            'delta': segments(delta)
+            'loss': segments(loss)
         }
-    # Store data for each sample type
-    samples = {'5_st': [], '10_st': [], 'ic': [], 'kc': []}
 
-    # Determine sample types for each path
-    sample_labels = ['5_st'] * n5st + ['10_st'] * n10St + ['ic'] * nIc + ['kc'] * nKc
+    samples = {
+        '0St': [], '0St + kCar': [], '0St + iCar': [],
+        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': [],
+        'kCar': [], 'kCar/CL': []
+    }
+    sample_keys = list(samples.keys())
+    sample_labels = (
+            [sample_keys[0]] * number_samples[0] +
+            [sample_keys[1]] * number_samples[1] +
+            [sample_keys[2]] * number_samples[2] +
+            [sample_keys[3]] * number_samples[3] +
+            [sample_keys[4]] * number_samples[4] +
+            [sample_keys[5]] * number_samples[5] +
+            [sample_keys[6]] * number_samples[6] +
+            [sample_keys[7]] * number_samples[7]
+    )
 
-    # Read data and categorize based on sample type
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
         segments = getSegments(df)
         samples[sample_type].append(segments)
 
-    # Initialize dictionaries to hold the results
-    dict_freqSweeps = {}
-
-    # Populate dictionaries with consolidated sample data
+    dict_data = {}
     for sample_type in samples:
-        dict_freqSweeps[f'{sample_type}_freq'] = [s['freq'] for s in samples[sample_type]]
-        dict_freqSweeps[f'{sample_type}_storage'] = [s['storage'] for s in samples[sample_type]]
-        dict_freqSweeps[f'{sample_type}_loss'] = [s['loss'] for s in samples[sample_type]]
-        dict_freqSweeps[f'{sample_type}_delta'] = [s['delta'] for s in samples[sample_type]]
+        dict_data[f'{sample_type}_freq'] = [s['freq'] for s in samples[sample_type]]
+        dict_data[f'{sample_type}_storage'] = [s['storage'] for s in samples[sample_type]]
+        dict_data[f'{sample_type}_loss'] = [s['loss'] for s in samples[sample_type]]
 
-    return dict_freqSweeps
+    return dict_data, sample_keys
 
 
-def plotFreqSweeps(nSamples, sampleName,
-                   ax, x, y,
+def plotFreqSweeps(sampleName,
+                   ax, x, yP, yD, yPerr, yDerr,
                    axTitle, yLabel, yLim, xLabel, xLim,
-                   curveColor, markerStyle, markerFColor, markerEColor, markerEWidth=0.5,
-                   lineStyle='-', individualData=False, logScale=False):
+                   curveColor,
+                   individualData=False, logScale=True,
+                   startVal=0, endVal=31, tableData=None):
     def legendLabel():
-        """Applies consistent styling to legends in plots."""
-        legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+        legend = ax.legend(
+            loc='lower right', ncols=2,
+            fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
         legend.get_frame().set_edgecolor('whitesmoke')
 
     def configPlot(idSample=0):
-        cteMean, cteMeanErr, indexStart_mean, indexEnd_mean = getCteMean(y)
         dotCteMean = 'k'
         idSample = idSample + 1 if individualData else 'Mean'
-        ax.set_title(axTitle, size=9, color='crimson')
-        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+        axisColor = '#303030'
 
-        ax.set_xlabel(f'{xLabel}')
+        ax.set_title(axTitle, size=10, color='k')
+        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+        ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
+        ax.tick_params(axis='both', which='both', colors=axisColor)
+
+        ax.grid(True, which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5)
+        ax.grid(True, which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5)
+
+        ax.set_xlabel(f'{xLabel}', color=axisColor)
         ax.set_xscale('log' if logScale else 'linear')
         ax.set_xlim(xLim)
 
-        ax.set_ylabel(f'{yLabel}')
+        ax.set_ylabel(f'{yLabel}', color=axisColor)
         ax.set_yscale('log' if logScale else 'linear')
         ax.set_ylim(yLim)
+        # ax.errorbar(
+        #     [x[indexStart_storage], x[indexEnd_storage]], [yP[indexStart_storage], yP[indexEnd_storage]], yerr=0,
+        #     color=dotCteMean, alpha=0.75,
+        #     fmt='.', markersize=4, mfc=dotCteMean, mec=dotCteMean, mew=1,
+        #     capsize=0, lw=1, linestyle='',
+        #     label=f'', zorder=4)
 
-        ax.errorbar(
-            [x[indexStart_mean], x[indexEnd_mean]], [y[indexStart_mean], y[indexEnd_mean]], yerr=0,
-            color=dotCteMean, alpha=0.75,
-            fmt='.', markersize=4, mfc=dotCteMean, mec=dotCteMean, mew=1,
-            capsize=0, lw=1, linestyle='',
-            label=f'', zorder=4)
+    configPlot()
 
-        ax.errorbar(
-            x, y, yerr,
-            color=curveColor, alpha=(0.9 - curve*0.2) if individualData else 1.0,
-            fmt=markerStyle, markersize=7, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
-            capsize=3, lw=1, linestyle=lineStyle,
-            label=f'{sampleName}_{idSample} | '
-                  + "$\overline{G'} \\approx$" + f'{cteMean:.0f} ± {cteMeanErr:.0f} ' + '$Pa$',
-            zorder=3)
+    x_toFit, y_toFit = arraySplit(x, yP, startVal, endVal)
+    params, covariance = curve_fit(powerLaw, x_toFit, y_toFit)  # p0=(y_mean[0], y_mean[-1], 100))
+    errors = np.sqrt(np.diag(covariance))
+    tableData = exportFit(
+        f'{sampleName}',
+        params, errors,
+        tableData)
 
+    ax.errorbar(
+        x[:-2], yP[:-2], yPerr[:-2],
+        color=curveColor, alpha=.65,
+        fmt='D' if 'CL' in sampleName else 'o', markersize=4.5 if 'CL' in sampleName else 5.25,
+        mfc=curveColor, mec=curveColor, mew=1,
+        capsize=2, lw=1, linestyle='',
+        label=f'{sampleName}', zorder=3)
+    # label=f'{sampleName}_{idSample} | '
+    #       + "$\overline{G'} \\approx$" + f'{meanStorage:.0f} ± {storageMeanErr:.0f} ' + '$Pa$',
+    # ax.errorbar(
+    #     x, yD, yDerr,
+    #     color=curveColor, alpha=1,
+    #     fmt=markerStyle, markersize=7, mfc='w', mec=curveColor, mew=0.75,
+    #     capsize=3, lw=0.75, linestyle=':',
+    #     zorder=3)
+
+    # if axTitle == 'After breakage':
+    # rectConfig = [(44, 0), xLim[-1] - 44, 10000]
+    # rect = Rectangle(*rectConfig, linewidth=.75, edgecolor='#303030', facecolor='snow', alpha=1, zorder=1)
+    # ax.add_patch(rect)
+
+    if axTitle == 'Before breakage':
         legendLabel()
 
-    if individualData:
-        for curve in range(nSamples):
-            x, y, yerr = x[curve][::3], y[curve][::3], 0
-            configPlot(idSample=curve)
-    else:
-        x = np.mean(x, axis=0)[:-2]
-        yerr = np.std(y, axis=0)[:-2]
-        y = np.mean(y, axis=0)[:-2]
-        configPlot()
+    return tableData
 
 
-def main(dataPath):
+def midAxis(color, ax):
+    ax[0].spines['right'].set_color(color)
+    ax[1].spines['left'].set_color(color)
+    ax[1].yaxis.tick_right()
+    ax[1].yaxis.set_label_position('right')
+
+
+def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
-    # samplesQuantities = list(samplesValues.keys())
-
-    fileName = '10pct_0WSt_and_Car-FrequencySweeps'
-    dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
-
     plt.style.use('seaborn-v0_8-ticks')
-    fig, ax = plt.subplots(figsize=(10, 7), facecolor='w', ncols=1)
-    # axVisc = ax.twinx()
-    fig.suptitle(f'Frequency sweeps')
+    fig, axes = plt.subplots(
+        figsize=(9, 7), ncols=1, nrows=1,
+        gridspec_kw={'width_ratios': [1]}, facecolor='snow')
+    axFreqS = axes
 
-    yTitle, yLimits = f"Storage (G')" + f' and loss (G") moduli' + f' (Pa)', (7, 1.5*10**4)
-    xTitle, xLimits = f'Frequency (Hz)', (0.05, 150)
-    st5_color, st10_color, ic_color, kc_color = 'silver', 'sandybrown', 'hotpink', 'mediumturquoise'
-    plotEachSample = False
+    fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
+    yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (10 ** (-2), 3 * 10 ** 4)
+    xTitle, xLimits = f'Frequency (Hz)', (0.08, 100)
 
-    st5_nSamples, st10_nSamples, ic_nSamples, kc_nSamples = 1, 2, 3, 2
-    data = getSamplesData(dataPath, st5_nSamples, st10_nSamples, ic_nSamples, kc_nSamples)
+    nSamples, colorSamples = getSamplesInfos(
+        2, 3, 3,
+        3, 1, 3,
+        3, 4,
+        'lightgray', 'hotpink', 'deepskyblue',
+        'darkgray', 'crimson', 'mediumblue',
+        'mediumorchid', 'rebeccapurple')
+    data, labels = getSamplesData(dataPath, nSamples)
 
-    (x_5st, gP_5st, gD_5st,
-     x_10st, gP_10st, gD_10st,
-     x_ic, gP_ic, gD_ic,
-     x_kc, gP_kc, gD_kc) = (
-        data['5_st_freq'],
-        data['5_st_storage'],
-        data['5_st_loss'],
-        #
-        data['10_st_freq'],
-        data['10_st_storage'],
-        data['10_st_loss'],
-        #
-        data['ic_freq'],
-        data['ic_storage'],
-        data['ic_loss'],
-        #
-        data['kc_freq'],
-        data['kc_storage'],
-        data['kc_loss'])
+    dataDict = {
+        labels[0]: ([], [], []),
+        labels[1]: ([], [], []),
+        labels[2]: ([], [], []),
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], []),
+        labels[6]: ([], [], []),
+    }
 
-    plotFreqSweeps(
-        nSamples=st5_nSamples,
-        ax=ax, x=x_5st, y=gP_5st,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=st5_color, markerStyle='o', markerFColor=st5_color, markerEColor='k',
-        sampleName=f'5_0WSt', individualData=plotEachSample, logScale=True)
-    plotFreqSweeps(
-        nSamples=st5_nSamples,
-        ax=ax, x=x_5st, y=gD_5st,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=st5_color, markerStyle='o', markerFColor='w',
-        markerEColor=st5_color, markerEWidth=1.5, lineStyle='--',
-        sampleName=f'', individualData=plotEachSample, logScale=True)
+    meanBefore, meanAfter = [], []
+    meanBeforeErr, meanAfterErr = [], []
+    dataFittingBef, dataFittingAft = [], []
 
-    plotFreqSweeps(
-        nSamples=st10_nSamples,
-        ax=ax, x=x_10st, y=gP_10st,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=st10_color, markerStyle='o', markerFColor=st10_color, markerEColor='k',
-        sampleName=f'10_0WSt', individualData=plotEachSample, logScale=True)
-    plotFreqSweeps(
-        nSamples=st10_nSamples,
-        ax=ax, x=x_10st, y=gD_10st,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=st10_color, markerStyle='o', markerFColor='w',
-        markerEColor=st10_color, markerEWidth=1.5, lineStyle='--',
-        sampleName=f'', individualData=plotEachSample, logScale=True)
+    for key, (x, gP, gD) in dataDict.items():
+        x.append(data[f'{key}_freq'])
+        gP.append(data[f'{key}_storage'])
+        gD.append(data[f'{key}_loss'])
 
-    plotFreqSweeps(
-        nSamples=ic_nSamples,
-        ax=ax, x=x_ic, y=gP_ic,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=ic_color, markerStyle='o', markerFColor=ic_color, markerEColor='k',
-        sampleName=f'10_0WSt_iCar', individualData=plotEachSample, logScale=True)
-    plotFreqSweeps(
-        nSamples=ic_nSamples,
-        ax=ax, x=x_ic, y=gD_ic,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=ic_color, markerStyle='o', markerFColor='w',
-        markerEColor=ic_color, markerEWidth=1.5, lineStyle='--',
-        sampleName=f'', individualData=plotEachSample, logScale=True)
+    for key, color in zip(dataDict, colorSamples):
+        gP, gD = np.mean(dataDict[key][1], axis=1)[0], np.mean(dataDict[key][2], axis=1)[0]
+        gPerr, gDerr = np.std(dataDict[key][1], axis=1)[0], np.std(dataDict[key][2], axis=1)[0]
 
-    plotFreqSweeps(
-        nSamples=kc_nSamples,
-        ax=ax, x=x_kc, y=gP_kc,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=kc_color, markerStyle='o', markerFColor=kc_color, markerEColor='k',
-        sampleName=f'10_0WSt_kCar', individualData=plotEachSample, logScale=True)
-    plotFreqSweeps(
-        nSamples=kc_nSamples,
-        ax=ax, x=x_kc, y=gD_kc,
-        axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-        curveColor=kc_color, markerStyle='o', markerFColor='w',
-        markerEColor=kc_color, markerEWidth=1.5, lineStyle='--',
-        sampleName=f'', individualData=plotEachSample, logScale=True)
+        meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
+        meanBefore.append(meanStorage)
+        meanBeforeErr.append(storageMeanErr)
 
-    # plt.subplots_adjust(wspace=0.175, top=0.890, bottom=0.14, left=0.05, right=0.95)
-    plt.tight_layout()
+        dataFittingBef = plotFreqSweeps(
+            sampleName=key,
+            ax=axFreqS, x=np.mean(dataDict[key][0], axis=1)[0],
+            yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
+            axTitle='Before breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
+            logScale=True, startVal=fitStart, endVal=fitEnd, tableData=dataFittingBef)
+
+    plt.subplots_adjust(
+        wspace=0.155,
+        top=0.91, bottom=0.1,
+        left=0.1, right=0.96)
     plt.show()
-    fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
 
+    dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
+    fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
     print(f'\n\n· Chart saved at\n{dirSave}.')
 
 
 if __name__ == '__main__':
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+
     filePath = [
-        folderPath + "/031024/5_0WSt/5_0WSt-FreqSweep.xlsx",
-        #
+
+        # 0St
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
-        #
-        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
-        #
-        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
+
+        # 0St + kCar
+        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
+
+        # 0St + iCar
+        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
+        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
+        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
+        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
+
+        # 0St/CL
+        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-1.xlsx",
+        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-2.xlsx",
+        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-3.xlsx",
+
+        # 0St+ kCar/CL
+        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-1.xlsx",
+        # folderPath + "/171024/10_0St_kC_CL/10_0St_CL-recovery-2.xlsx",
+
+        # 0St + iCar/CL
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
+
+        # kC
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+
+        # kC/CL
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
     ]
 
-    main(dataPath=filePath)
+    main(filePath, '0WSt_Car_CL-ViscoelasticRecovery')

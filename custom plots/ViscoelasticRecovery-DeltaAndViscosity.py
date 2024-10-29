@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
 
 
-def fonts(folder_path, s=10, m=12):
+def fonts(folder_path, s=11, m=13):
     """Configures font properties for plots."""
     font_path = folder_path + 'HelveticaNeueThin.otf'
     helvetica_thin = FontProperties(fname=font_path)
@@ -69,7 +69,30 @@ def getCteMean(values, tolerance=50):
     return mean, stddev, iStart, iEnd
 
 
-def getSamplesData(dataPath, nSt, nKc, nIc, nStCL, nKcCL, nIcCL):
+def getSamplesInfos(
+        # quantity
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_icCL_n,
+        kc_n, kcCL_n,
+        # colors
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_icCL_color,
+        kc_color, kcCL_color
+):
+    number_samples = [
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_icCL_n,
+        kc_n, kcCL_n]
+
+    colors_samples = [
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_icCL_color,
+        kc_color, kcCL_color]
+
+    return number_samples, colors_samples
+
+
+def getSamplesData(dataPath, number_samples):
 
     def getSegments(dataframe):
         """
@@ -93,34 +116,39 @@ def getSamplesData(dataPath, nSt, nKc, nIc, nStCL, nKcCL, nIcCL):
             'viscosity': segments(viscComplex)
         }
 
-    # Store data for each sample type
-    samples = {'10%-0St': [], '10%-0St + kCar': [], '10%-0St + iCar': [],
-               '10%-0St/Ca²⁺': [], '10%-0St + iCar/Ca²⁺': [], '10%-0St+kCar/Ca²⁺': []}
+    samples = {
+        '0St': [], '0St + kCar': [], '0St + iCar': [],
+        '0St/CL': [], '0St + iCar/CL': [],
+        'kCar': [], 'kCar/CL': []
+    }
+    sample_keys = list(samples.keys())
+    sample_labels = (
+            [sample_keys[0]] * number_samples[0] +
+            [sample_keys[1]] * number_samples[1] +
+            [sample_keys[2]] * number_samples[2] +
+            [sample_keys[3]] * number_samples[3] +
+            [sample_keys[4]] * number_samples[4] +
+            [sample_keys[5]] * number_samples[5] +
+            [sample_keys[6]] * number_samples[6]
+    )
 
-    # Determine sample types for each path
-    sample_labels = (['10%-0St'] * nSt + ['10%-0St + kCar'] * nKc + ['10%-0St + iCar'] * nIc +
-                     ['10%-0St/Ca²⁺'] * nStCL + ['10%-0St + iCar/Ca²⁺'] * nKcCL + ['10%-0St+kCar/Ca²⁺'] * nIcCL)
-
-    # Read data and categorize based on sample type
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
         segments = getSegments(df)
         samples[sample_type].append(segments)
 
-    # Initialize dictionaries to hold the results
     dict_freqSweeps = {}
 
-    # Populate dictionaries with consolidated sample data
     for sample_type in samples:
-        dict_freqSweeps[f'{sample_type}_freq'] = [s['freq'][0] for s in samples[sample_type]]
-        dict_freqSweeps[f'{sample_type}_delta'] = [s['delta'][0] for s in samples[sample_type]]
-        dict_freqSweeps[f'{sample_type}_viscosity'] = [s['viscosity'][0] for s in samples[sample_type]]
+        dict_freqSweeps[f'{sample_type} freq'] = [s['freq'][0] for s in samples[sample_type]]
+        dict_freqSweeps[f'{sample_type} delta'] = [s['delta'][0] for s in samples[sample_type]]
+        dict_freqSweeps[f'{sample_type} viscosity'] = [s['viscosity'][0] for s in samples[sample_type]]
 
-        dict_freqSweeps[f'{sample_type}_freq_broken'] = [s['freq'][-1] for s in samples[sample_type]]
-        dict_freqSweeps[f'{sample_type}_delta_broken'] = [s['delta'][-1] for s in samples[sample_type]]
-        dict_freqSweeps[f'{sample_type}_viscosity_broken'] = [s['viscosity'][-1] for s in samples[sample_type]]
+        dict_freqSweeps[f'{sample_type} freq_broken'] = [s['freq'][-1] for s in samples[sample_type]]
+        dict_freqSweeps[f'{sample_type} delta_broken'] = [s['delta'][-1] for s in samples[sample_type]]
+        dict_freqSweeps[f'{sample_type} viscosity_broken'] = [s['viscosity'][-1] for s in samples[sample_type]]
 
-    return dict_freqSweeps
+    return dict_freqSweeps, sample_keys
 
 
 def plotFreqSweeps(sampleName, ax, axTitle,
@@ -133,7 +161,7 @@ def plotFreqSweeps(sampleName, ax, axTitle,
     def configPlot(axisColor='#383838'):
         axes_visc, axes_tan = ax[0], ax[1]
 
-        axes_visc.set_title(axTitle, size=9, color='crimson')
+        axes_visc.set_title(axTitle, size=11, color='crimson')
         axes_visc.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
         axes_visc.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
         # ax.tick_params(axis='both', colors=axisColor)
@@ -164,49 +192,17 @@ def plotFreqSweeps(sampleName, ax, axTitle,
 
     axVisc.errorbar(
         x, yV, yPerr,
-        color=curveColor, alpha=.8,
-        fmt='o', markersize=7, mfc=curveColor, mec=curveColor, mew=1.,
+        color=curveColor, alpha=.65,
+        fmt='o', markersize=6, mfc=curveColor, mec=curveColor, mew=1.,
         capsize=3, lw=1, linestyle='',
         label=f'{sampleName}', zorder=3)
 
     axTan.errorbar(
         x, yD, yDerr,
-        color=curveColor, alpha=.8,
-        fmt='s', markersize=7, mfc=curveColor, mec=curveColor, mew=1,
+        color=curveColor, alpha=.65,
+        fmt='s', markersize=6, mfc=curveColor, mec=curveColor, mew=1,
         capsize=3, lw=1, linestyle='',
         zorder=3)
-
-
-def plotInsetMean(data, dataErr, keys, colors, ax):
-    ax_inset = inset_axes(ax, width='30%', height='20%', loc='upper left')  # Create an inset plot
-
-    xInset = np.arange(len(data))
-    ax_inset.barh(xInset, width=data, xerr=0,
-                  color=colors, edgecolor='black', alpha=0.85, linewidth=0.5)
-
-    ax_inset.errorbar(y=xInset, x=data, xerr=dataErr, alpha=1,
-                      color='#383838', linestyle='', capsize=2, linewidth=0.75)
-
-    for i in range(len(data)):
-        ax_inset.text(data[i] + dataErr[i] + 100, xInset[i],
-                      f'{data[i]:.0f} ± {dataErr[i]:.0f}',
-                      size=8, va='center_baseline', ha='left', color='black')
-
-    ax_inset.text(
-        0.5, -0.08, "Average G' values (Pa)",
-        ha='center', va='top', fontsize=9, transform=ax_inset.transAxes)
-    ax_inset.set_facecolor('snow')  # Change to your desired color
-    ax_inset.tick_params(axis='both', labelsize=8, length=0)
-    ax_inset.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
-    ax_inset.spines[['top', 'bottom', 'left', 'right']].set_color('dimgrey')
-
-    ax_inset.set_yticks(np.arange(len(data)))
-    ax_inset.set_yticklabels(keys)
-    ax_inset.yaxis.tick_right()
-    ax_inset.yaxis.set_label_position('right')
-
-    ax_inset.set_xticks([])
-    ax_inset.set_xlim(0, 2900)
 
 
 def midAxis(color, ax):
@@ -237,54 +233,52 @@ def main(dataPath):
     fig, axes = plt.subplots(figsize=(18, 10), facecolor='w', ncols=2, nrows=2)
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
 
-    yTitle, yLimits = f'Complex viscosity (mPa·s)', (10**3, 4*10**6)
-    y2Title, y2Limits = f'tan(δ)', (1 * 10**(-2), 10**1)
+    yTitle, yLimits = f'Complex viscosity (mPa·s)', (10**1, 3*10**6)
+    y2Title, y2Limits = f'tan(δ)', (3 * 10**(-2), 2*10**1)
     xTitle, xLimits = f'Frequency (Hz)', (0.06, 200)
 
-    (st_n, kc_n, ic_n,
-     stCL_n, kcCL_n, icCL_n) = 2, 3, 2, 0, 0, 0
-    nSamples = (st_n, kc_n, ic_n,
-                stCL_n, kcCL_n, icCL_n)
+    nSamples, colorSamples = getSamplesInfos(
+        2, 3, 3,
+        2, 3,
+        3, 4,
+        'lightgray', 'hotpink', 'deepskyblue',
+        'darkgray', 'mediumblue',
+        'mediumorchid', 'rebeccapurple')
 
-    (st_color, kc_color, ic_color,
-     stCL_color, kcCL_color, icCL_color) = ('sandybrown', 'hotpink', 'deepskyblue',
-                                            'grey', 'sandybrown', 'deepskyblue')
-    colors = (st_color, kc_color, ic_color,
-              stCL_color, kcCL_color, icCL_color)
+    data, labels = getSamplesData(dataPath, nSamples)
 
-    data = getSamplesData(dataPath, *nSamples)
-
-    listBefore = {
-        '10%-0St': ([], [], []),  # (x_5st, gP_5st, gD_5st)
-        '10%-0St + kCar': ([], [], []),  # (x_10st, gP_10st, gD_10st)
-        '10%-0St + iCar': ([], [], []),  # (x_ic, gP_ic, gD_ic)
-        # '10%-0St/Ca²⁺': ([], [], []),  # (x_kc, gP_kc, gD_kc)
-        # '10%-0St + iCar/Ca²⁺': ([], [], []),  # (x_kc, gP_kc, gD_kc)
-        # '10%-0St+kCar/Ca²⁺': ([], [], [])  # (x_kc, gP_kc, gD_kc)
-    }
-    listAfter = {
-        '10%-0St': ([], [], []),  # (x_5st, gP_5st, gD_5st)
-        '10%-0St + kCar': ([], [], []),  # (x_10st, gP_10st, gD_10st)
-        '10%-0St + iCar': ([], [], []),  # (x_ic, gP_ic, gD_ic)
-        # '10%-0St/Ca²⁺': ([], [], []),  # (x_kc, gP_kc, gD_kc)
-        # '10%-0St + iCar/Ca²⁺': ([], [], []),  # (x_kc, gP_kc, gD_kc)
-        # '10%-0St+kCar/Ca²⁺': ([], [], [])  # (x_kc, gP_kc, gD_kc)
+    listBefore, listAfter = {
+        labels[0]: ([], [], []),
+        labels[1]: ([], [], []),
+        labels[2]: ([], [], []),
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], []),
+        labels[6]: ([], [], []),
+    }, {
+        labels[0]: ([], [], []),
+        labels[1]: ([], [], []),
+        labels[2]: ([], [], []),
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], []),
+        labels[6]: ([], [], []),
     }
 
     meanBefore, meanAfter = [], []
     meanBeforeErr, meanAfterErr = [], []
 
     for key, (x, tan_d, visc) in listBefore.items():
-        x.append(data[f'{key}_freq'])
-        tan_d.append(data[f'{key}_delta'])
-        visc.append(data[f'{key}_viscosity'])
+        x.append(data[f'{key} freq'])
+        tan_d.append(data[f'{key} delta'])
+        visc.append(data[f'{key} viscosity'])
 
     for key, (x, tan_d, visc) in listAfter.items():
-        x.append(data[f'{key}_freq_broken'])
-        tan_d.append(data[f'{key}_delta_broken'])
-        visc.append(data[f'{key}_viscosity_broken'])
+        x.append(data[f'{key} freq_broken'])
+        tan_d.append(data[f'{key} delta_broken'])
+        visc.append(data[f'{key} viscosity_broken'])
 
-    for k_a, k_b, c in zip(listAfter, listBefore, colors):
+    for k_a, k_b, c in zip(listAfter, listBefore, colorSamples):
         delta, visc = np.mean(listBefore[k_a][1], axis=1)[0], np.mean(listBefore[k_a][2], axis=1)[0]
         deltaErr, viscErr = np.std(listBefore[k_a][1], axis=1)[0], np.std(listBefore[k_a][2], axis=1)[0]
 
@@ -325,14 +319,6 @@ def main(dataPath):
 
     midAxis('#383838', axes)
 
-    # Inset plot (bar plot showing meanStorage)
-    # plotInsetMean(
-    #     data=meanBefore, dataErr=meanBeforeErr,
-    #     keys=listBefore.keys(), colors=colors, ax=axes[0])
-    # plotInsetMean(
-    #     data=meanAfter, dataErr=meanAfterErr,
-    #     keys=listBefore.keys(), colors=colors, ax=axes[1])
-
     plt.subplots_adjust(wspace=0.0, hspace=0.0, top=0.92, bottom=0.08, left=0.05, right=0.95)
     plt.show()
     fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
@@ -344,17 +330,42 @@ if __name__ == '__main__':
     folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
+
+        # 0St
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
-        #
-        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
+
+        # 0St + kCar
+        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
-        #
-        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
+
+        # 0St + iCar
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
+        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
+
+        # 0St/CL
+        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-1.xlsx",
+        # folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-2.xlsx",
+        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-3.xlsx",
+
+        # 0St + iCar/CL
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
+
+        # kC
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+
+        # kC/CL
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
     ]
 
     main(dataPath=filePath)

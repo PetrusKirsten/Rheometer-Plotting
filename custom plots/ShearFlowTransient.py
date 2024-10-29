@@ -34,15 +34,15 @@ def fonts(folder_path, s=10, m=12):
 def exportFit(
         sample,
         data, err,
-        rows, modHB=False):
-    keys = ('Initial stress (tau_0) in Pa', 'Equilibrium stress (tau_e) in Pa', 'Characteristic time (lambda) in s')
+        rows):
+    keys = ('$\\tau_0$', '$\\tau_e$', '$\lambda$')
     values = (data, err)
 
     dictData = {'Sample': sample}
     iParams = 0
     for key, value in zip(keys, range(len(values[0]))):
         dictData[f'{key}'] = values[0][iParams]
-        dictData[f'{key} err'] = values[1][iParams]
+        dictData[f'± {key}'] = values[1][iParams]
         iParams += 1
 
     rows.append(dictData)
@@ -54,48 +54,30 @@ def funcTransient(t, tau_0, tau_e, time_cte):
     return tau_e + (tau_0 - tau_e) * np.exp(- t / time_cte)
 
 
-def getCteMean(values, tolerance=100):
-    """
-    :param values: to be analysed
-    :param tolerance: the difference betweem two points data
-    :return: the mean of the "cte" region and its indexes
-    """
-    diffs = np.abs(np.diff(values))  # Calcular as diferenças entre valores consecutivos
+def getSamplesInfos(
+        # quantity
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_kcCL_n, st_icCL_n,
+        kc_n, kcCL_n,
+        # colors
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_kcCL_color, st_icCL_color,
+        kc_color, kcCL_color
+):
+    number_samples = [
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_kcCL_n, st_icCL_n,
+        kc_n, kcCL_n]
 
-    constantRegions = diffs < tolerance  # Identificar regiões onde a diferença está abaixo do valor de tolerância
+    colors_samples = [
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_kcCL_color, st_icCL_color,
+        kc_color, kcCL_color]
 
-    # Encontrar os índices onde a condição é satisfeita
-    iStart, iEnd = None, None
-    lengthMax, lengthCurrent, currentStart = 0, 0, 0
-    for i, is_constant in enumerate(constantRegions):
-        if is_constant:
-            if lengthCurrent == 0:
-                currentStart = i
-            lengthCurrent += 1
-        else:
-            if lengthCurrent > lengthMax:
-                lengthMax = lengthCurrent
-                iStart = currentStart
-                iEnd = i
-            lengthCurrent = 0
-
-    if lengthCurrent > lengthMax:  # Checar se a última sequência é a maior constante
-        iStart = currentStart
-        iEnd = len(values) - 1
-
-    if iStart is None or iEnd is None:  # Se nenhuma região constante foi encontrada
-        return None, None, None
-
-    mean = np.mean(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
-
-    return mean, iStart, iEnd
+    return number_samples, colors_samples
 
 
-def getSamplesData(dataPath, nSt, nKc, nIc, nStCL, nKcCL, nIcCL):
-    """
-    Reads multiple sample files and categorizes the data into 'cteRate' and 'stepsRate' dictionaries.
-    """
-
+def getSamplesData(dataPath, number_samples):
     def getSegments(dataframe):
         """
         Extracts time, shear rate, shear stress, and viscosity segments from the dataframe.
@@ -107,62 +89,71 @@ def getSamplesData(dataPath, nSt, nKc, nIc, nStCL, nKcCL, nIcCL):
         viscosity = dataframe['η in mPas'].to_numpy()
 
         # Identifying segments in the data
-        seg3, seg4, seg5 = (dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['3|1', '4|1', '5|1'])
+        seg3, seg4 = (dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['3|1', '4|1'])
 
         # Slice segments
-        segments = lambda arr: (arr[seg3:seg4], arr[seg4:seg5])  # Returns (constant segment, step segment)
-        t_cte, t_steps = segments(time)
+        segments = lambda arr: (arr[seg3:seg4])  # Returns (constant segment, step segment)
+        t_cte = segments(time)
 
         return {
-            'time': [t_cte - t_cte[0], t_steps - t_cte[0]],
-            'shear_rate': segments(shear_rate),
+            'time': [t_cte - t_cte[0]],
             'shear_stress': segments(shear_stress),
             'viscosity': segments(viscosity)
         }
 
-    # Store data for each sample type
-    samples = {'0St': [], '0St + kCar': [], '0St + iCar': [],
-               '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': []}
-    # Determine sample types for each path
+    samples = {
+        '0St': [], '0St + kCar': [], '0St + iCar': [],
+        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': [],
+        'kCar': [], 'kCar/CL': []
+    }
+    sample_keys = list(samples.keys())
     sample_labels = (
-            [list(samples.keys())[0]] * nSt + [list(samples.keys())[1]] * nKc + [list(samples.keys())[2]] * nIc +
-            [list(samples.keys())[3]] * nStCL + [list(samples.keys())[4]] * nKcCL + [list(samples.keys())[5]] * nIcCL)
-    # Read data and categorize based on sample type
+            [sample_keys[0]] * number_samples[0] +
+            [sample_keys[1]] * number_samples[1] +
+            [sample_keys[2]] * number_samples[2] +
+            [sample_keys[3]] * number_samples[3] +
+            [sample_keys[4]] * number_samples[4] +
+            [sample_keys[5]] * number_samples[5] +
+            [sample_keys[6]] * number_samples[6] +
+            [sample_keys[7]] * number_samples[7])
+
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
         segments = getSegments(df)
         samples[sample_type].append(segments)
 
-    # Initialize dictionaries to hold the results
     dict_cteRate = {}
 
-    # Populate dictionaries with consolidated sample data
     for sample_type in samples:
-        dict_cteRate[f'{sample_type}_time'] = [s['time'][0] for s in samples[sample_type]]
-
-        dict_cteRate[f'{sample_type}_rateCte'] = [s['shear_rate'][0] for s in samples[sample_type]]
-        dict_cteRate[f'{sample_type}_stressCte'] = [s['shear_stress'][0] for s in samples[sample_type]]
-        dict_cteRate[f'{sample_type}_viscosityCte'] = [s['viscosity'][0] for s in samples[sample_type]]
+        dict_cteRate[f'{sample_type} time'] = [s['time'] for s in samples[sample_type]]
+        dict_cteRate[f'{sample_type} stress'] = [s['shear_stress'] for s in samples[sample_type]]
+        dict_cteRate[f'{sample_type} viscosity'] = [s['viscosity'] for s in samples[sample_type]]
 
     return dict_cteRate, list(samples.keys())
 
 
-def plotFlow(listRows, nSamples, sampleName,
-             ax, x, y,
+def downsampler(array, n=200):
+    if len(array) > n:
+        step = len(array) // n  # Calculate step size
+        return array[::step][:n]
+    return array
+
+
+def plotFlow(listRows, sampleName,
+             ax, x, y, yErr,
              axTitle, yLabel, yLim, xLabel, xLim,
              curveColor, markerStyle,
-             individualData=False, fit='', logScale=False):
+             fit='', logScale=False):
     def legendLabel():
-        """Applies consistent styling to legends in plots."""
         legend = ax.legend(
             fancybox=False, frameon=True,
             framealpha=0.9, fontsize=9, ncols=2,
-            loc='lower right'
+            loc='upper left'
         )
         legend.get_frame().set_facecolor('w')
         legend.get_frame().set_edgecolor('whitesmoke')
 
-    def configPlot(xPlot, yPlot, yErr=0, scatter=True):
+    def configPlot():
         ax.set_title(axTitle, size=9, color='crimson')
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
 
@@ -178,159 +169,215 @@ def plotFlow(listRows, nSamples, sampleName,
         ax.yaxis.set_major_locator(MultipleLocator(100))
         ax.yaxis.set_minor_locator(MultipleLocator(25))
 
-        if scatter:
-            ax.errorbar(
-                xPlot, yPlot, yerr=yErr, color=curveColor, alpha=(0.9 - curve * 0.2) if individualData else .8,
-                fmt=markerStyle, markersize=7, mec='k', mew=0.5,
-                capsize=3, lw=.5, linestyle='',  # ecolor='k'
-                label=f'{sampleName}', zorder=3)
-        else:
-            ax.plot(
-                xPlot, yPlot, color=curveColor, linestyle='-.', linewidth=.75,
-                zorder=2)
+    params, covariance = curve_fit(
+        funcTransient, x, y)
+    # p0=(x[0], y[-1], 100))  # method='trf')  # method='dogbox', maxfev=5000)
+    errors = np.sqrt(np.diag(covariance))
 
-        legendLabel()
+    tau_0, tau_e, t_cte = params
+    x_fit = np.linspace(0, 300, 300)
+    y_fit = funcTransient(x_fit, tau_0, tau_e, t_cte)
 
-    if individualData:
-        for curve in range(nSamples):
-            split_index = np.where(x[curve] <= 175)[0][-1]
-            x_split, y_split = x[curve][:split_index], y[curve][:split_index]
-            configPlot(x_split, y_split)
+    listRows = exportFit(
+        f'{sampleName}',
+        params, errors,
+        listRows)
 
-            if fit == 'transient':
-                params, covariance = curve_fit(funcTransient, x, y, p0=(10, 1, 0.1, 1),
-                                               method='trf')  # method='dogbox', maxfev=5000)
-                errors = np.sqrt(np.diag(covariance))
-                print(params, errors)
-                tau_0, tau_e, t_cte = params
-                x_fit = np.linspace(0, 180, 180)
-                y_fit = funcTransient(x_fit, tau_0, tau_e, t_cte)
-                # listRows = exportFit(
-                #     f'{sampleName}',
-                #     params, errors,
-                #     listRows)
-                configPlot(x_split, y_split)
+    ax.errorbar(
+        x, y, yerr=yErr, color=curveColor, alpha=.65,
+        fmt=markerStyle, markersize=7, mec='k', mew=0.5,
+        capsize=3, lw=.5, linestyle='',  # ecolor='k'
+        label=f'{sampleName}', zorder=3)
 
-    else:
-        x_split, y_split = [], []
-        for curve in range(nSamples):
-            split_index = np.where(x[curve] <= 175)[0][-1]
-            x_split.append(x[curve][:split_index]), y_split.append(y[curve][:split_index])
+    ax.plot(
+        x_fit, y_fit, color=curveColor, linestyle='-.', linewidth=.75,
+        zorder=2)
 
-        x_mean = np.mean(x_split, axis=0)
-        y_err = np.std(y_split, axis=0)
-        y_mean = np.mean(y_split, axis=0)
-
-        if fit == 'transient':
-            params, covariance = curve_fit(funcTransient, x_mean, y_mean, p0=(y_mean[0], y_mean[-1], 100))
-            # method='trf')  # method='dogbox', maxfev=5000)
-            errors = np.sqrt(np.diag(covariance))
-            print(params, errors)
-            tau_0, tau_e, t_cte = params
-            x_fit = np.linspace(0, 300, 300)
-            y_fit = funcTransient(x_fit, tau_0, tau_e, t_cte)
-            listRows = exportFit(
-                f'{sampleName}',
-                params, errors,
-                listRows)
-            configPlot(x_fit, y_fit, scatter=False)
-
-        configPlot(x_mean, y_mean, yErr=y_err)
+    configPlot()
+    legendLabel()
 
     return listRows
 
 
+def plotBars(title, axes, data, colors, a, z):
+    def configPlot(ax, yTitle, yLim):
+        ax.set_title(title, size=10, color='k')
+        if yTitle == "$\\tau_0$ (Pa)":
+            ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
+            ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
+
+        if yTitle == "$\\tau_e$ (Pa)":
+            ax.yaxis.tick_left()
+            ax.yaxis.set_label_position('left')
+            ax.tick_params(axis='y', which='both', direction='in', pad=-28)
+            ax.yaxis.set_label_coords(.125, .5)
+
+        ax.tick_params(axis='x', labelsize=10, length=4)
+        # ax.tick_params(axis='y', which='both', direction='out', pad=1)
+
+        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+        ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+
+        ax.set_xticks([])
+        ax.set_xlim([-3.5, 23])
+
+        ax.set_ylabel(yTitle)
+        ax.set_ylim(yLim)
+
+        ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
+        ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / 50))
+
+    axes2, axes3 = axes.twinx(), axes.twinx()
+
+    configPlot(axes, "$\\tau_0$ (Pa)", (0, 1600))
+    configPlot(axes2, "$\\tau_e$ (Pa)", (0, 500))
+    configPlot(axes3, "$\lambda$ (s)", (0, 55))
+
+    samples = [d['Sample'] for d in data]
+    kPrime, kPrime_err = [d["$\\tau_0$"] for d in data], [d["± $\\tau_0$"] for d in data]
+    nPrime, nPrime_err = [d["$\\tau_e$"] for d in data], [d["± $\\tau_e$"] for d in data]
+    sigmaZero, sigmaZero_err = [d["$\lambda$"] for d in data], [d["± $\lambda$"] for d in data]
+
+    w, s = 0.8, 3
+    x = np.arange(s * len(data))
+
+    posList, labelsList = [], []
+
+    for i in range(len(kPrime)):
+        axes.bar(
+            s * x[i] - w,
+            height=kPrime[i], yerr=0,
+            color=colors[i], edgecolor='#383838',
+            width=w, hatch='////', alpha=a, linewidth=.5,
+            zorder=z)
+        axes.errorbar(
+            x=s * x[i] - w, y=kPrime[i], yerr=kPrime_err[i],
+            color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            zorder=3)
+
+        axes2.bar(
+            s * x[i],
+            height=nPrime[i], yerr=0,
+            color=colors[i], edgecolor='#383838',
+            width=w, hatch='....', alpha=a, linewidth=.5,
+            zorder=z)
+        axes2.errorbar(
+            x=s * x[i], y=nPrime[i], yerr=nPrime_err[i],
+            color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            zorder=3)
+
+        axes3.bar(
+            s * x[i] + w,
+            height=sigmaZero[i], yerr=0,
+            color=colors[i], edgecolor='#383838',
+            width=w, hatch='', alpha=a, linewidth=.5,
+            zorder=z)
+        axes3.errorbar(
+            x=s * x[i] + w, y=sigmaZero[i], yerr=sigmaZero_err[i],
+            color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            zorder=3)
+
+        posList.append(s * x[i] - w), posList.append(s * x[i]), posList.append(s * x[i] + w)
+        labelsList.append("$\\tau_0$"), labelsList.append("$\\tau_e$"), labelsList.append("$\lambda$")
+
+    axes.set_xticks(posList)
+    axes.set_xticklabels(labelsList)
+
+    return nPrime
+
+
 def main(dataPath):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
-
-    fileName = 'St_Car_CL-Thixotropy'
-    dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
-
-    fig, axesStress = plt.subplots(figsize=(12, 7), facecolor='w', ncols=1, nrows=1)
-    fig.suptitle(f'Constant shear rate flow')
     plt.style.use('seaborn-v0_8-ticks')
-    xTitle, xLimits = (f'Time (s)', (0, 240))
-    yTitle, yLimits = (f'Shear stress (Pa)', (0, 550))
+
+    fig, axes = plt.subplots(
+        figsize=(16, 7), ncols=2, nrows=1,
+        gridspec_kw={'width_ratios': [1.25, 1]}, facecolor='snow')
+    axStress, axBars = axes[0], axes[1]
+
+    fig.suptitle(f'Constant shear rate flow')
+    xTitle, xLimits = (f'Time (s)', (0, 200))
+    yTitle, yLimits = (f'Shear stressMean (Pa)', (0, 800))
     yTitleVisc, yLimitsVisc = f'Viscosity (mPa·s)', (yLimits[0] * 3.33, yLimits[1] * 3.33)
 
-    axesVisc = axesStress.twinx()
+    axesVisc = axStress.twinx()
     axesVisc.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0)
     axesVisc.set_ylabel(f'{yTitleVisc}')
     axesVisc.set_ylim(yLimitsVisc)
     axesVisc.yaxis.set_major_locator(MultipleLocator(200))
     axesVisc.yaxis.set_minor_locator(MultipleLocator(50))
 
-    (st_n, kc_n, ic_n,
-     stCL_n, kcCL_n, icCL_n) = (2, 2, 2,
-                                3, 1, 3)
-    nSamples = (st_n, kc_n, ic_n,
-                stCL_n, kcCL_n, icCL_n)
-
-    (st_color, kc_color, ic_color,
-     stCL_color, kcCL_color, icCL_color) = ('sandybrown', 'hotpink', 'deepskyblue',
-                                            'chocolate', 'mediumvioletred', 'steelblue')
-    colors = (st_color, kc_color, ic_color,
-              stCL_color, kcCL_color, icCL_color)
-
-    constantShear, sampleLabels = getSamplesData(dataPath, *nSamples)
+    nSamples, colorSamples = getSamplesInfos(
+        2, 3, 3,
+        3, 1, 3,
+        3, 4,
+        'lightgray', 'hotpink', 'deepskyblue',
+        'darkgray', 'crimson', 'mediumblue',
+        'mediumorchid', 'rebeccapurple')
+    data, labels = getSamplesData(dataPath, nSamples)
 
     fitModeStress, fitModeVisc = 'transient', ''
 
-    (x_st, s_st,
-     x_kc, s_kc,
-     x_ic, s_ic,
-     x_stCL, s_stCL,
-     x_kcCL, s_kcCL,
-     x_icCL, s_icCL) = (
-        # 10% starch
-        constantShear[f'{sampleLabels[0]}_time'],
-        constantShear[f'{sampleLabels[0]}_stressCte'],
-        # 10% starch + kappa
-        constantShear[f'{sampleLabels[1]}_time'],
-        constantShear[f'{sampleLabels[1]}_stressCte'],
-        # 10% starch + iota
-        constantShear[f'{sampleLabels[2]}_time'],
-        constantShear[f'{sampleLabels[2]}_stressCte'],
-        # 10% starch CL
-        constantShear[f'{sampleLabels[3]}_time'],
-        constantShear[f'{sampleLabels[3]}_stressCte'],
-        # 10% starch + kappa CL
-        constantShear[f'{sampleLabels[4]}_time'],
-        constantShear[f'{sampleLabels[4]}_stressCte'],
-        # 10% starch + iota CL
-        constantShear[f'{sampleLabels[5]}_time'],
-        constantShear[f'{sampleLabels[5]}_stressCte'],)
-
-    data = [(x_st, s_st),
-            (x_kc, s_kc),
-            (x_ic, s_ic),
-            (x_stCL, s_stCL),
-            (x_kcCL, s_kcCL),
-            (x_icCL, s_icCL)]
+    dictData = {
+        labels[0]: ([], [], []),
+        labels[1]: ([], [], []),
+        labels[2]: ([], [], []),
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], []),
+        labels[6]: ([], [], []),
+        labels[7]: ([], [], []),
+    }
 
     tableStress = []
 
-    for i in range(len(data)):
+    for key, (t, s, v) in dictData.items():
+        t.append(data[f'{key} time'])
+        s.append(data[f'{key} stress'])
+        v.append(data[f'{key} viscosity'])
+
+    for key, color in zip(dictData, colorSamples):
+        time, stress, stressErr = (
+            dictData[key][0][0],
+            dictData[key][1][0],
+            dictData[key][1][0])
+
+        timeSplit, stressSplit, stressErrSplit = [], [], []
+        for t in range(len(time)):
+            index = np.where(time[t][0] <= 175)[-1][-1]
+            timeSplit.append(downsampler(time[t][0][:index]))
+            stressSplit.append(downsampler(stress[t][:index]))
+            stressErrSplit.append(downsampler(stressErr[t][:index]))
+
+        timeMean, stressMean, stressErrMean = (
+            np.mean(timeSplit, axis=0),
+            np.mean(stressSplit, axis=0),
+            np.std(stressErrSplit, axis=0))
+
         tableStress = plotFlow(
-            listRows=tableStress, nSamples=nSamples[i],
-            ax=axesStress, x=data[i][0], y=data[i][1],
+            listRows=tableStress, ax=axStress,
+            x=timeMean, y=stressMean, yErr=stressErrMean,
             axTitle='', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits,
-            curveColor=colors[i], markerStyle='o',
-            sampleName=f'{sampleLabels[i]}', fit=fitModeStress)
+            curveColor=color, markerStyle='o',
+            sampleName=f'{key}', fit=fitModeStress)
+
+    _ = plotBars(
+        '',
+        axBars, tableStress,
+        colorSamples, a=.85, z=2)
 
     plt.subplots_adjust(
-        hspace=0,
-        wspace=0.200,
-        top=0.940,
-        bottom=0.095,
-        left=0.090,
-        right=0.900)
-    # plt.tight_layout()
+        hspace=0, wspace=0.30,
+        top=0.940, bottom=0.095,
+        left=0.090, right=0.900)
     plt.show()
+
+    fileName = 'St_Car_CL-Thixotropy'
+    dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
     fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
 
-    fitParams = pd.DataFrame(tableStress)
-    fitParams.to_excel(f'{dirSave}' + f'\\{fileName}' + '.xlsx', index=False)
+    # fitParams = pd.DataFrame(tableStress)
+    # fitParams.to_excel(f'{dirSave}' + f'\\{fileName}' + '.xlsx', index=False)
 
     print(f'\n\n· Chart and tableStress with fitted parameters saved at\n{dirSave}.')
 
@@ -339,29 +386,45 @@ if __name__ == '__main__':
     folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
-        #
+        # 0St
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
-        #
+
+        # 0St + kCar
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        #
-        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
+        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
+
+        # 0St + iCar
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
-        # folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
+        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
+        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
-        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
-        #
+
+        # 0St/CL
         folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-1.xlsx",
         folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-2.xlsx",
         folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-3.xlsx",
-        #
+
+        # 0St+ kCar/CL
         folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-1.xlsx",
         # folderPath + "/171024/10_0St_kC_CL/10_0St_CL-recovery-2.xlsx",
-        #
+
+        # 0St + iCar/CL
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
+
+        # kC
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+
+        # kC/CL
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
     ]
 
     main(dataPath=filePath)

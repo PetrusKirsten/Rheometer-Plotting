@@ -356,7 +356,6 @@ if __name__ == '__main__':
     folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
-
         # 0St
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
