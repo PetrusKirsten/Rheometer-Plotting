@@ -218,20 +218,19 @@ def plotFreqSweeps(sampleName,
         tableData)
 
     ax.errorbar(
-        x[:-3], yP[:-3], yPerr[:-3],
+        x[:-2], yP[:-2], yPerr[:-2],
+        color=curveColor, alpha=.85,
+        fmt='none', mfc=curveColor,
+        capsize=3, capthick=1, linestyle='', lw=1,
+        label=f'', zorder=2)
+
+    ax.errorbar(
+        x[:-2], yP[:-2], 0,
         color=curveColor, alpha=.65,
-        fmt='D' if 'CL' in sampleName else 'o', markersize=4.5 if 'CL' in sampleName else 5.25,
-        mfc=curveColor, mec=curveColor, mew=1,
-        capsize=2, lw=1, linestyle='',
+        fmt='o', markersize=6,
+        mfc=curveColor, mec='#383838', mew=.75,
+        linestyle='',
         label=f'{sampleName}', zorder=3)
-    # label=f'{sampleName}_{idSample} | '
-    #       + "$\overline{G'} \\approx$" + f'{meanStorage:.0f} ± {storageMeanErr:.0f} ' + '$Pa$',
-    # ax.errorbar(
-    #     x, yD, yDerr,
-    #     color=curveColor, alpha=1,
-    #     fmt=markerStyle, markersize=7, mfc='w', mec=curveColor, mew=0.75,
-    #     capsize=3, lw=0.75, linestyle=':',
-    #     zorder=3)
 
     # if axTitle == 'After breakage':
     # rectConfig = [(44, 0), xLim[-1] - 44, 10000]
@@ -249,7 +248,7 @@ def plotInset(data, dataErr, keys, colors, ax, recovery=None):
 
     xInset = np.arange(len(data))
     ax_inset.barh(xInset, width=data, xerr=0,
-                  color=colors, edgecolor='black', alpha=0.85, linewidth=0.5)
+                  color=colors, edgecolor='black', alpha=.8, linewidth=0.5)
 
     ax_inset.errorbar(y=xInset, x=data, xerr=dataErr, alpha=1,
                       color='#303030', linestyle='', capsize=2, linewidth=0.75)
@@ -281,11 +280,10 @@ def plotInset(data, dataErr, keys, colors, ax, recovery=None):
     return data, dataErr
 
 
-def plotBars(title, axes, data, colors, a, h, z, recoveryData):
+def plotBars(title, axes, lim, data_before, data_after, colors, a=.9, h='', z=1):
     def configPlot(ax, yTitle, yLim):
-        if yTitle == "Proportionality coefficient $G_0'$ (Pa)":
-            ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
-            ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
+        ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
+        ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
 
         ax.tick_params(axis='x', labelsize=10, length=4)
         ax.tick_params(axis='y', which='both', direction='out', pad=1)
@@ -302,67 +300,54 @@ def plotBars(title, axes, data, colors, a, h, z, recoveryData):
         ax.set_ylabel(yTitle)
         ax.set_ylim(yLim)
 
-        ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 8.25))
-        ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / 33))
+        ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
+        ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / 40))
 
-    axes2 = axes.twinx()
-    axes2.set_title(title, size=10, color='k')
+    configPlot(axes, title, (.0, lim))
 
-    configPlot(axes, "Proportionality coefficient $G_0'$ (Pa)", (.01, 50))
-    configPlot(axes2, "Expoent index $n'$", (.0001, 1.3))
-
-    samples = [d['Sample'] for d in data]
-    kPrime, kPrime_err = [d["k'"] for d in data], [d["± k'"] for d in data]
-    nPrime, nPrime_err = [d["n'"] for d in data], [d["± n'"] for d in data]
+    samples = [d['Sample'] for d in data_before]
+    key = "k'" if 'Proportionality' in title else "n'"
+    height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
+    height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
 
     w, s = 1, 2.75
-    x = np.arange(s * len(data))
+    x = np.arange(s * len(data_before))
 
-    for i in range(len(kPrime)):
+    for i in range(len(height_bef)):
         axes.bar(
             s * x[i] - w / 1.75,
-            height=kPrime[i], yerr=0,
+            height=height_bef[i], yerr=0,
             color=colors[i], edgecolor='#383838',
             width=w, hatch=h, alpha=a, linewidth=.5,
             zorder=z)
         axes.errorbar(
-            x=s * x[i] - w / 1.75, y=kPrime[i], yerr=kPrime_err[i],
-            color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            x=s * x[i] - w / 1.75, y=height_bef[i], yerr=height_bef_err[i],
+            color='#383838', alpha=.9, linewidth=1, capsize=6, capthick=1.05,
             zorder=3)
 
     posList, labelsList = [], []
-    if recoveryData is None:
-        recoveryData = np.zeros(len(nPrime))
-    else:
-        # axes2.text(x[14] + w/2, (nPrime[5] + nPrime_err[5] + .05),
-        #            '$10\\times$',
-        #            size=9, ha='left', va='bottom',
-        #            rotation=0, color=colors[5])
-        pass
 
-    for i in range(len(nPrime)):
-        axes2.bar(
+    for i in range(len(height_aft)):
+        axes.bar(
             s * x[i] + w / 1.75,
-            height=nPrime[i] - recoveryData[i],
+            height=height_aft[i],
             yerr=0,
-            bottom=recoveryData[i],
+            bottom=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch=h, alpha=a, linewidth=.5,
-            zorder=z)
-        axes2.errorbar(
+            width=w, hatch='////', alpha=a, linewidth=.5,
+            zorder=2)
+        axes.errorbar(
             x=s * x[i] + w / 1.75,
-            y=nPrime[i],
-            yerr=nPrime_err[i],
-            color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            y=height_aft[i],
+            yerr=height_aft_err[i],
+            color='#383838', alpha=.99, linewidth=1, capsize=6, capthick=1.05,
             zorder=3)
 
         posList.append(s * x[i] - w / 1.75), posList.append(s * x[i] + w / 1.75)
-        labelsList.append("$G_0'$"), labelsList.append("$n'$")
+        labelsList.append('Before'), labelsList.append('After')
 
-    axes2.set_xticks(posList)
-    axes2.set_xticklabels(labelsList)
-
-    return nPrime
+    axes.set_xticks(posList)
+    axes.set_xticklabels(labelsList, rotation=90)
 
 
 def midAxis(color, ax):
@@ -376,9 +361,9 @@ def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
     fig, axes = plt.subplots(
-        figsize=(21, 7), ncols=3, nrows=1,
-        gridspec_kw={'width_ratios': [1.5, 1.5, 1]}, facecolor='snow')
-    axPre, axPost, axBars = axes[0], axes[1], axes[2],
+        figsize=(21, 7), ncols=4, nrows=1,
+        gridspec_kw={'width_ratios': [1.5, 1.5, 0.6, 0.6]}, facecolor='snow')
+    axPre, axPost, axK, axN = axes[0], axes[1], axes[2], axes[3]
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
     yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** 0, 2 * 10 ** 3)
@@ -386,7 +371,7 @@ def main(dataPath, fileName):
 
     nSamples, colorSamples = getSamplesInfos(
         2, 2, 2, 3,
-        'cornflowerblue', 'mediumturquoise', 'darkorange', 'crimson')
+        '#80ed99', '#57cc99', '#38a3a5', '#22577a')
 
     data, labels = getSamplesData(dataPath, nSamples)
 
@@ -453,19 +438,20 @@ def main(dataPath, fileName):
     #     keys=listBefore.keys(), colors=colorSamples, ax=axPost,
     #     recovery=meanBefore)
 
-    nPrime_recovery = plotBars(
-        "Power law fitting: $ G'(\omega) = G'_0 \omega^{n'} $",
-        axBars, dataFittingBef,
-        colorSamples, a=.65, h='', recoveryData=None, z=1)
-    _ = plotBars(
-        '',
-        axBars, dataFittingAft,
-        colorSamples, a=.85, h='....', recoveryData=nPrime_recovery, z=2)
+    plotBars(
+        "Proportionality coefficient $G_0'$ (Pa)", axK, 40,
+        dataFittingBef, dataFittingAft,
+        colorSamples, z=1)
+
+    plotBars(
+        "Expoent index $n'$", axN, 2,
+        dataFittingBef, dataFittingAft,
+        colorSamples, z=1)
 
     plt.subplots_adjust(
-        wspace=0.155,
+        wspace=0.22,
         top=0.91, bottom=0.1,
-        left=0.05, right=0.96)
+        left=0.04, right=0.99)
     plt.show()
 
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
@@ -474,8 +460,8 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
 
     filePath = [
         # iC CL 14
@@ -495,4 +481,4 @@ if __name__ == '__main__':
         folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-2.xlsx",
     ]
 
-    main(filePath, '0WSt_Car_CL-ViscoelasticRecovery')
+    main(filePath, 'iCar_CL-ViscoelasticRecovery')
