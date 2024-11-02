@@ -1,12 +1,10 @@
 import numpy as np
 import pandas as pd
 from pathlib import Path
-
-from matplotlib.gridspec import GridSpec
-from matplotlib.patches import Rectangle
-from matplotlib.ticker import MultipleLocator
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
+from matplotlib.gridspec import GridSpec
+from matplotlib.ticker import MultipleLocator
 from matplotlib.font_manager import FontProperties
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -185,7 +183,7 @@ def plotFreqSweeps(sampleName,
         idSample = idSample + 1 if individualData else 'Mean'
         axisColor = '#303030'
 
-        ax.set_title(axTitle, size=10, color='k')
+        # ax.set_title(axTitle, size=10, color='k')
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
         ax.tick_params(axis='both', which='both', colors=axisColor)
@@ -281,73 +279,67 @@ def plotInset(data, dataErr, keys, colors, ax, recovery=None):
 
 
 def plotBars(title, axes, lim, data_before, data_after, colors, a=.9, h='', z=1):
-    def configPlot(ax, yTitle, yLim):
-        ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
-        ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
+    def configPlot(ax, yTitle, yLim, xLim):
+        ax.grid(which='major', axis='x', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
+        ax.grid(which='minor', axis='x', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
 
-        ax.tick_params(axis='x', labelsize=10, length=4)
-        ax.tick_params(axis='y', which='both', direction='out', pad=1)
+        ax.tick_params(axis='y', labelsize=10, length=4)
+        ax.tick_params(
+            axis='x', which='both', direction='in', pad=1,
+            labeltop=True, top=True,
+            labelbottom=False, bottom=False)
 
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
-        # ax.yaxis.set_label_position('right')
-        ax.set_xticks([])
-        ax.set_xlim([-1.5, 10])
-        # ax.set_xticklabels(samples)
-        # ax_inset.yaxis.tick_right()
-        # ax_inset.yaxis.set_label_position('right')
-        # ax.set_yticks([])
-        ax.set_ylabel(yTitle)
-        ax.set_ylim(yLim)
+        ax.set_yticks([]), ax.set_ylim(xLim), ax.set_xlim(yLim), ax.set_xlabel(yTitle, labelpad=10, loc='left')
 
-        ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
-        ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / 40))
-
-    configPlot(axes, title, (.0, lim))
+        ax.xaxis.tick_top(), ax.xaxis.set_label_position('top')
+        ax.xaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
+        ax.xaxis.set_minor_locator(MultipleLocator(yLim[1] / 40))
 
     samples = [d['Sample'] for d in data_before]
     key = "k'" if 'Proportionality' in title else "n'"
     height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
     height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
 
-    w, s = 1, 2.75
-    x = np.arange(s * len(data_before))
-
-    for i in range(len(height_bef)):
-        axes.bar(
-            s * x[i] - w / 1.75,
-            height=height_bef[i], yerr=0,
-            color=colors[i], edgecolor='#383838',
-            width=w, hatch=h, alpha=a, linewidth=.5,
-            zorder=z)
-        axes.errorbar(
-            x=s * x[i] - w / 1.75, y=height_bef[i], yerr=height_bef_err[i],
-            color='#383838', alpha=.9, linewidth=1, capsize=6, capthick=1.05,
-            zorder=3)
-
+    bin_width, space_samples, space_break = 1, 2.5, 2
+    x = np.arange(space_samples * len(data_before))
     posList, labelsList = [], []
 
-    for i in range(len(height_aft)):
-        axes.bar(
-            s * x[i] + w / 1.75,
-            height=height_aft[i],
-            yerr=0,
-            bottom=0,
+    configPlot(axes, title, (.0, lim), (x.min()-bin_width-.5, x.max()))
+
+    for i in range(len(height_bef)):
+        axes.barh(
+            space_samples * x[i] + bin_width / space_break,
+            width=height_bef[i], xerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='////', alpha=a, linewidth=.5,
+            height=bin_width, hatch=h, alpha=a, linewidth=.5,
+            zorder=z)
+        axes.errorbar(
+            y=space_samples * x[i] + bin_width / space_break, x=height_bef[i],
+            xerr=height_bef_err[i], color='#383838', alpha=.9,
+            linewidth=1, capsize=5, capthick=1.05, zorder=3)
+
+    for i in range(len(height_aft)):
+        axes.barh(
+            space_samples * x[i] - bin_width / space_break,
+            width=height_aft[i], xerr=0,
+            left=0, color=colors[i], edgecolor='#383838',
+            height=bin_width, hatch='////', alpha=a, linewidth=.5,
             zorder=2)
         axes.errorbar(
-            x=s * x[i] + w / 1.75,
-            y=height_aft[i],
-            yerr=height_aft_err[i],
-            color='#383838', alpha=.99, linewidth=1, capsize=6, capthick=1.05,
+            y=space_samples * x[i] - bin_width / space_break,
+            x=height_aft[i], xerr=height_aft_err[i],
+            color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
 
-        posList.append(s * x[i] - w / 1.75), posList.append(s * x[i] + w / 1.75)
-        labelsList.append('Before'), labelsList.append('After')
+        if i == 3:
+            posList.append(space_samples * x[i] + bin_width / space_break)
+            posList.append(space_samples * x[i] - bin_width / space_break)
+            labelsList.append('Before'), labelsList.append('After')
 
-    axes.set_xticks(posList)
-    axes.set_xticklabels(labelsList, rotation=90)
+    axes.set_yticks(posList)
+    axes.set_yticklabels(labelsList)
 
 
 def midAxis(color, ax):
@@ -360,10 +352,11 @@ def midAxis(color, ax):
 def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
-    fig, axes = plt.subplots(
-        figsize=(21, 7), ncols=4, nrows=1,
-        gridspec_kw={'width_ratios': [1.5, 1.5, 0.6, 0.6]}, facecolor='snow')
-    axPre, axPost, axK, axN = axes[0], axes[1], axes[2], axes[3]
+    fig = plt.figure(figsize=(18, 8), facecolor='snow')
+    gs = GridSpec(2, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1])
+
+    axPre, axPost = fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[:, 1])
+    axK, axN = fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 2])
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
     yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** 0, 2 * 10 ** 3)
@@ -449,9 +442,9 @@ def main(dataPath, fileName):
         colorSamples, z=1)
 
     plt.subplots_adjust(
-        wspace=0.22,
+        wspace=0.164, hspace=0.24,
         top=0.91, bottom=0.1,
-        left=0.04, right=0.99)
+        left=0.045, right=0.99)
     plt.show()
 
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
