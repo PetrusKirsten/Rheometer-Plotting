@@ -109,21 +109,17 @@ def getSamplesInfos(
         # quantity
         st_n, st_kc_n, st_ic_n,
         stCL_n, st_icCL_n,
-        kc_n, kcCL_n,
         # colors
         st_color, st_kc_color, st_ic_color,
-        stCL_color, st_icCL_color,
-        kc_color, kcCL_color
+        stCL_color, st_icCL_color
 ):
     number_samples = [
         st_n, st_kc_n, st_ic_n,
-        stCL_n, st_icCL_n,
-        kc_n, kcCL_n]
+        stCL_n, st_icCL_n]
 
     colors_samples = [
         st_color, st_kc_color, st_ic_color,
-        stCL_color, st_icCL_color,
-        kc_color, kcCL_color]
+        stCL_color, st_icCL_color]
 
     return number_samples, colors_samples
 
@@ -161,9 +157,7 @@ def getSamplesData(
             [sample_keys[1]] * number_samples[1] +
             [sample_keys[2]] * number_samples[2] +
             [sample_keys[3]] * number_samples[3] +
-            [sample_keys[4]] * number_samples[4] +
-            [sample_keys[5]] * number_samples[5] +
-            [sample_keys[6]] * number_samples[6]
+            [sample_keys[4]] * number_samples[4]
     )
 
     for sample_type, path in zip(sample_labels, dataPath):
@@ -191,7 +185,6 @@ def plotFreqSweeps(sampleName,
                    individualData=False, logScale=True,
                    startVal=0, endVal=31, tableData=None):
     def legendLabel():
-        """Applies consistent styling to legends in plots."""
         legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
         legend.get_frame().set_edgecolor('whitesmoke')
@@ -234,12 +227,21 @@ def plotFreqSweeps(sampleName,
         tableData)
 
     ax.errorbar(
-        x[:-3], yP[:-3], yPerr[:-3],
+        x[:-2], yP[:-2], yPerr[:-2],
+        color=curveColor, alpha=.85,
+        fmt='none', mfc=curveColor,
+        capsize=2.5, capthick=1, linestyle='', lw=1,
+        label=f'', zorder=2)
+
+    ax.errorbar(
+        x[:-2], yP[:-2], 0,
         color=curveColor, alpha=.65,
-        fmt='D' if 'CL' in sampleName else 'o', markersize=4.5 if 'CL' in sampleName else 5.25,
-        mfc=curveColor, mec=curveColor, mew=1,
-        capsize=2, lw=1, linestyle='',
+        fmt='D' if 'CL' in sampleName else 'o',
+        markersize=4.6 if 'CL' in sampleName else 5.25,
+        mfc=curveColor, mec='#383838', mew=.75,
+        linestyle='',
         label=f'{sampleName}', zorder=3)
+
     # label=f'{sampleName}_{idSample} | '
     #       + "$\overline{G'} \\approx$" + f'{meanStorage:.0f} ± {storageMeanErr:.0f} ' + '$Pa$',
     # ax.errorbar(
@@ -254,7 +256,7 @@ def plotFreqSweeps(sampleName,
     # rect = Rectangle(*rectConfig, linewidth=.75, edgecolor='#303030', facecolor='snow', alpha=1, zorder=1)
     # ax.add_patch(rect)
 
-    if axTitle == 'Before breakage':
+    if axTitle == 'After breakage':
         legendLabel()
 
     return tableData
@@ -297,88 +299,83 @@ def plotInset(data, dataErr, keys, colors, ax, recovery=None):
     return data, dataErr
 
 
-def plotBars(title, axes, data, colors, a, h, z, recoveryData):
-    def configPlot(ax, yTitle, yLim):
-        if yTitle == "Proportionality coefficient $G_0'$ (Pa)":
-            ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
-            ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
+def plotBars(
+        title, axes, lim,
+        data_before, data_after,
+        colors, scale_correction=False, a=.9, h='', z=1):
+    def configPlot(ax, yTitle, yLim, xLim):
+        ax.grid(which='major', axis='x', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
+        ax.grid(which='minor', axis='x', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
 
-        ax.tick_params(axis='x', labelsize=10, length=4)
-        ax.tick_params(axis='y', which='both', direction='out', pad=1)
+        ax.tick_params(axis='y', labelsize=10, length=4)
+        ax.tick_params(
+            axis='x', which='both', direction='in', pad=1,
+            labeltop=True, top=True,
+            labelbottom=False, bottom=False)
 
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
-        # ax.yaxis.set_label_position('right')
-        ax.set_xticks([])
-        ax.set_xlim([-1.5, 18])
-        # ax.set_xticklabels(samples)
-        # ax_inset.yaxis.tick_right()
-        # ax_inset.yaxis.set_label_position('right')
-        # ax.set_yticks([])
-        ax.set_ylabel(yTitle)
-        ax.set_ylim(yLim)
+        ax.set_yticks([]), ax.set_ylim(xLim), ax.set_xlim(yLim), ax.set_xlabel(yTitle, labelpad=10, loc='left')
 
-        ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 8.25))
-        ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / 33))
+        ax.xaxis.tick_top(), ax.xaxis.set_label_position('top')
+        ax.xaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
+        ax.xaxis.set_minor_locator(MultipleLocator(yLim[1] / 40))
 
-    axes2 = axes.twinx()
-    axes2.set_title(title, size=10, color='k')
+    samples = [d['Sample'] for d in data_before]
+    key = "k'" if 'Proportionality' in title else "n'"
+    height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
+    height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
 
-    configPlot(axes, "Proportionality coefficient $G_0'$ (Pa)", (.01, 1650))
-    configPlot(axes2, "Expoent index $n'$", (.0001, .8250))
+    bin_width, space_samples, space_break = 1, 2.5, 2
+    x = np.arange(space_samples * len(data_before))
+    posList, labelsList = [], []
 
-    samples = [d['Sample'] for d in data]
-    kPrime, kPrime_err = [d["k'"] for d in data], [d["± k'"] for d in data]
-    nPrime, nPrime_err = [d["n'"] for d in data], [d["± n'"] for d in data]
+    configPlot(axes, title, (.0, lim), (x.min()-bin_width-.5, x.max()))
 
-    w, s = 1, 2.75
-    x = np.arange(s * len(data))
+    for i in range(len(height_bef)):
+        if scale_correction:
+            height_bef[i] = height_bef[i] / 10 if i == 5 else height_bef[i]
+            height_bef_err[i] = height_bef_err[i] / 10 if i == 5 else height_bef_err[i]
 
-    for i in range(len(kPrime)):
-        axes.bar(
-            s * x[i] - w / 1.75,
-            height=kPrime[i], yerr=0,
+        axes.barh(
+            space_samples * x[i] + bin_width / space_break,
+            width=height_bef[i], xerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch=h, alpha=a, linewidth=.5,
+            height=bin_width, hatch=h, alpha=a, linewidth=.5,
             zorder=z)
         axes.errorbar(
-            x=s * x[i] - w / 1.75, y=kPrime[i], yerr=kPrime_err[i],
-            color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            y=space_samples * x[i] + bin_width / space_break,
+            x=height_bef[i], xerr=height_bef_err[i],
+            color='#383838', alpha=.9,
+            linewidth=1, capsize=5, capthick=1.05, zorder=3)
+
+    for i in range(len(height_aft)):
+        if scale_correction:
+            height_aft[i] = height_aft[i] / 10 if i == 5 else height_aft[i]
+            height_aft_err[i] = height_aft_err[i] / 10 if i == 5 else height_aft_err[i]
+
+        axes.barh(
+            space_samples * x[i] - bin_width / space_break,
+            width=height_aft[i], xerr=0,
+            left=0, color=colors[i], edgecolor='#383838',
+            height=bin_width, hatch='////', alpha=a, linewidth=.5,
+            zorder=2)
+        axes.errorbar(
+            y=space_samples * x[i] - bin_width / space_break,
+            x=height_aft[i],
+            xerr=height_aft_err[i],
+            color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
 
-    posList, labelsList = [], []
-    scaleFactor = 10  # to fit kCar bar in scale
-    if recoveryData is None:
-        recoveryData = np.zeros(len(nPrime))
-    else:
-        axes2.text(x[14] + w/2, (nPrime[5] + nPrime_err[5] + .05) / scaleFactor,
-                   '$10\\times$',
-                   size=9, ha='left', va='bottom',
-                   rotation=0, color=colors[5])
+        if i == 6:
+            posList.append(space_samples * x[i] + bin_width / space_break)
+            posList.append(space_samples * x[i] - bin_width / space_break)
+            labelsList.append('Before'), labelsList.append('After')
+        if i == 5 and scale_correction:
+            posList.append(space_samples * x[i]), labelsList.append('10×')
 
-    for i in range(len(nPrime)):
-        axes2.bar(
-            s * x[i] + w / 1.75,
-            height=nPrime[i] - recoveryData[i] if i != 5 else (nPrime[i] - recoveryData[i]) / scaleFactor,
-            yerr=0,
-            bottom=recoveryData[i] if i != 5 else recoveryData[i] / scaleFactor,
-            color=colors[i], edgecolor='#383838',
-            width=w, hatch=h, alpha=a, linewidth=.5,
-            zorder=z)
-        axes2.errorbar(
-            x=s * x[i] + w / 1.75,
-            y=nPrime[i] if i != 5 else (nPrime[i]) / scaleFactor,
-            yerr=nPrime_err[i] if i != 5 else nPrime_err[i] / scaleFactor,
-            color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
-            zorder=3)
-
-        posList.append(s * x[i] - w / 1.75), posList.append(s * x[i] + w / 1.75)
-        labelsList.append("$G_0'$"), labelsList.append("$n'$")
-
-    axes2.set_xticks(posList)
-    axes2.set_xticklabels(labelsList)
-
-    return nPrime
+    axes.set_yticks(posList)
+    axes.set_yticklabels(labelsList)
 
 
 def midAxis(color, ax):
@@ -391,22 +388,21 @@ def midAxis(color, ax):
 def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
-    fig, axes = plt.subplots(
-        figsize=(21, 7), ncols=3, nrows=1,
-        gridspec_kw={'width_ratios': [1.5, 1.5, 1]}, facecolor='snow')
-    axPre, axPost, axBars = axes[0], axes[1], axes[2],
+    fig = plt.figure(figsize=(18, 8), facecolor='snow')
+    gs = GridSpec(2, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1])
+
+    axPre, axPost = fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[:, 1])
+    axK, axN = fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 2])
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
-    yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (8 * 10 ** (-3), 5 * 10 ** 3)
+    yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 4)
     xTitle, xLimits = f'Frequency (Hz)', (0.08, 100)
 
     nSamples, colorSamples = getSamplesInfos(
         2, 3, 3,
         2, 3,
-        3, 4,
         'lightgray', 'hotpink', 'deepskyblue',
-        'darkgray', 'mediumblue',
-        'mediumorchid', 'rebeccapurple')
+        'darkgray', 'mediumblue')
 
     data, labels = getSamplesData(dataPath, nSamples)
 
@@ -479,14 +475,15 @@ def main(dataPath, fileName):
     #     keys=listBefore.keys(), colors=colorSamples, ax=axPost,
     #     recovery=meanBefore)
 
-    nPrime_recovery = plotBars(
-        "Power law fitting: $ G'(\omega) = G'_0 \omega^{n'} $",
-        axBars, dataFittingBef,
-        colorSamples, a=.65, h='', recoveryData=None, z=1)
-    _ = plotBars(
-        '',
-        axBars, dataFittingAft,
-        colorSamples, a=.85, h='....', recoveryData=nPrime_recovery, z=2)
+    plotBars(
+        "Proportionality coefficient $G_0'$ (Pa)", axK, 2000,
+        dataFittingBef, dataFittingAft,
+        colorSamples, z=1)
+
+    plotBars(
+        "Expoent index $n'$", axN, .8,
+        dataFittingBef, dataFittingAft, colorSamples,
+        scale_correction=True, z=1)
 
     plt.subplots_adjust(
         wspace=0.155,
@@ -500,8 +497,8 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
 
     filePath = [
         # 0St
@@ -528,17 +525,6 @@ if __name__ == '__main__':
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
-
-        # kC
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
-
-        # kC/CL
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
     ]
 
-    main(filePath, '0WSt_Car_CL-ViscoelasticRecovery')
+    main(filePath, '0St-ViscoelasticRecovery')

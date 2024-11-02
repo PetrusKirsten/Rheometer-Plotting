@@ -105,13 +105,15 @@ def getCteMean(values, tolerance=100):
 
 def getSamplesInfos(
         # quantity
+        n_kc_0, n_kc_14,
         n_ic_14, n_ic_21, n_ic_28, n_ic_42,
         # colors
+        color_kc_0, color_kc_14,
         color_ic_14, color_ic_21, color_ic_28, color_ic_42
 ):
-    number_samples = [n_ic_14, n_ic_21, n_ic_28, n_ic_42]
+    number_samples = [n_kc_0, n_kc_14, n_ic_14, n_ic_21, n_ic_28, n_ic_42]
 
-    colors_samples = [color_ic_14, color_ic_21, color_ic_28, color_ic_42]
+    colors_samples = [color_kc_0, color_kc_14, color_ic_14, color_ic_21, color_ic_28, color_ic_42]
 
     return number_samples, colors_samples
 
@@ -139,6 +141,7 @@ def getSamplesData(
         }
 
     samples = {
+        'kCar': [], 'kCar/CL-14': [],
         'iCar/CL-14': [], 'iCar/CL-21': [], 'iCar/CL-28': [], 'iCar/CL-42': []
     }
     sample_keys = list(samples.keys())
@@ -146,7 +149,9 @@ def getSamplesData(
             [sample_keys[0]] * number_samples[0] +
             [sample_keys[1]] * number_samples[1] +
             [sample_keys[2]] * number_samples[2] +
-            [sample_keys[3]] * number_samples[3])
+            [sample_keys[3]] * number_samples[3] +
+            [sample_keys[4]] * number_samples[4] +
+            [sample_keys[5]] * number_samples[5])
 
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
@@ -235,7 +240,7 @@ def plotFreqSweeps(sampleName,
     # rect = Rectangle(*rectConfig, linewidth=.75, edgecolor='#303030', facecolor='snow', alpha=1, zorder=1)
     # ax.add_patch(rect)
 
-    if axTitle == 'Before breakage':
+    if axTitle == 'After breakage':
         legendLabel()
 
     return tableData
@@ -278,7 +283,10 @@ def plotInset(data, dataErr, keys, colors, ax, recovery=None):
     return data, dataErr
 
 
-def plotBars(title, axes, lim, data_before, data_after, colors, a=.9, h='', z=1):
+def plotBars(
+        title, axes, lim,
+        data_before, data_after,
+        colors, scale_correction=None, a=.9, h='', z=1):
     def configPlot(ax, yTitle, yLim, xLim):
         ax.grid(which='major', axis='x', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
         ax.grid(which='minor', axis='x', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
@@ -309,6 +317,10 @@ def plotBars(title, axes, lim, data_before, data_after, colors, a=.9, h='', z=1)
     configPlot(axes, title, (.0, lim), (x.min()-bin_width-.5, x.max()))
 
     for i in range(len(height_bef)):
+        if scale_correction is not None:
+            height_bef[i] = height_bef[i] / 10 if i == scale_correction else height_bef[i]
+            height_bef_err[i] = height_bef_err[i] / 10 if i == scale_correction else height_bef_err[i]
+
         axes.barh(
             space_samples * x[i] + bin_width / space_break,
             width=height_bef[i], xerr=0,
@@ -321,6 +333,10 @@ def plotBars(title, axes, lim, data_before, data_after, colors, a=.9, h='', z=1)
             linewidth=1, capsize=5, capthick=1.05, zorder=3)
 
     for i in range(len(height_aft)):
+        if scale_correction is not None:
+            height_aft[i] = height_aft[i] / 10 if i == scale_correction else height_aft[i]
+            height_aft_err[i] = height_aft_err[i] / 10 if i == scale_correction else height_aft_err[i]
+
         axes.barh(
             space_samples * x[i] - bin_width / space_break,
             width=height_aft[i], xerr=0,
@@ -333,10 +349,12 @@ def plotBars(title, axes, lim, data_before, data_after, colors, a=.9, h='', z=1)
             color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
 
-        if i == 3:
+        if i == 5:
             posList.append(space_samples * x[i] + bin_width / space_break)
             posList.append(space_samples * x[i] - bin_width / space_break)
             labelsList.append('Before'), labelsList.append('After')
+        if scale_correction is not None and i == scale_correction:
+            posList.append(space_samples * x[i]), labelsList.append('10×')
 
     axes.set_yticks(posList)
     axes.set_yticklabels(labelsList)
@@ -359,11 +377,13 @@ def main(dataPath, fileName):
     axK, axN = fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 2])
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
-    yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** 0, 2 * 10 ** 3)
-    xTitle, xLimits = f'Frequency (Hz)', (0.09, 100)
+    yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 4)
+    xTitle, xLimits = f'Frequency (Hz)', (0.09, 70)
 
     nSamples, colorSamples = getSamplesInfos(
+        3, 4,
         2, 2, 2, 3,
+        'grey', 'k',
         '#80ed99', '#57cc99', '#38a3a5', '#22577a')
 
     data, labels = getSamplesData(dataPath, nSamples)
@@ -372,12 +392,16 @@ def main(dataPath, fileName):
         labels[0]: ([], [], []),
         labels[1]: ([], [], []),
         labels[2]: ([], [], []),
-        labels[3]: ([], [], [])
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], [])
     }, {
         labels[0]: ([], [], []),
         labels[1]: ([], [], []),
         labels[2]: ([], [], []),
-        labels[3]: ([], [], [])
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], [])
     }
 
     meanBefore, meanAfter = [], []
@@ -432,14 +456,14 @@ def main(dataPath, fileName):
     #     recovery=meanBefore)
 
     plotBars(
-        "Proportionality coefficient $G_0'$ (Pa)", axK, 40,
-        dataFittingBef, dataFittingAft,
-        colorSamples, z=1)
+        "Proportionality coefficient $G_0'$ (Pa)", axK, 100,
+        dataFittingBef, dataFittingAft, colorSamples,
+        scale_correction=1, z=1)
 
     plotBars(
-        "Expoent index $n'$", axN, 2,
-        dataFittingBef, dataFittingAft,
-        colorSamples, z=1)
+        "Expoent index $n'$", axN, 1.2,
+        dataFittingBef, dataFittingAft, colorSamples,
+        scale_correction=0, z=1)
 
     plt.subplots_adjust(
         wspace=0.164, hspace=0.24,
@@ -457,6 +481,17 @@ if __name__ == '__main__':
     folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
 
     filePath = [
+        # kC
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+
+        # kC/CL
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
+
         # iC CL 14
         folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-1.xlsx",
         folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-2.xlsx",
@@ -472,6 +507,7 @@ if __name__ == '__main__':
         # iC CL 42
         folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-1.xlsx",
         folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-2.xlsx",
+        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
     ]
 
-    main(filePath, 'iCar_CL-ViscoelasticRecovery')
+    main(filePath, 'Car-ViscoelasticRecovery')
