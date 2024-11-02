@@ -199,8 +199,8 @@ def plotFreqSweeps(sampleName,
         ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
         ax.tick_params(axis='both', which='both', colors=axisColor)
 
-        ax.grid(True, which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5)
-        ax.grid(True, which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5)
+        ax.grid(True, which='major', axis='y', linestyle='-', linewidth=.75, color='lightgrey', alpha=0.75)
+        ax.grid(True, which='minor', axis='y', linestyle='-', linewidth=.50, color='lightgrey', alpha=0.5)
 
         ax.set_xlabel(f'{xLabel}', color=axisColor)
         ax.set_xscale('log' if logScale else 'linear')
@@ -367,12 +367,10 @@ def plotBars(
             color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
 
-        if i == 6:
+        if i == 4:
             posList.append(space_samples * x[i] + bin_width / space_break)
             posList.append(space_samples * x[i] - bin_width / space_break)
             labelsList.append('Before'), labelsList.append('After')
-        if i == 5 and scale_correction:
-            posList.append(space_samples * x[i]), labelsList.append('10×')
 
     axes.set_yticks(posList)
     axes.set_yticklabels(labelsList)
@@ -401,8 +399,8 @@ def main(dataPath, fileName):
     nSamples, colorSamples = getSamplesInfos(
         2, 3, 3,
         2, 3,
-        'lightgray', 'hotpink', 'deepskyblue',
-        'darkgray', 'mediumblue')
+        'silver', 'hotpink', 'lightskyblue',
+        'grey', 'royalblue')
 
     data, labels = getSamplesData(dataPath, nSamples)
 
@@ -483,12 +481,12 @@ def main(dataPath, fileName):
     plotBars(
         "Expoent index $n'$", axN, .8,
         dataFittingBef, dataFittingAft, colorSamples,
-        scale_correction=True, z=1)
+        scale_correction=False, z=1)
 
     plt.subplots_adjust(
-        wspace=0.155,
+        wspace=0.164, hspace=0.24,
         top=0.91, bottom=0.1,
-        left=0.05, right=0.96)
+        left=0.045, right=0.99)
     plt.show()
 
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
@@ -505,7 +503,7 @@ if __name__ == '__main__':
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
 
-        # 0St + kCar
+        # 0St + kCar TODO: idenfity outlier
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",

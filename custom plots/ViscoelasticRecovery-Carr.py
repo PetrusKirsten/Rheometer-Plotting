@@ -193,8 +193,8 @@ def plotFreqSweeps(sampleName,
         ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
         ax.tick_params(axis='both', which='both', colors=axisColor)
 
-        ax.grid(True, which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5)
-        ax.grid(True, which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5)
+        ax.grid(True, which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5)
+        ax.grid(True, which='minor', axis='y', linestyle='-', linewidth=.5, color='lightgray', alpha=0.5)
 
         ax.set_xlabel(f'{xLabel}', color=axisColor)
         ax.set_xscale('log' if logScale else 'linear')
@@ -378,12 +378,12 @@ def main(dataPath, fileName):
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
     yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 4)
-    xTitle, xLimits = f'Frequency (Hz)', (0.09, 70)
+    xTitle, xLimits = f'Frequency (Hz)', (0.09, 100)
 
     nSamples, colorSamples = getSamplesInfos(
         3, 4,
         2, 2, 2, 3,
-        'grey', 'k',
+        '#fb7e8f', '#e30057',
         '#80ed99', '#57cc99', '#38a3a5', '#22577a')
 
     data, labels = getSamplesData(dataPath, nSamples)
@@ -461,7 +461,7 @@ def main(dataPath, fileName):
         scale_correction=1, z=1)
 
     plotBars(
-        "Expoent index $n'$", axN, 1.2,
+        "Expoent index $n'$", axN, 2,
         dataFittingBef, dataFittingAft, colorSamples,
         scale_correction=0, z=1)
 
