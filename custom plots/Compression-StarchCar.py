@@ -147,7 +147,7 @@ def plotCompression(sampleName,
 
         ax.set_xlabel(f'{xLabel}')
         ax.set_xlim(xLim)
-        ax.xaxis.set_minor_locator(MultipleLocator(5 if not linearFitting else 1x))
+        ax.xaxis.set_minor_locator(MultipleLocator(5 if not linearFitting else 1))
         ax.xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}%"))
 
         ax.set_ylabel(f'{yLabel}', color=axisColor)
