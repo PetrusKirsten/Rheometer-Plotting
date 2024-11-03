@@ -108,18 +108,18 @@ def getCteMean(values, tolerance=100):
 def getSamplesInfos(
         # quantity
         st_n, st_kc_n, st_ic_n,
-        stCL_n, st_icCL_n,
+        stCL_n, st_kcCL_n, st_icCL_n,
         # colors
         st_color, st_kc_color, st_ic_color,
-        stCL_color, st_icCL_color
+        stCL_color, st_kcCL_color, st_icCL_color
 ):
     number_samples = [
         st_n, st_kc_n, st_ic_n,
-        stCL_n, st_icCL_n]
+        stCL_n, st_kcCL_n, st_icCL_n]
 
     colors_samples = [
         st_color, st_kc_color, st_ic_color,
-        stCL_color, st_icCL_color]
+        stCL_color, st_kcCL_color, st_icCL_color]
 
     return number_samples, colors_samples
 
@@ -133,12 +133,15 @@ def getSamplesData(
         elastic = dataframe["G' in Pa"].to_numpy()
         loss = dataframe['G" in Pa'].to_numpy()
 
-        # Identifying segments in the data
-        seg2, seg3, seg5, seg6 = (
-            dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1', '5|1', '5|31'])
+        if 'off' in path:
+            seg2, seg3 = (
+                dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1'])
+            segments = lambda arr: (arr[seg2:seg3], arr[seg2:seg3])
 
-        # Slice segments
-        segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6])  # Returns (constant segment, step segment)
+        else:
+            seg2, seg3, seg5, seg6 = (
+                dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1', '5|1', '5|31'])
+            segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6+1])
 
         return {
             'freq': segments(freq),
@@ -148,8 +151,7 @@ def getSamplesData(
 
     samples = {
         '0St': [], '0St + kCar': [], '0St + iCar': [],
-        '0St/CL': [], '0St + iCar/CL': [],
-        'kCar': [], 'kCar/CL': []
+        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
@@ -157,7 +159,8 @@ def getSamplesData(
             [sample_keys[1]] * number_samples[1] +
             [sample_keys[2]] * number_samples[2] +
             [sample_keys[3]] * number_samples[3] +
-            [sample_keys[4]] * number_samples[4]
+            [sample_keys[4]] * number_samples[4] +
+            [sample_keys[5]] * number_samples[5]
     )
 
     for sample_type, path in zip(sample_labels, dataPath):
@@ -185,7 +188,9 @@ def plotFreqSweeps(sampleName,
                    individualData=False, logScale=True,
                    startVal=0, endVal=31, tableData=None):
     def legendLabel():
-        legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+        legend = ax.legend(
+            loc='best', fancybox=False, frameon=True,
+            ncols=2, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
         legend.get_frame().set_edgecolor('whitesmoke')
 
@@ -393,14 +398,14 @@ def main(dataPath, fileName):
     axK, axN = fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 2])
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
-    yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 4)
+    yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (2 * 10 ** 0, 2 * 10 ** 4)
     xTitle, xLimits = f'Frequency (Hz)', (0.08, 100)
 
     nSamples, colorSamples = getSamplesInfos(
         2, 3, 3,
-        2, 3,
+        2, 3, 3,
         'silver', 'hotpink', 'lightskyblue',
-        'grey', 'royalblue')
+        'grey', 'mediumvioletred', 'royalblue')
 
     data, labels = getSamplesData(dataPath, nSamples)
 
@@ -411,7 +416,6 @@ def main(dataPath, fileName):
         labels[3]: ([], [], []),
         labels[4]: ([], [], []),
         labels[5]: ([], [], []),
-        labels[6]: ([], [], []),
     }, {
         labels[0]: ([], [], []),
         labels[1]: ([], [], []),
@@ -419,7 +423,6 @@ def main(dataPath, fileName):
         labels[3]: ([], [], []),
         labels[4]: ([], [], []),
         labels[5]: ([], [], []),
-        labels[6]: ([], [], []),
     }
 
     meanBefore, meanAfter = [], []
@@ -436,33 +439,35 @@ def main(dataPath, fileName):
         gP.append(data[f'{key}_storage_broken'])
         gD.append(data[f'{key}_loss_broken'])
 
-    for k_a, k_b, c in zip(listAfter, listBefore, colorSamples):
-        gP, gD = np.mean(listBefore[k_a][1], axis=1)[0], np.mean(listBefore[k_a][2], axis=1)[0]
-        gPerr, gDerr = np.std(listBefore[k_a][1], axis=1)[0], np.std(listBefore[k_a][2], axis=1)[0]
+    for key, color in zip(listBefore, colorSamples):
+        gP, gD = listBefore[key][1], listBefore[key][2]
+        gPerr, gDerr = np.std(gP, axis=1)[0], np.std(gD, axis=1)[0]
+        gP, gD = np.mean(gP, axis=1)[0], np.mean(gD, axis=1)[0]
 
         meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
         meanBefore.append(meanStorage)
         meanBeforeErr.append(storageMeanErr)
 
         dataFittingBef = plotFreqSweeps(  # Before axes
-            sampleName=k_a,
-            ax=axPre, x=np.mean(listBefore[k_a][0], axis=1)[0],
+            sampleName=key,
+            ax=axPre, x=np.mean(listBefore[key][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='Before breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
+            axTitle='Before breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
             logScale=True, startVal=fitStart, endVal=fitEnd, tableData=dataFittingBef)
 
-        gP, gD = np.mean(listAfter[k_a][1], axis=1)[0], np.mean(listAfter[k_a][2], axis=1)[0]
-        gPerr, gDerr = np.std(listAfter[k_a][1], axis=1)[0], np.std(listAfter[k_a][2], axis=1)[0]
+        gP, gD = listAfter[key][1] if key != '0St + kCar/CL' else listAfter[key][1][0][0], listAfter[key][2]
+        gPerr, gDerr = np.std(gP, axis=1)[0] if key != '0St + kCar/CL' else np.zeros(31), np.std(gD, axis=1)[0]
+        gP, gD = np.mean(gP, axis=1)[0] if key != '0St + kCar/CL' else gP, np.mean(gD, axis=1)[0]
 
         meanStorage, storageMeanErr, _, _ = getCteMean(gP)
         meanAfter.append(meanStorage)
         meanAfterErr.append(storageMeanErr)
 
         dataFittingAft = plotFreqSweeps(  # After axes
-            sampleName=k_a,
-            ax=axPost, x=np.mean(listAfter[k_a][0], axis=1)[0],
+            sampleName=key,
+            ax=axPost, x=np.mean(listAfter[key][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='After breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
+            axTitle='After breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
             logScale=True, startVal=fitStart, endVal=fitEnd, tableData=dataFittingAft)
 
     # plotInsetMean(
@@ -474,7 +479,7 @@ def main(dataPath, fileName):
     #     recovery=meanBefore)
 
     plotBars(
-        "Proportionality coefficient $G_0'$ (Pa)", axK, 2000,
+        "Proportionality coefficient $G_0'$ (Pa)", axK, 8000,
         dataFittingBef, dataFittingAft,
         colorSamples, z=1)
 
@@ -518,6 +523,11 @@ if __name__ == '__main__':
         folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-1.xlsx",
         # folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-2.xlsx",
         folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-3.xlsx",
+
+        # 0St + kCar/CL
+        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-1.xlsx",
+        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-3_off.xlsx",
+        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-4.xlsx",
 
         # 0St + iCar/CL
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
