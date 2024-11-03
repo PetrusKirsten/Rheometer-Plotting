@@ -372,13 +372,14 @@ def plotBars(
             color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
 
-        if i == 4:
+        if i == 0:
             posList.append(space_samples * x[i] + bin_width / space_break)
             posList.append(space_samples * x[i] - bin_width / space_break)
             labelsList.append('Before'), labelsList.append('After')
 
     axes.set_yticks(posList)
     axes.set_yticklabels(labelsList)
+    axes.invert_yaxis()
 
 
 def midAxis(color, ax):
@@ -402,7 +403,7 @@ def main(dataPath, fileName):
     xTitle, xLimits = f'Frequency (Hz)', (0.08, 100)
 
     nSamples, colorSamples = getSamplesInfos(
-        2, 3, 3,
+        2, 2, 3,
         2, 3, 3,
         'silver', 'hotpink', 'lightskyblue',
         'grey', 'mediumvioletred', 'royalblue')
@@ -508,10 +509,10 @@ if __name__ == '__main__':
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
 
-        # 0St + kCar TODO: idenfity outlier
+        # 0St + kCar
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
+        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
 
         # 0St + iCar
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
