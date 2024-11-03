@@ -147,7 +147,7 @@ def plotCompression(sampleName,
 
         ax.set_xlabel(f'{xLabel}')
         ax.set_xlim(xLim)
-        ax.xaxis.set_minor_locator(MultipleLocator(5))
+        ax.xaxis.set_minor_locator(MultipleLocator(5 if not linearFitting else 1x))
         ax.xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}%"))
 
         ax.set_ylabel(f'{yLabel}', color=axisColor)
@@ -156,10 +156,6 @@ def plotCompression(sampleName,
         ax.tick_params(axis='y', colors=axisColor, which='both')
         ax.yaxis.set_major_locator(MultipleLocator(200 if not linearFitting else 100))
         ax.yaxis.set_minor_locator(MultipleLocator(50 if not linearFitting else 25))
-        if linearFitting:
-            ax.tick_params(axis='y', which='both', direction='in', pad=-28)
-            y_tick_labels = ["" if tick == 0 else f"{int(tick)}" for tick in ax.get_yticks()]
-            ax.set_yticklabels(y_tick_labels)
 
     if linearFitting:
         x_toFit, y_toFit = arraySplit(x, y, startVal, endVal)
@@ -175,16 +171,23 @@ def plotCompression(sampleName,
         yFit = fitLinear(xFit, slope, intercept)
         ax.plot(  # plot fit curve
             xFit, yFit,
-            color=markerFColor, alpha=0.8, lw=.75, linestyle='-',
+            color=markerFColor, alpha=0.8, lw=1, linestyle='--',
             label=f'Linear fitting', zorder=4)
 
-        ax.errorbar(  # plot raw data
-            x, np.abs(y) + 5, yErr,
-            color=curveColor, alpha=0.65,
-            fmt=markerStyle, markersize=4.5, mfc=markerFColor, mec=markerFColor, mew=markerEWidth,
-            capsize=1.5, lw=1, linestyle='',
-            label=f'',
-            zorder=3)
+        ax.errorbar(
+            x, y, yErr,
+            color=curveColor, alpha=.85,
+            fmt='none', mfc=curveColor,
+            capsize=2.5, capthick=1, linestyle='', lw=1,
+            label=f'', zorder=2)
+
+        ax.errorbar(
+            x, y, 0,
+            color=curveColor, alpha=.65,
+            fmt='o', markersize=5.4,
+            mfc=curveColor, mec='#383838', mew=.75,
+            linestyle='',
+            label=f'{sampleName}', zorder=3)
         # show text and rectangle at the linear region
 
         # DRAW DATA
@@ -212,12 +215,19 @@ def plotCompression(sampleName,
 
     else:
         ax.errorbar(
-            x, y, yErr,
-            color=curveColor, alpha=0.65,
-            fmt=markerStyle, markersize=4.5, mfc=markerFColor, mec=markerFColor, mew=markerEWidth,
-            capsize=1.5, lw=1, linestyle='',
-            label=f'{sampleName}',
-            zorder=3)
+            x[::2], y[::2], yErr[::2],
+            color=curveColor, alpha=.85,
+            fmt='none', mfc=curveColor,
+            capsize=2.5, capthick=1, linestyle='', lw=1,
+            label=f'', zorder=2)
+
+        ax.errorbar(
+            x[::2], y[::2], 0,
+            color=curveColor, alpha=.65,
+            fmt='o', markersize=5.4,
+            mfc=curveColor, mec='#383838', mew=.75,
+            linestyle='',
+            label=f'{sampleName}', zorder=3)
         legendLabel()
 
     configPlot()
@@ -225,65 +235,79 @@ def plotCompression(sampleName,
     return tableData if linearFitting else None
 
 
-def plotBars(axes, data, keys, colors, a, h, z):
+def plotBars(axes, data, keys, colors, h, z, a=.9):
     def configPlot(ax, yTitle, yLim):
-        if yTitle == 'Stress peak (Pa)':
+        if yTitle == 'Young modulus (Pa)':
             ax.grid(which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
             ax.grid(which='minor', axis='y', linestyle='--', linewidth=.5, color='lightgray', alpha=0.5, zorder=-1)
 
         ax.tick_params(axis='x', labelsize=10, length=4)
-        ax.tick_params(axis='y', which='both', direction='out', pad=1)
+        ax.tick_params(axis='y', which='both', labelsize=9, pad=1, length=0)
 
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
-        # ax.yaxis.set_label_position('right')
         ax.set_xticks([])
-        ax.set_xlim([-2, 12.5])
-        # ax.set_xticklabels(samples)
-        # ax_inset.yaxis.tick_right()
-        # ax_inset.yaxis.set_label_position('right')
-        # ax.set_yticks([])
+        ax.set_xlim([-2, 13.5])
+
         ax.set_ylabel(yTitle)
         ax.set_ylim(yLim)
 
-        ax.yaxis.set_major_locator(MultipleLocator(yLim[-1] / 4))
-        ax.yaxis.set_minor_locator(MultipleLocator(yLim[-1] / 16))
+        ax.yaxis.set_major_locator(MultipleLocator(yLim[-1] / 5))
+        ax.yaxis.set_minor_locator(MultipleLocator(yLim[-1] / 20))
 
     axes2 = axes.twinx()
 
-    configPlot(axes, "Stress peak (Pa)", (0, 1200))
-    configPlot(axes2, "Young modulus (Pa)", (0, 2300))
+    lim1, lim2 = (0, 2500), (0, 750)
+
+    configPlot(axes, "Young modulus (Pa)", lim1)
+    configPlot(axes2, "Stress peak (Pa)", lim2)
 
     posList, labelsList = [], []
 
-    w, s = 1, 3
+    bin_width, space_samples = 1, 3
     samples = keys
-    x = np.arange(s * len(samples))
+    x = np.arange(space_samples * len(samples))
     for i in range(len(samples)):
         slope, slope_err = data[i]['Slope (Pa)'], data[i]['Slope (Pa) err']
         peak, peak_err = data[i]['Tensile stress (Pa)'], data[i]['Tensile stress (Pa) err']
         
         axes.bar(
-            s * x[i] - w,
+            space_samples * x[i] - bin_width,
             height=slope, yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='//////', alpha=a, linewidth=.5,
+            width=bin_width, hatch='///', alpha=a, linewidth=.5,
             zorder=z)
         axes.errorbar(
-            x=s * x[i] - w, y=slope, yerr=slope_err,
-            color=colors[i], alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            x=space_samples * x[i] - bin_width, y=slope, yerr=slope_err,
+            color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
+        axes.text(
+            space_samples * x[i] - bin_width - .15,
+            slope + slope_err + lim1[1]*.075,
+            f'{slope:.{1}f} ± {slope_err:.{1}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
 
         axes2.bar(
-            s * x[i],
+            space_samples * x[i],
             height=peak, yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='....', alpha=a, linewidth=.5,
+            width=bin_width, hatch='', alpha=a, linewidth=.5,
             zorder=z)
         axes2.errorbar(
-            x=s * x[i], y=peak, yerr=peak_err,
-            color=colors[i], alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+            x=space_samples * x[i], y=peak, yerr=peak_err,
+            color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
+        axes2.text(
+            space_samples * x[i] - .15,
+            peak + peak_err + lim2[1]*.075,
+            f'{peak:.{1}f} ± {peak_err:.{1}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
+
+        posList.append(space_samples * x[i] - bin_width)
+        posList.append(space_samples * x[i])
+        labelsList.append("YM"), labelsList.append("Peak")
 
     axes.set_xticks(posList)
     axes.set_xticklabels(labelsList, rotation=45)
@@ -303,8 +327,8 @@ def main(dataPath, fileName):
     nSamples, colorSamples = getSamplesInfos(
         3, 2, 5,
         4, 2,
-        'darkgray', 'crimson', 'mediumblue',
-        'mediumorchid', 'rebeccapurple')
+        'grey', 'mediumvioletred', 'royalblue',
+        '#fb7e8f', '#e30057')
 
     raw_data, labels = getSamplesData(dataPath, nSamples)
 
@@ -329,7 +353,7 @@ def main(dataPath, fileName):
             sampleName=f'{k}',
             ax=axComplete, axisColor='k',
             x=strain, y=stress, yErr=stressErr,
-            axTitle='', yLabel='Stress (Pa)', yLim=(0, 1100), xLabel='Strain', xLim=(0, 99.9),
+            axTitle='', yLabel='Stress (Pa)', yLim=(0, 1100), xLabel='Strain', xLim=(0, 100),
             curveColor=c, markerStyle='o', markerFColor=c, markerEColor='k',
             linearFitting=False)
 
@@ -337,18 +361,18 @@ def main(dataPath, fileName):
             sampleName=f'{k}',
             ax=axFit, axisColor='k',
             x=strain[:35], y=stress[:35], yErr=stressErr[:35],
-            axTitle='', yLabel='', yLim=(0, 425), xLabel='Strain', xLim=(.001, 30),
+            axTitle='', yLabel='Stress (Pa)', yLim=(0, 425), xLabel='Strain', xLim=(0, 30),
             curveColor=c, markerStyle='o', markerFColor=c, markerEColor='k',
             linearFitting=True, tableData=dataFitting)
 
     plotBars(
         axBars, dataFitting, labels,
-        colorSamples, a=.65, h='', z=2)
+        colorSamples, h='', z=2)
 
     plt.subplots_adjust(
-        wspace=0, hspace=0,
+        wspace=0.15, hspace=0.1,
         top=0.940, bottom=0.08,
-        left=0.065, right=0.975)
+        left=0.05, right=0.96)
     plt.show()
 
     dirSave = Path(*Path(filesPath[0]).parts[:Path(filesPath[0]).parts.index('data') + 1])
@@ -358,8 +382,8 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
 
     filesPath = [
         # 0St/CL
@@ -391,4 +415,4 @@ if __name__ == '__main__':
         folderPath + "/231024/kC_CL/kC_CL-compression-4.xlsx",  # 99
     ]
 
-    main(filesPath, '0St_Car_andCL-CompressionToBreakage')
+    main(filesPath, '0St_Car-CompressionToBreakage')

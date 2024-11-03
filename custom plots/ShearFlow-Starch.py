@@ -60,21 +60,17 @@ def getSamplesInfos(
         # quantity
         st_n, st_kc_n, st_ic_n,
         stCL_n, st_kcCL_n, st_icCL_n,
-        kc_n, kcCL_n,
         # colors
         st_color, st_kc_color, st_ic_color,
-        stCL_color, st_kcCL_color, st_icCL_color,
-        kc_color, kcCL_color
+        stCL_color, st_kcCL_color, st_icCL_color
 ):
     number_samples = [
         st_n, st_kc_n, st_ic_n,
-        stCL_n, st_kcCL_n, st_icCL_n,
-        kc_n, kcCL_n]
+        stCL_n, st_kcCL_n, st_icCL_n]
 
     colors_samples = [
         st_color, st_kc_color, st_ic_color,
-        stCL_color, st_kcCL_color, st_icCL_color,
-        kc_color, kcCL_color]
+        stCL_color, st_kcCL_color, st_icCL_color]
 
     return number_samples, colors_samples
 
@@ -103,8 +99,7 @@ def getSamplesData(dataPath, number_samples):
 
     samples = {
         '0St': [], '0St + kCar': [], '0St + iCar': [],
-        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': [],
-        'kCar': [], 'kCar/CL': []
+        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
@@ -113,9 +108,7 @@ def getSamplesData(dataPath, number_samples):
             [sample_keys[2]] * number_samples[2] +
             [sample_keys[3]] * number_samples[3] +
             [sample_keys[4]] * number_samples[4] +
-            [sample_keys[5]] * number_samples[5] +
-            [sample_keys[6]] * number_samples[6] +
-            [sample_keys[7]] * number_samples[7]
+            [sample_keys[5]] * number_samples[5]
     )
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
@@ -211,7 +204,7 @@ def plotBars(title, axes, data, colors, a, z):
             ax.yaxis.tick_left()
             ax.yaxis.set_label_position('left')
             ax.tick_params(axis='y', which='both', direction='in', length=0, labelsize=9, pad=-15)
-            ax.yaxis.set_label_coords(0.075, 0.5)
+            ax.yaxis.set_label_coords(0.06, 0.5)
         else:
             ax.tick_params(
                 axis='y', which='both', labelsize=9, pad=1, length=0)
@@ -220,7 +213,7 @@ def plotBars(title, axes, data, colors, a, z):
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
 
         ax.set_xticks([])
-        ax.set_xlim([-3, 23])
+        ax.set_xlim([-2, 17])
 
         ax.set_ylabel(yTitle)
         ax.set_ylim(yLim)
@@ -323,10 +316,8 @@ def main(dataPath):
     nSamples, colorSamples = getSamplesInfos(
         2, 2, 3,
         3, 1, 3,
-        3, 4,
         'silver', 'hotpink', 'lightskyblue',
-        'grey', 'mediumvioletred', 'royalblue',
-        '#fb7e8f', '#e30057')
+        'grey', 'mediumvioletred', 'royalblue')
     data, labels = getSamplesData(dataPath, nSamples)
 
     dictData = {
@@ -336,8 +327,6 @@ def main(dataPath):
         labels[3]: ([], [], []),
         labels[4]: ([], [], []),
         labels[5]: ([], [], []),
-        labels[6]: ([], [], []),
-        labels[7]: ([], [], []),
     }
 
     for key, (x, s, v) in dictData.items():
