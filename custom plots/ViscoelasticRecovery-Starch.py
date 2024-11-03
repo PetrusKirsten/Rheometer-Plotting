@@ -242,7 +242,7 @@ def plotFreqSweeps(sampleName,
         x[:-2], yP[:-2], 0,
         color=curveColor, alpha=.65,
         fmt='D' if 'CL' in sampleName else 'o',
-        markersize=4.6 if 'CL' in sampleName else 5.25,
+        markersize=4.6 if 'CL' in sampleName else 5.4,
         mfc=curveColor, mec='#383838', mew=.75,
         linestyle='',
         label=f'{sampleName}', zorder=3)
@@ -307,14 +307,15 @@ def plotInset(data, dataErr, keys, colors, ax, recovery=None):
 def plotBars(
         title, axes, lim,
         data_before, data_after,
-        colors, scale_correction=False, a=.9, h='', z=1):
+        colors, flt,
+        scale_correction=False, a=.9, h='', z=1):
     def configPlot(ax, yTitle, yLim, xLim):
         ax.grid(which='major', axis='x', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
         ax.grid(which='minor', axis='x', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
 
         ax.tick_params(axis='y', labelsize=10, length=4)
         ax.tick_params(
-            axis='x', which='both', direction='in', pad=1,
+            axis='x', which='both', labelsize=9, pad=1, length=0,
             labeltop=True, top=True,
             labelbottom=False, bottom=False)
 
@@ -323,8 +324,8 @@ def plotBars(
         ax.set_yticks([]), ax.set_ylim(xLim), ax.set_xlim(yLim), ax.set_xlabel(yTitle, labelpad=10, loc='left')
 
         ax.xaxis.tick_top(), ax.xaxis.set_label_position('top')
-        ax.xaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
-        ax.xaxis.set_minor_locator(MultipleLocator(yLim[1] / 40))
+        ax.xaxis.set_major_locator(MultipleLocator(yLim[1] / 5))
+        ax.xaxis.set_minor_locator(MultipleLocator(yLim[1] / 20))
 
     samples = [d['Sample'] for d in data_before]
     key = "k'" if 'Proportionality' in title else "n'"
@@ -343,16 +344,22 @@ def plotBars(
             height_bef_err[i] = height_bef_err[i] / 10 if i == 5 else height_bef_err[i]
 
         axes.barh(
-            space_samples * x[i] + bin_width / space_break,
+            space_samples * x[i] - bin_width / space_break,
             width=height_bef[i], xerr=0,
             color=colors[i], edgecolor='#383838',
             height=bin_width, hatch=h, alpha=a, linewidth=.5,
             zorder=z)
         axes.errorbar(
-            y=space_samples * x[i] + bin_width / space_break,
+            y=space_samples * x[i] - bin_width / space_break,
             x=height_bef[i], xerr=height_bef_err[i],
             color='#383838', alpha=.9,
             linewidth=1, capsize=5, capthick=1.05, zorder=3)
+        axes.text(
+            height_bef[i] + height_bef_err[i] + max(height_aft)*0.1,
+            space_samples * x[i] - bin_width / space_break,
+            f'{height_bef[i]:.{flt}f} ± {height_bef_err[i]:.{flt}f}',
+            va='center_baseline', ha='left',
+            color='#383838', fontsize=9)
 
     for i in range(len(height_aft)):
         if scale_correction:
@@ -360,21 +367,27 @@ def plotBars(
             height_aft_err[i] = height_aft_err[i] / 10 if i == 5 else height_aft_err[i]
 
         axes.barh(
-            space_samples * x[i] - bin_width / space_break,
+            space_samples * x[i] + bin_width / space_break,
             width=height_aft[i], xerr=0,
             left=0, color=colors[i], edgecolor='#383838',
             height=bin_width, hatch='////', alpha=a, linewidth=.5,
             zorder=2)
         axes.errorbar(
-            y=space_samples * x[i] - bin_width / space_break,
+            y=space_samples * x[i] + bin_width / space_break,
             x=height_aft[i],
             xerr=height_aft_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
             zorder=3)
+        axes.text(
+            height_aft[i] + height_aft_err[i] + max(height_aft)*0.1,
+            space_samples * x[i] + bin_width / space_break,
+            f'{height_aft[i]:.{flt}f} ± {height_aft_err[i]:.{flt}f}',
+            va='center_baseline', ha='left',
+            color='#383838', fontsize=9)
 
         if i == 0:
-            posList.append(space_samples * x[i] + bin_width / space_break)
             posList.append(space_samples * x[i] - bin_width / space_break)
+            posList.append(space_samples * x[i] + bin_width / space_break)
             labelsList.append('Before'), labelsList.append('After')
 
     axes.set_yticks(posList)
@@ -392,7 +405,7 @@ def midAxis(color, ax):
 def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
-    fig = plt.figure(figsize=(18, 8), facecolor='snow')
+    fig = plt.figure(figsize=(18, 7), facecolor='snow')
     gs = GridSpec(2, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1])
 
     axPre, axPost = fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[:, 1])
@@ -480,19 +493,19 @@ def main(dataPath, fileName):
     #     recovery=meanBefore)
 
     plotBars(
-        "Proportionality coefficient $G_0'$ (Pa)", axK, 8000,
+        "Proportionality coefficient $G_0'$ (Pa)", axK, 10000,
         dataFittingBef, dataFittingAft,
-        colorSamples, z=1)
+        colorSamples, 0, z=1)
 
     plotBars(
-        "Expoent index $n'$", axN, .8,
-        dataFittingBef, dataFittingAft, colorSamples,
+        "Expoent index $n'$", axN, 1,
+        dataFittingBef, dataFittingAft, colorSamples, 3,
         scale_correction=False, z=1)
 
     plt.subplots_adjust(
         wspace=0.164, hspace=0.24,
         top=0.91, bottom=0.1,
-        left=0.045, right=0.99)
+        left=0.045, right=0.98)
     plt.show()
 
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
