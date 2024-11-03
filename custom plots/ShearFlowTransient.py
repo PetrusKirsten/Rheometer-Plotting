@@ -58,21 +58,17 @@ def getSamplesInfos(
         # quantity
         st_n, st_kc_n, st_ic_n,
         stCL_n, st_kcCL_n, st_icCL_n,
-        kc_n, kcCL_n,
         # colors
         st_color, st_kc_color, st_ic_color,
         stCL_color, st_kcCL_color, st_icCL_color,
-        kc_color, kcCL_color
 ):
     number_samples = [
         st_n, st_kc_n, st_ic_n,
-        stCL_n, st_kcCL_n, st_icCL_n,
-        kc_n, kcCL_n]
+        stCL_n, st_kcCL_n, st_icCL_n]
 
     colors_samples = [
         st_color, st_kc_color, st_ic_color,
-        stCL_color, st_kcCL_color, st_icCL_color,
-        kc_color, kcCL_color]
+        stCL_color, st_kcCL_color, st_icCL_color]
 
     return number_samples, colors_samples
 
@@ -103,8 +99,7 @@ def getSamplesData(dataPath, number_samples):
 
     samples = {
         '0St': [], '0St + kCar': [], '0St + iCar': [],
-        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': [],
-        'kCar': [], 'kCar/CL': []
+        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
@@ -113,9 +108,7 @@ def getSamplesData(dataPath, number_samples):
             [sample_keys[2]] * number_samples[2] +
             [sample_keys[3]] * number_samples[3] +
             [sample_keys[4]] * number_samples[4] +
-            [sample_keys[5]] * number_samples[5] +
-            [sample_keys[6]] * number_samples[6] +
-            [sample_keys[7]] * number_samples[7])
+            [sample_keys[5]] * number_samples[5])
 
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
@@ -148,7 +141,7 @@ def plotFlow(listRows, sampleName,
         legend = ax.legend(
             fancybox=False, frameon=True,
             framealpha=0.9, fontsize=9, ncols=2,
-            loc='upper left'
+            loc='upper right'
         )
         legend.get_frame().set_facecolor('w')
         legend.get_frame().set_edgecolor('whitesmoke')
@@ -169,8 +162,7 @@ def plotFlow(listRows, sampleName,
         ax.yaxis.set_major_locator(MultipleLocator(100))
         ax.yaxis.set_minor_locator(MultipleLocator(25))
 
-    params, covariance = curve_fit(
-        funcTransient, x, y)
+    params, covariance = curve_fit(funcTransient, x, y)
     # p0=(x[0], y[-1], 100))  # method='trf')  # method='dogbox', maxfev=5000)
     errors = np.sqrt(np.diag(covariance))
 
@@ -184,14 +176,28 @@ def plotFlow(listRows, sampleName,
         listRows)
 
     ax.errorbar(
-        x, y, yerr=yErr, color=curveColor, alpha=.65,
-        fmt=markerStyle, markersize=7, mec='k', mew=0.5,
-        capsize=3, lw=.5, linestyle='',  # ecolor='k'
+        x[::2] if sampleName == '0St + iCar' else x[::4],
+        y[::2] if sampleName == '0St + iCar' else y[::4],
+        yerr=yErr[::2] if sampleName == '0St + iCar' else yErr[::4],
+        color=curveColor, alpha=.85,
+        fmt='none', mfc=curveColor,
+        capsize=2.5, capthick=1, lw=1, linestyle='',
+        label=f'', zorder=2)
+
+    ax.errorbar(
+        x[::2] if sampleName == '0St + iCar' else x[::4],
+        y[::2] if sampleName == '0St + iCar' else y[::4],
+        yerr=0,
+        color=curveColor, alpha=.65,
+        fmt='D' if 'CL' in sampleName else 'o',
+        markersize=6.5 if 'CL' in sampleName else 7,
+        mfc=curveColor, mec='#383838', mew=.75,
+        linestyle='',
         label=f'{sampleName}', zorder=3)
 
     ax.plot(
-        x_fit, y_fit, color=curveColor, linestyle='-.', linewidth=.75,
-        zorder=2)
+        x_fit, y_fit, color=curveColor, linestyle='--', linewidth=1,
+        zorder=4)
 
     configPlot()
     legendLabel()
@@ -206,20 +212,22 @@ def plotBars(title, axes, data, colors, a, z):
             ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
             ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
 
+        ax.tick_params(axis='x', labelsize=10, length=4)
+
         if yTitle == "$\\tau_e$ (Pa)":
             ax.yaxis.tick_left()
             ax.yaxis.set_label_position('left')
-            ax.tick_params(axis='y', which='both', direction='in', pad=-28)
-            ax.yaxis.set_label_coords(.125, .5)
-
-        ax.tick_params(axis='x', labelsize=10, length=4)
-        # ax.tick_params(axis='y', which='both', direction='out', pad=1)
+            ax.tick_params(axis='y', which='both', direction='in', length=0, labelsize=9, pad=-17)
+            ax.yaxis.set_label_coords(0.1, 0.5)
+        else:
+            ax.tick_params(
+                axis='y', which='both', labelsize=9, pad=1, length=0)
 
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
 
         ax.set_xticks([])
-        ax.set_xlim([-3.5, 23])
+        ax.set_xlim([-2.5, 17])
 
         ax.set_ylabel(yTitle)
         ax.set_ylim(yLim)
@@ -229,55 +237,75 @@ def plotBars(title, axes, data, colors, a, z):
 
     axes2, axes3 = axes.twinx(), axes.twinx()
 
-    configPlot(axes, "$\\tau_0$ (Pa)", (0, 1600))
-    configPlot(axes2, "$\\tau_e$ (Pa)", (0, 500))
-    configPlot(axes3, "$\lambda$ (s)", (0, 55))
+    lim1, lim2, lim3 = (0, 2000), (0, 750), (0, 75)
+
+    configPlot(axes, "$\\tau_0$ (Pa)", lim1)
+    configPlot(axes2, "$\\tau_e$ (Pa)", lim2)
+    configPlot(axes3, "$\lambda$ (s)", lim3)
 
     samples = [d['Sample'] for d in data]
     kPrime, kPrime_err = [d["$\\tau_0$"] for d in data], [d["± $\\tau_0$"] for d in data]
     nPrime, nPrime_err = [d["$\\tau_e$"] for d in data], [d["± $\\tau_e$"] for d in data]
     sigmaZero, sigmaZero_err = [d["$\lambda$"] for d in data], [d["± $\lambda$"] for d in data]
 
-    w, s = 0.8, 3
-    x = np.arange(s * len(data))
+    bin_width, space_samples = 0.8, 3
+    x = np.arange(space_samples * len(data))
 
     posList, labelsList = [], []
 
     for i in range(len(kPrime)):
         axes.bar(
-            s * x[i] - w,
+            space_samples * x[i] - bin_width,
             height=kPrime[i], yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='////', alpha=a, linewidth=.5,
+            width=bin_width, hatch='////', alpha=a, linewidth=.5,
             zorder=z)
         axes.errorbar(
-            x=s * x[i] - w, y=kPrime[i], yerr=kPrime_err[i],
+            x=space_samples * x[i] - bin_width, y=kPrime[i], yerr=kPrime_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
             zorder=3)
+        axes.text(
+            space_samples * x[i] - bin_width - .15,
+            kPrime[i] + kPrime_err[i] + lim1[1]*.075,
+            f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
 
         axes2.bar(
-            s * x[i],
+            space_samples * x[i],
             height=nPrime[i], yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='....', alpha=a, linewidth=.5,
+            width=bin_width, hatch='....', alpha=a, linewidth=.5,
             zorder=z)
         axes2.errorbar(
-            x=s * x[i], y=nPrime[i], yerr=nPrime_err[i],
+            x=space_samples * x[i], y=nPrime[i], yerr=nPrime_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
             zorder=3)
+        axes2.text(
+            space_samples * x[i] - .15,
+            nPrime[i] + nPrime_err[i] + lim2[1]*.075,
+            f'{nPrime[i]:.{1}f} ± {nPrime_err[i]:.{1}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
 
         axes3.bar(
-            s * x[i] + w,
+            space_samples * x[i] + bin_width,
             height=sigmaZero[i], yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='', alpha=a, linewidth=.5,
+            width=bin_width, hatch='', alpha=a, linewidth=.5,
             zorder=z)
         axes3.errorbar(
-            x=s * x[i] + w, y=sigmaZero[i], yerr=sigmaZero_err[i],
+            x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
             zorder=3)
+        axes3.text(
+            space_samples * x[i] + bin_width - .15,
+            sigmaZero[i] + sigmaZero_err[i] + lim3[1]*.075,
+            f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
 
-        posList.append(s * x[i] - w), posList.append(s * x[i]), posList.append(s * x[i] + w)
+        posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(space_samples * x[i] + bin_width)
         labelsList.append("$\\tau_0$"), labelsList.append("$\\tau_e$"), labelsList.append("$\lambda$")
 
     axes.set_xticks(posList)
@@ -296,8 +324,8 @@ def main(dataPath):
     axStress, axBars = axes[0], axes[1]
 
     fig.suptitle(f'Constant shear rate flow')
-    xTitle, xLimits = (f'Time (s)', (0, 200))
-    yTitle, yLimits = (f'Shear stressMean (Pa)', (0, 800))
+    xTitle, xLimits = (f'Time (s)', (0, 180))
+    yTitle, yLimits = (f'Shear stress (Pa)', (0, 700))
     yTitleVisc, yLimitsVisc = f'Viscosity (mPa·s)', (yLimits[0] * 3.33, yLimits[1] * 3.33)
 
     axesVisc = axStress.twinx()
@@ -308,12 +336,10 @@ def main(dataPath):
     axesVisc.yaxis.set_minor_locator(MultipleLocator(50))
 
     nSamples, colorSamples = getSamplesInfos(
-        2, 3, 3,
+        2, 2, 3,
         3, 1, 3,
-        3, 4,
-        'lightgray', 'hotpink', 'deepskyblue',
-        'darkgray', 'crimson', 'mediumblue',
-        'mediumorchid', 'rebeccapurple')
+        'silver', 'hotpink', 'lightskyblue',
+        'grey', 'mediumvioletred', 'royalblue')
     data, labels = getSamplesData(dataPath, nSamples)
 
     fitModeStress, fitModeVisc = 'transient', ''
@@ -325,8 +351,6 @@ def main(dataPath):
         labels[3]: ([], [], []),
         labels[4]: ([], [], []),
         labels[5]: ([], [], []),
-        labels[6]: ([], [], []),
-        labels[7]: ([], [], []),
     }
 
     tableStress = []
@@ -367,12 +391,12 @@ def main(dataPath):
         colorSamples, a=.85, z=2)
 
     plt.subplots_adjust(
-        hspace=0, wspace=0.30,
-        top=0.940, bottom=0.095,
-        left=0.090, right=0.900)
+        hspace=0, wspace=0.21,
+        top=0.92, bottom=0.075,
+        left=0.045, right=0.96)
     plt.show()
 
-    fileName = 'St_Car_CL-Thixotropy'
+    fileName = '0St-Thixotropy'
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
     fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
 
@@ -393,7 +417,7 @@ if __name__ == '__main__':
         # 0St + kCar
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
+        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
 
         # 0St + iCar
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
@@ -415,16 +439,16 @@ if __name__ == '__main__':
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
         folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
 
-        # kC
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
-
-        # kC/CL
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
+        # # kC
+        # folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
+        # folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+        #
+        # # kC/CL
+        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
+        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
     ]
 
     main(dataPath=filePath)
