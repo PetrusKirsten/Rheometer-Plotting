@@ -180,8 +180,17 @@ def plotFlow(listRows, sampleName,
     ax.errorbar(
         x, y, yerr=yErr,
         color=curveColor, alpha=.85,
-        fmt=markerStyle, markersize=7, mec='k', mew=0.5,
-        capsize=3, lw=.5, linestyle='',  # ecolor='k'
+        fmt='none', mfc=curveColor,
+        capsize=2.5, capthick=1, lw=1, linestyle='',
+        label=f'', zorder=2)
+
+    ax.errorbar(
+        x, y, yerr=0,
+        color=curveColor, alpha=.65,
+        fmt='D' if 'CL' in sampleName else 'o',
+        markersize=6.5 if 'CL' in sampleName else 7,
+        mfc=curveColor, mec='#383838', mew=.75,
+        linestyle='',
         label=f'{sampleName}', zorder=3)
 
     legendLabel()
@@ -196,14 +205,16 @@ def plotBars(title, axes, data, colors, a, z):
             ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
             ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
 
+        ax.tick_params(axis='x', labelsize=10, length=4)
+        # ax.tick_params(axis='y', which='both', direction='out', pad=1)
         if yTitle == "$n'$":
             ax.yaxis.tick_left()
             ax.yaxis.set_label_position('left')
-            ax.tick_params(axis='y', which='both', direction='in', pad=-25)
-            ax.yaxis.set_label_coords(0.1, 0.5)
-
-        ax.tick_params(axis='x', labelsize=10, length=4)
-        # ax.tick_params(axis='y', which='both', direction='out', pad=1)
+            ax.tick_params(axis='y', which='both', direction='in', length=0, labelsize=9, pad=-15)
+            ax.yaxis.set_label_coords(0.075, 0.5)
+        else:
+            ax.tick_params(
+                axis='y', which='both', labelsize=9, pad=1, length=0)
 
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
@@ -219,55 +230,75 @@ def plotBars(title, axes, data, colors, a, z):
 
     axes2, axes3 = axes.twinx(), axes.twinx()
 
-    configPlot(axes, "$k'$", (0, 75))
-    configPlot(axes2, "$n'$", (0, 2))
-    configPlot(axes3, "$\sigma_0 (Pa)$", (0, 120))
+    lim1, lim2, lim3 = (0, 75), (0, 1), (0, 120)
+
+    configPlot(axes, "$k'$", lim1)
+    configPlot(axes2, "$n'$", lim2)
+    configPlot(axes3, "$\sigma_0$ (Pa)", lim3)
 
     samples = [d['Sample'] for d in data]
     kPrime, kPrime_err = [d["k"] for d in data], [d["± k"] for d in data]
     nPrime, nPrime_err = [d["n"] for d in data], [d["± n"] for d in data]
     sigmaZero, sigmaZero_err = [d["sigma_zero"] for d in data], [d["± sigma_zero"] for d in data]
 
-    w, s = 0.8, 3
-    x = np.arange(s * len(data))
+    bin_width, space_samples = 0.8, 3
+    x = np.arange(space_samples * len(data))
 
     posList, labelsList = [], []
 
     for i in range(len(kPrime)):
         axes.bar(
-            s * x[i] - w,
+            space_samples * x[i] - bin_width,
             height=kPrime[i], yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='////', alpha=a, linewidth=.5,
+            width=bin_width, hatch='////', alpha=a, linewidth=.5,
             zorder=z)
         axes.errorbar(
-            x=s * x[i] - w, y=kPrime[i], yerr=kPrime_err[i],
+            x=space_samples * x[i] - bin_width, y=kPrime[i], yerr=kPrime_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
             zorder=3)
+        axes.text(
+            space_samples * x[i] - bin_width - .15,
+            kPrime[i] + kPrime_err[i] + lim1[1]*.075,
+            f'{kPrime[i]:.{2}f} ± {kPrime_err[i]:.{2}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
 
         axes2.bar(
-            s * x[i],
+            space_samples * x[i],
             height=nPrime[i], yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='....', alpha=a, linewidth=.5,
+            width=bin_width, hatch='....', alpha=a, linewidth=.5,
             zorder=z)
         axes2.errorbar(
-            x=s * x[i], y=nPrime[i], yerr=nPrime_err[i],
+            x=space_samples * x[i], y=nPrime[i], yerr=nPrime_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
             zorder=3)
+        axes2.text(
+            space_samples * x[i] - .15,
+            nPrime[i] + nPrime_err[i] + lim2[1]*.075,
+            f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
 
         axes3.bar(
-            s * x[i] + w,
+            space_samples * x[i] + bin_width,
             height=sigmaZero[i], yerr=0,
             color=colors[i], edgecolor='#383838',
-            width=w, hatch='', alpha=a, linewidth=.5,
+            width=bin_width, hatch='', alpha=a, linewidth=.5,
             zorder=z)
         axes3.errorbar(
-            x=s * x[i] + w, y=sigmaZero[i], yerr=sigmaZero_err[i],
+            x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
             zorder=3)
+        axes3.text(
+            space_samples * x[i] + bin_width - .15,
+            sigmaZero[i] + sigmaZero_err[i] + lim3[1]*.075,
+            f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
+            va='center', ha='left', rotation=90,
+            color='#383838', fontsize=9)
 
-        posList.append(s * x[i] - w), posList.append(s * x[i]), posList.append(s * x[i] + w)
+        posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(space_samples * x[i] + bin_width)
         labelsList.append("$k'$"), labelsList.append("$n'$"), labelsList.append("$\sigma_0$'")
 
     axes.set_xticks(posList)
@@ -282,20 +313,20 @@ def main(dataPath):
 
     fig, axes = plt.subplots(
         figsize=(16, 7), ncols=2, nrows=1,
-        gridspec_kw={'width_ratios': [1.25, 1]}, facecolor='snow')
+        gridspec_kw={'width_ratios': [1.2, 1]}, facecolor='snow')
     axFlow, axBars = axes[0], axes[1]
 
     fig.suptitle(f'Steps shear rate flow')
-    xTitle, xLimits = ('Shear rate ($s^{-1}$)', (-15, 315))
+    xTitle, xLimits = ('Shear rate ($s^{-1}$)', (0, 315))
     yTitle, yLimits = (f'Shear stress (Pa)', (0, 500))
 
     nSamples, colorSamples = getSamplesInfos(
-        2, 3, 3,
+        2, 2, 3,
         3, 1, 3,
         3, 4,
-        'lightgray', 'hotpink', 'deepskyblue',
-        'darkgray', 'crimson', 'mediumblue',
-        'mediumorchid', 'rebeccapurple')
+        'silver', 'hotpink', 'lightskyblue',
+        'grey', 'mediumvioletred', 'royalblue',
+        '#fb7e8f', '#e30057')
     data, labels = getSamplesData(dataPath, nSamples)
 
     dictData = {
@@ -353,8 +384,8 @@ def main(dataPath):
 
 
 if __name__ == '__main__':
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
         # 0St
         folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
@@ -363,7 +394,7 @@ if __name__ == '__main__':
         # 0St + kCar
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
         folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
+        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
 
         # 0St + iCar
         folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
