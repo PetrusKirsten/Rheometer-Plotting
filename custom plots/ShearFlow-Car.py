@@ -65,7 +65,6 @@ def getSamplesInfos(
         color_ic_14, color_ic_21, color_ic_28, color_ic_42
 ):
     number_samples = [n_kc_0, n_kc_14, n_ic_14, n_ic_21, n_ic_28, n_ic_42]
-
     colors_samples = [color_kc_0, color_kc_14, color_ic_14, color_ic_21, color_ic_28, color_ic_42]
 
     return number_samples, colors_samples

@@ -56,19 +56,14 @@ def funcTransient(t, tau_0, tau_e, time_cte):
 
 def getSamplesInfos(
         # quantity
-        st_n, st_kc_n, st_ic_n,
-        stCL_n, st_kcCL_n, st_icCL_n,
+        n_kc_0, n_kc_14,
+        n_ic_14, n_ic_21, n_ic_28, n_ic_42,
         # colors
-        st_color, st_kc_color, st_ic_color,
-        stCL_color, st_kcCL_color, st_icCL_color,
+        color_kc_0, color_kc_14,
+        color_ic_14, color_ic_21, color_ic_28, color_ic_42
 ):
-    number_samples = [
-        st_n, st_kc_n, st_ic_n,
-        stCL_n, st_kcCL_n, st_icCL_n]
-
-    colors_samples = [
-        st_color, st_kc_color, st_ic_color,
-        stCL_color, st_kcCL_color, st_icCL_color]
+    number_samples = [n_kc_0, n_kc_14, n_ic_14, n_ic_21, n_ic_28, n_ic_42]
+    colors_samples = [color_kc_0, color_kc_14, color_ic_14, color_ic_21, color_ic_28, color_ic_42]
 
     return number_samples, colors_samples
 
@@ -98,8 +93,8 @@ def getSamplesData(dataPath, number_samples):
         }
 
     samples = {
-        '0St': [], '0St + kCar': [], '0St + iCar': [],
-        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': []
+        'kCar': [], 'kCar/CL-14': [],
+        'iCar/CL-14': [], 'iCar/CL-21': [], 'iCar/CL-28': [], 'iCar/CL-42': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
@@ -159,8 +154,8 @@ def plotFlow(listRows, sampleName,
         ax.set_ylabel(f'{yLabel}')
         ax.set_yscale('log' if logScale else 'linear')
         ax.set_ylim(yLim)
-        ax.yaxis.set_major_locator(MultipleLocator(100))
-        ax.yaxis.set_minor_locator(MultipleLocator(25))
+        ax.yaxis.set_major_locator(MultipleLocator(20))
+        ax.yaxis.set_minor_locator(MultipleLocator(5))
 
     params, covariance = curve_fit(funcTransient, x, y)
     # p0=(x[0], y[-1], 100))  # method='trf')  # method='dogbox', maxfev=5000)
@@ -223,12 +218,12 @@ def plotBars(title, axes, data, colors, a, z):
 
         ax.set_ylabel(yTitle)
         ax.set_ylim(yLim)
-        ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
-        ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / (10*2)))
+        ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 14))
+        ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / (14*4)))
 
     axes3 = axes.twinx()
 
-    lim1, lim3 = (0, 2000), (0, 60)
+    lim1, lim3 = (0, 140), (0, 70)
 
     configPlot(axes, "$\\tau_0$ (Pa) and $\\tau_e$ (Pa)", lim1)
     configPlot(axes3, "$\lambda$ (s)", lim3)
@@ -315,21 +310,21 @@ def main(dataPath):
 
     fig.suptitle(f'Constant shear rate flow')
     xTitle, xLimits = (f'Time (s)', (0, 180))
-    yTitle, yLimits = (f'Shear stress (Pa)', (0, 700))
+    yTitle, yLimits = (f'Shear stress (Pa)', (0, 135))
     yTitleVisc, yLimitsVisc = f'Viscosity (mPa·s)', (yLimits[0] * 3.33, yLimits[1] * 3.33)
 
     axesVisc = axStress.twinx()
     axesVisc.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0)
     axesVisc.set_ylabel(f'{yTitleVisc}')
     axesVisc.set_ylim(yLimitsVisc)
-    axesVisc.yaxis.set_major_locator(MultipleLocator(200))
-    axesVisc.yaxis.set_minor_locator(MultipleLocator(50))
+    axesVisc.yaxis.set_major_locator(MultipleLocator(100))
+    axesVisc.yaxis.set_minor_locator(MultipleLocator(25))
 
     nSamples, colorSamples = getSamplesInfos(
-        2, 2, 3,
-        3, 1, 3,
-        'silver', 'hotpink', 'lightskyblue',
-        'grey', 'mediumvioletred', 'royalblue')
+        3, 4,
+        2, 2, 2, 3,
+        '#fb7e8f', '#e30057',
+        '#80ed99', '#57cc99', '#38a3a5', '#22577a')
     data, labels = getSamplesData(dataPath, nSamples)
 
     fitModeStress, fitModeVisc = 'transient', ''
@@ -386,7 +381,7 @@ def main(dataPath):
         left=0.045, right=0.96)
     plt.show()
 
-    fileName = '0St-Thixotropy'
+    fileName = 'Car-Thixotropy'
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
     fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
 
@@ -400,45 +395,33 @@ if __name__ == '__main__':
     folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
-        # 0St
-        folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
-        folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
+        # kC
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
 
-        # 0St + kCar
-        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
-        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
+        # kC/CL
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
 
-        # 0St + iCar
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
-        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
+        # iC CL 14
+        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-2.xlsx",
 
-        # 0St/CL
-        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-1.xlsx",
-        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-2.xlsx",
-        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-3.xlsx",
+        # iC CL 21
+        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-2.xlsx",
 
-        # 0St+ kCar/CL
-        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-1.xlsx",
-        # folderPath + "/171024/10_0St_kC_CL/10_0St_CL-recovery-2.xlsx",
+        # iC CL 28
+        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-2.xlsx",
 
-        # 0St + iCar/CL
-        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
-        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
-        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
-
-        # # kC
-        # folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
-        # folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
-        # folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
-        #
-        # # kC/CL
-        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
-        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
-        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
-        # folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
+        # iC CL 42
+        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-2.xlsx",
+        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
     ]
 
     main(dataPath=filePath)
