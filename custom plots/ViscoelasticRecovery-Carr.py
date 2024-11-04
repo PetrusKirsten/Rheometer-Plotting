@@ -62,7 +62,7 @@ def exportFit(
     return table
 
 
-def getCteMean(values, tolerance=100):
+def getCteMean(values, tolerance=10**(6)):
     """
     :param values: to be analysed
     :param tolerance: the difference betweem two points data
@@ -132,7 +132,7 @@ def getSamplesData(
             dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1', '5|1', '5|31'])
 
         # Slice segments
-        segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6])  # Returns (constant segment, step segment)
+        segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6+1])  # Returns (constant segment, step segment)
 
         return {
             'freq': segments(freq),
@@ -171,24 +171,19 @@ def getSamplesData(
     return dict_data, sample_keys
 
 
-def plotFreqSweeps(sampleName,
-                   ax, x, yP, yD, yPerr, yDerr,
-                   axTitle, yLabel, yLim, xLabel, xLim,
+def plotFreqSweeps(sampleName, axTop, axBottom, axTitle,
+                   x, yP, yD, yPerr, yDerr,
+                   yLabel, yLim, xLabel, xLim,
                    curveColor,
-                   individualData=False, logScale=True,
-                   startVal=0, endVal=31, tableData=None):
-    def legendLabel():
-        """Applies consistent styling to legends in plots."""
+                   logScale=True,
+                   startVal=0, endVal=16,
+                   tableDataStor=None, tableDataLoss=None):
+    def legendLabel(ax):
         legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
         legend.get_frame().set_edgecolor('whitesmoke')
 
-    def configPlot(idSample=0):
-        dotCteMean = 'k'
-        idSample = idSample + 1 if individualData else 'Mean'
-        axisColor = '#303030'
-
-        ax.set_title(axTitle, size=10, color='k')
+    def configPlot(ax, axisColor='#303030'):
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
         ax.tick_params(axis='both', which='both', colors=axisColor)
@@ -196,91 +191,67 @@ def plotFreqSweeps(sampleName,
         ax.grid(True, which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5)
         ax.grid(True, which='minor', axis='y', linestyle='-', linewidth=.5, color='lightgray', alpha=0.5)
 
-        ax.set_xlabel(f'{xLabel}', color=axisColor)
         ax.set_xscale('log' if logScale else 'linear')
         ax.set_xlim(xLim)
 
         ax.set_ylabel(f'{yLabel}', color=axisColor)
         ax.set_yscale('log' if logScale else 'linear')
         ax.set_ylim(yLim)
-        # ax.errorbar(
-        #     [x[indexStart_storage], x[indexEnd_storage]], [yP[indexStart_storage], yP[indexEnd_storage]], yerr=0,
-        #     color=dotCteMean, alpha=0.75,
-        #     fmt='.', markersize=4, mfc=dotCteMean, mec=dotCteMean, mew=1,
-        #     capsize=0, lw=1, linestyle='',
-        #     label=f'', zorder=4)
 
-    configPlot()
+    yTitleBottom = f'Loss modulus (Pa)'
+    configPlot(axTop), configPlot(axBottom)
+    axTop.set_title(axTitle, size=10, color='k'), axTop.set_xticklabels([])
+    axBottom.set_xlabel(f'{xLabel}', color='#303030'), axBottom.set_ylabel(f'{yTitleBottom}', color='#303030')
+    axBottom.set_ylim([yLim[0] * 10, yLim[1] / 10])
 
-    x_toFit, y_toFit = arraySplit(x, yP, startVal, endVal)
-    params, covariance = curve_fit(powerLaw, x_toFit, y_toFit)  # p0=(y_mean[0], y_mean[-1], 100))
-    errors = np.sqrt(np.diag(covariance))
-    tableData = exportFit(
+    x_toFit_stor, y_toFit_stor = arraySplit(x, yP, startVal, endVal)
+    params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor, y_toFit_stor)  # p0=(y_mean[0], y_mean[-1], 100))
+    errors_stor = np.sqrt(np.diag(covariance_stor))
+    tableDataStor = exportFit(
         f'{sampleName}',
-        params, errors,
-        tableData)
+        params_stor, errors_stor,
+        tableDataStor)
 
-    ax.errorbar(
-        x[:-2], yP[:-2], yPerr[:-2],
+    axTop.errorbar(
+        x[:-1], yP[:-1], yPerr[:-1],
         color=curveColor, alpha=.85,
         fmt='none', mfc=curveColor,
         capsize=2.5, capthick=1, linestyle='', lw=1,
         label=f'', zorder=2)
-
-    ax.errorbar(
-        x[:-2], yP[:-2], 0,
+    axTop.errorbar(
+        x[:-1], yP[:-1], 0,
         color=curveColor, alpha=.65,
         fmt='o', markersize=5.4,
         mfc=curveColor, mec='#383838', mew=.75,
         linestyle='',
         label=f'{sampleName}', zorder=3)
 
-    # if axTitle == 'After breakage':
-    # rectConfig = [(44, 0), xLim[-1] - 44, 10000]
-    # rect = Rectangle(*rectConfig, linewidth=.75, edgecolor='#303030', facecolor='snow', alpha=1, zorder=1)
-    # ax.add_patch(rect)
+    x_toFit_loss, y_toFit_loss = arraySplit(x, yD, startVal, endVal)
+    params_loss, covariance_loss = curve_fit(powerLaw, x_toFit_loss, y_toFit_loss)  # p0=(y_mean[0], y_mean[-1], 100))
+    errors_loss = np.sqrt(np.diag(covariance_loss))
+    tableDataLoss = exportFit(
+        f'{sampleName}',
+        params_loss, errors_loss,
+        tableDataLoss)
+
+    axBottom.errorbar(
+        x[:-1], yD[:-1], yDerr[:-1],
+        color=curveColor, alpha=.85,
+        fmt='none', mfc=curveColor,
+        capsize=2.5, capthick=1, linestyle='', lw=1,
+        label=f'', zorder=2)
+    axBottom.errorbar(
+        x[:-1], yD[:-1], 0,
+        color=curveColor, alpha=.75,
+        fmt='o', markersize=5.4,
+        mfc='w', mec=curveColor, mew=1,
+        linestyle='',
+        label=f'{sampleName}', zorder=3)
 
     if axTitle == 'After breakage':
-        legendLabel()
+        legendLabel(axTop)
 
-    return tableData
-
-
-def plotInset(data, dataErr, keys, colors, ax, recovery=None):
-    ax_inset = inset_axes(ax, width='40%', height='25%', loc='lower right')
-
-    xInset = np.arange(len(data))
-    ax_inset.barh(xInset, width=data, xerr=0,
-                  color=colors, edgecolor='black', alpha=.8, linewidth=0.5)
-
-    ax_inset.errorbar(y=xInset, x=data, xerr=dataErr, alpha=1,
-                      color='#303030', linestyle='', capsize=2, linewidth=0.75)
-
-    for i in range(len(data)):
-        ax_inset.text(data[i] + dataErr[i] + 100, xInset[i],
-                      f'{data[i]:.0f} ± {dataErr[i]:.0f} '
-                      f'~ {100 * data[i] / recovery[i]:.0f}%'
-                      if recovery is not None
-                      else f'{data[i]:.0f} ± {dataErr[i]:.0f}',
-                      size=8, va='center_baseline', ha='left', color='black')
-
-    ax_inset.text(
-        0.5, 1.1, "Average G' values (Pa)",
-        ha='center', va='top', fontsize=9, transform=ax_inset.transAxes)
-    ax_inset.set_facecolor('snow')
-    ax_inset.tick_params(axis='both', labelsize=8, length=0)
-    ax_inset.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
-    ax_inset.spines[['top', 'bottom', 'left', 'right']].set_color('dimgrey')
-
-    ax_inset.set_yticks(np.arange(len(data)))
-    ax_inset.set_yticklabels(keys)
-    # ax_inset.yaxis.tick_right()
-    # ax_inset.yaxis.set_label_position('right')
-
-    ax_inset.set_xticks([])
-    ax_inset.set_xlim(0, 2300)
-
-    return data, dataErr
+    return tableDataStor, tableDataLoss
 
 
 def plotBars(
@@ -300,7 +271,8 @@ def plotBars(
 
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
-        ax.set_yticks([]), ax.set_ylim(xLim), ax.set_xlim(yLim), ax.set_xlabel(yTitle, labelpad=10, loc='left')
+        ax.set_yticks([]), ax.set_ylim(xLim), ax.set_xlim(yLim)
+        ax.set_xlabel(yTitle, size=10, labelpad=5, loc='center')
 
         ax.xaxis.tick_top(), ax.xaxis.set_label_position('top')
         ax.xaxis.set_major_locator(MultipleLocator(yLim[1] / 5))
@@ -311,7 +283,7 @@ def plotBars(
     height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
     height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
 
-    bin_width, space_samples, space_break = 1, 2.5, 2
+    bin_width, space_samples, space_break = 1, 2.5, 1.85
     x = np.arange(space_samples * len(data_before))
     posList, labelsList = [], []
 
@@ -322,7 +294,7 @@ def plotBars(
         if scale_correction is not None:
             height_bef[i] = height_bef[i] / 10 if i == scale_correction else height_bef[i]
             height_bef_err[i] = height_bef_err[i] / 10 if i == scale_correction else height_bef_err[i]
-            text_scale_correction = 10
+            text_scale_correction = 10 if i == scale_correction else 1
 
         axes.barh(
             space_samples * x[i] - bin_width / space_break,
@@ -333,7 +305,7 @@ def plotBars(
         axes.errorbar(
             y=space_samples * x[i] - bin_width / space_break, x=height_bef[i],
             xerr=height_bef_err[i], color='#383838', alpha=.9,
-            linewidth=1, capsize=5, capthick=1.05, zorder=3)
+            linewidth=1, capsize=3, capthick=1.05, zorder=3)
         axes.text(
             height_bef[i] + height_bef_err[i] + lim*.035,
             space_samples * x[i] - bin_width / space_break,
@@ -346,7 +318,7 @@ def plotBars(
         if scale_correction is not None:
             height_aft[i] = height_aft[i] / 10 if i == scale_correction else height_aft[i]
             height_aft_err[i] = height_aft_err[i] / 10 if i == scale_correction else height_aft_err[i]
-            text_scale_correction = 10
+            text_scale_correction = 10 if i == scale_correction else 1
 
         axes.barh(
             space_samples * x[i] + bin_width / space_break,
@@ -357,7 +329,7 @@ def plotBars(
         axes.errorbar(
             y=space_samples * x[i] + bin_width / space_break,
             x=height_aft[i], xerr=height_aft_err[i],
-            color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+            color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
             zorder=3)
         axes.text(
             height_aft[i] + height_aft_err[i] + lim*.034,
@@ -378,21 +350,17 @@ def plotBars(
     axes.invert_yaxis()
 
 
-def midAxis(color, ax):
-    ax[0].spines['right'].set_color(color)
-    ax[1].spines['left'].set_color(color)
-    ax[1].yaxis.tick_right()
-    ax[1].yaxis.set_label_position('right')
-
-
 def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
-    fig = plt.figure(figsize=(18, 7), facecolor='snow')
-    gs = GridSpec(2, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1])
+    fig = plt.figure(figsize=(18, 12), facecolor='snow')
+    gs = GridSpec(4, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1, 1, 1])
 
-    axPre, axPost = fig.add_subplot(gs[:, 0]), fig.add_subplot(gs[:, 1])
-    axK, axN = fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 2])
+    axPreTop, axPostTop = fig.add_subplot(gs[:2, 0]), fig.add_subplot(gs[:2, 1])
+    axKTop, axNTop = fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, 2])
+
+    axPreBottom, axPostBottom = fig.add_subplot(gs[2:, 0]), fig.add_subplot(gs[2:, 1])
+    axKBottom, axNBottom = fig.add_subplot(gs[2, 2]), fig.add_subplot(gs[3, 2])
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
     yTitle, yLimits = f"Storage modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 4)
@@ -424,7 +392,8 @@ def main(dataPath, fileName):
 
     meanBefore, meanAfter = [], []
     meanBeforeErr, meanAfterErr = [], []
-    dataFittingBef, dataFittingAft = [], []
+    dataFittingBef_stor, dataFittingAft_stor = [], []
+    dataFittingBef_loss, dataFittingAft_loss = [], []
 
     for key, (x, gP, gD) in listBefore.items():
         x.append(data[f'{key}_freq'])
@@ -444,48 +413,54 @@ def main(dataPath, fileName):
         meanBefore.append(meanStorage)
         meanBeforeErr.append(storageMeanErr)
 
-        dataFittingBef = plotFreqSweeps(  # Before axes
+        dataFittingBef_stor, dataFittingBef_loss = plotFreqSweeps(  # Before axes
             sampleName=k_a,
-            ax=axPre, x=np.mean(listBefore[k_a][0], axis=1)[0],
+            axTop=axPreTop, axBottom=axPreBottom,
+            x=np.mean(listBefore[k_a][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='Before breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
-            logScale=True, startVal=fitStart, endVal=fitEnd, tableData=dataFittingBef)
+            axTitle='Before breakage',
+            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
+            logScale=True,
+            tableDataStor=dataFittingBef_stor, tableDataLoss=dataFittingBef_loss)
 
         gP, gD = np.mean(listAfter[k_a][1], axis=1)[0], np.mean(listAfter[k_a][2], axis=1)[0]
         gPerr, gDerr = np.std(listAfter[k_a][1], axis=1)[0], np.std(listAfter[k_a][2], axis=1)[0]
 
-        meanStorage, storageMeanErr, _, _ = getCteMean(gP)
-        meanAfter.append(meanStorage)
-        meanAfterErr.append(storageMeanErr)
+        # meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gD)
+        # meanAfter.append(meanStorage)
+        # meanAfterErr.append(storageMeanErr)
 
-        dataFittingAft = plotFreqSweeps(  # After axes
+        dataFittingAft_stor, dataFittingAft_loss = plotFreqSweeps(  # After axes
             sampleName=k_a,
-            ax=axPost, x=np.mean(listAfter[k_a][0], axis=1)[0],
+            axTop=axPostTop, axBottom=axPostBottom,
+            x=np.mean(listAfter[k_a][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='After breakage', yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
-            logScale=True, startVal=fitStart, endVal=fitEnd, tableData=dataFittingAft)
+            axTitle='After breakage',
+            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
+            logScale=True,
+            tableDataStor=dataFittingAft_stor, tableDataLoss=dataFittingAft_loss)
+        axPostTop.set_ylabel(''), axPostBottom.set_ylabel('')
 
-    # plotInsetMean(
-    #     data=meanBefore, dataErr=meanBeforeErr,
-    #     keys=listBefore.keys(), colors=colorSamples, ax=axPre)
-    # plotInsetMean(
-    #     data=meanAfter, dataErr=meanAfterErr,
-    #     keys=listBefore.keys(), colors=colorSamples, ax=axPost,
-    #     recovery=meanBefore)
-
+    # 1st two rows
     plotBars(
-        "Proportionality coefficient $G_0'$ (Pa)", axK, 120,
-        dataFittingBef, dataFittingAft, colorSamples, 1,
+        "Proportionality coefficient $G_0'$ (Pa)", axKTop, 120,
+        dataFittingBef_stor, dataFittingAft_stor, colorSamples, 1,
         scale_correction=1, z=1)
-
     plotBars(
-        "Expoent index $n'$", axN, 2,
-        dataFittingBef, dataFittingAft, colorSamples, 3,
+        "Expoent index $n'$", axNTop, 2,
+        dataFittingBef_stor, dataFittingAft_stor, colorSamples, 3,
         scale_correction=0, z=1)
 
+    # 2nd two rows
+    plotBars(
+        "Proportionality coefficient $G_0''$ (Pa)", axKBottom, 15,
+        dataFittingBef_loss, dataFittingAft_loss, colorSamples, 2,
+        scale_correction=1, z=1)
+    # TODO: add the G'/G'' bar plot
+
     plt.subplots_adjust(
-        wspace=0.164, hspace=0.24,
-        top=0.91, bottom=0.1,
+        wspace=0.105, hspace=0.24,
+        top=0.93, bottom=0.1,
         left=0.045, right=0.98)
     plt.show()
 
@@ -495,8 +470,8 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"  # CEBB
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
 
     filePath = [
         # kC
