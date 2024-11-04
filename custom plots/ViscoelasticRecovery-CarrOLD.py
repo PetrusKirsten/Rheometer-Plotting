@@ -1,4 +1,4 @@
-from math import ceil, sqrt
+from math import ceil
 
 import numpy as np
 import pandas as pd
@@ -179,25 +179,12 @@ def ratioElaVis(data_elastic, data_viscous):
     for entry1 in data_elastic:
         for entry2 in data_viscous:
             if entry1['Sample'] == entry2['Sample']:
-                if entry2["k'"] == 0:
-                    new_entry = {
-                        'Sample': entry1['Sample'],
-                        "k'": None,
-                        "± k'": None}
-                else:
-                    ratio_k_prime = entry1["k'"] / entry2["k'"]
-                    uncertainty_k_prime = ratio_k_prime * sqrt(
-                        (entry1["± k'"] / entry1["k'"]) ** 2 + (entry2["± k'"] / entry2["k'"]) ** 2)
-
-                    rounded_ratio_k_prime = ceil(ratio_k_prime * 10) / 10
-                    rounded_uncertainty_k_prime = ceil(uncertainty_k_prime * 10) / 10
-
-                    new_entry = {
-                        'Sample': entry1['Sample'],
-                        "k'": rounded_ratio_k_prime,
-                        "± k'": rounded_uncertainty_k_prime}
+                new_entry = {
+                    'Sample': entry1['Sample'],
+                    "k'": ceil(entry1["k'"] / entry2["k'"] * 10) / 10 if entry2["k'"] != 0 else None,
+                    "± k'": ceil(entry1["± k'"] * 10) / 10 if entry2["± k'"] != 0 else None,
+                }
                 result.append(new_entry)
-
     return result
 
 
@@ -232,6 +219,7 @@ def plotFreqSweeps(sampleName, axTop, axBottom, axTitle,
     configPlot(axTop), configPlot(axBottom)
     axTop.set_title(axTitle, size=10, color='k'), axTop.set_xticklabels([])
     axBottom.set_xlabel(f'{xLabel}', color='#303030'), axBottom.set_ylabel(f'{yTitleBottom}', color='#303030')
+    axBottom.set_ylim([yLim[0] * 10, yLim[1] / 10])
 
     x_toFit_stor, y_toFit_stor = arraySplit(x, yP, startVal, endVal)
     params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor, y_toFit_stor)  # p0=(y_mean[0], y_mean[-1], 100))
@@ -324,23 +312,22 @@ def plotBars(
 
         axes.barh(
             space_samples * x[i] - bin_width / space_break,
-            width=height_bef[i] if height_bef_err[i] < height_bef[i] else 0, xerr=0,
+            width=height_bef[i], xerr=0,
             color=colors[i], edgecolor='#383838', alpha=a,
             height=bin_width, hatch=h, linewidth=.5,
             zorder=z)
         axes.errorbar(
             y=space_samples * x[i] - bin_width / space_break,
-            x=height_bef[i] if height_bef_err[i] < height_bef[i] else 0,
-            xerr=height_bef_err[i] if height_bef_err[i] < height_bef[i] else 0,
-            color='#383838', alpha=.9,
+            x=height_bef[i],
+            xerr=height_bef_err[i], color='#383838', alpha=.9,
             linewidth=1, capsize=3, capthick=1.05, zorder=3)
 
-        text = (f'{ceil(height_bef[i] * text_scale_correction * 100) / 100:.{dec}f} '
-                f'± {ceil(height_bef_err[i] * text_scale_correction * 100) / 100:.{dec}f}')
+        text = (f'{ceil(height_bef[i] * text_scale_correction * 10) / 10:.{dec}f} '
+                f'± {ceil(height_bef_err[i] * text_scale_correction * 10) / 10:.{dec}f}')
         axes.text(
             lim * .975,
             space_samples * x[i] + 0.1 - bin_width / space_break,
-            text if height_bef_err[i] < height_bef[i] else 'Not fitted',
+            text,
             va='center_baseline', ha='left',
             color='#383838', fontsize=9)
 
@@ -353,23 +340,22 @@ def plotBars(
 
         axes.barh(
             space_samples * x[i] + bin_width / space_break,
-            width=height_aft[i] if height_aft_err[i] < height_aft[i] else 0, xerr=0,
+            width=height_aft[i], xerr=0,
             color=colors[i], edgecolor='#383838', alpha=a,
             height=bin_width, hatch='////', linewidth=.5,
             zorder=2)
         axes.errorbar(
             y=space_samples * x[i] + bin_width / space_break,
-            x=height_aft[i] if height_aft[i] < 0.1 else 0,
-            xerr=height_aft_err[i] if height_aft_err[i] < height_aft[i] else 0,
+            x=height_aft[i], xerr=height_aft_err[i],
             color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
             zorder=3)
 
-        text = (f'{ceil(height_aft[i] * text_scale_correction * 100) / 100:.{dec}f} '
-                f'± {ceil(height_aft_err[i] * text_scale_correction * 100) / 100:.{dec}f}')
+        text = (f'{ceil(height_aft[i] * text_scale_correction * 10) / 10:.{dec}f} '
+                f'± {ceil(height_aft_err[i] * text_scale_correction * 10) / 10:.{dec}f}')
         axes.text(
             lim * .975,
             space_samples * x[i] + 0.1 + bin_width / space_break,
-            text if height_aft_err[i] < height_aft[i] else 'Not fitted',
+            text,
             va='center_baseline', ha='left',
             color='#383838', fontsize=9)
 
@@ -408,6 +394,7 @@ def main(dataPath, fileName):
         2, 2, 2, 3,
         '#fb7e8f', '#e30057',
         '#80ed99', '#57cc99', '#38a3a5', '#22577a')
+
     data, labels = getSamplesData(dataPath, nSamples)
 
     listBefore, listAfter = {
@@ -441,39 +428,36 @@ def main(dataPath, fileName):
         gP.append(data[f'{key}_storage_broken'])
         gD.append(data[f'{key}_loss_broken'])
 
-    for key, color in zip(listBefore, colorSamples):
-        gP, gD = np.mean(listBefore[key][1], axis=1)[0], np.mean(listBefore[key][2], axis=1)[0]
-        gPerr, gDerr = np.std(listBefore[key][1], axis=1)[0], np.std(listBefore[key][2], axis=1)[0]
+    for k_a, k_b, c in zip(listAfter, listBefore, colorSamples):
+        gP, gD = np.mean(listBefore[k_a][1], axis=1)[0], np.mean(listBefore[k_a][2], axis=1)[0]
+        gPerr, gDerr = np.std(listBefore[k_a][1], axis=1)[0], np.std(listBefore[k_a][2], axis=1)[0]
 
         meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
         meanBefore.append(meanStorage)
         meanBeforeErr.append(storageMeanErr)
 
         dataFittingBef_stor, dataFittingBef_loss = plotFreqSweeps(  # Before axes
-            sampleName=key,
+            sampleName=k_a,
             axTop=axPreTop, axBottom=axPreBottom,
-            x=np.mean(listBefore[key][0], axis=1)[0],
+            x=np.mean(listBefore[k_a][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
             axTitle='Before breakage',
-            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
+            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
             logScale=True,
             tableDataStor=dataFittingBef_stor, tableDataLoss=dataFittingBef_loss)
 
-        gP = listAfter[key][1] if key != '0St + kCar/CL' else listAfter[key][1][0][0]
-        gD = listAfter[key][2] if key != '0St + kCar/CL' else listAfter[key][2][0][0]
-
-        gPerr = np.std(gP, axis=1)[0] if key != '0St + kCar/CL' else np.zeros(31)
-        gDerr = np.std(gD, axis=1)[0] if key != '0St + kCar/CL' else np.zeros(31)
-        gP = np.mean(gP, axis=1)[0] if key != '0St + kCar/CL' else gP
-        gD = np.mean(gD, axis=1)[0] if key != '0St + kCar/CL' else gD
-
+        gP, gD = np.mean(listAfter[k_a][1], axis=1)[0], np.mean(listAfter[k_a][2], axis=1)[0]
+        gPerr, gDerr = np.std(listAfter[k_a][1], axis=1)[0], np.std(listAfter[k_a][2], axis=1)[0]
+        # meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gD)
+        # meanAfter.append(meanStorage)
+        # meanAfterErr.append(storageMeanErr)
         dataFittingAft_stor, dataFittingAft_loss = plotFreqSweeps(  # After axes
-            sampleName=key,
+            sampleName=k_a,
             axTop=axPostTop, axBottom=axPostBottom,
-            x=np.mean(listAfter[key][0], axis=1)[0],
+            x=np.mean(listAfter[k_a][0], axis=1)[0],
             yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
             axTitle='After breakage',
-            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
+            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=c,
             logScale=True,
             tableDataStor=dataFittingAft_stor, tableDataLoss=dataFittingAft_loss)
         axPostTop.set_ylabel(''), axPostBottom.set_ylabel('')
@@ -484,7 +468,7 @@ def main(dataPath, fileName):
 
     plotBars(  # First table
         "$n'$", axBar1, 1.1,
-        dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=2,
+        dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=1,
         scale_correction=0, z=1)
 
     plotBars(  # Second table
@@ -498,9 +482,9 @@ def main(dataPath, fileName):
         scale_correction=1, z=1)
 
     plotBars(  # Fourth table
-        "$G_0'\,/\,G_0''$", axBar4, 20,
+        "$G_0'/G_0''$", axBar4, 20,
         ratioBef, ratioAft, colorSamples, dec=1,
-        scale_correction=None, z=1)
+        scale_correction=0, z=1)
 
     plt.subplots_adjust(
         wspace=0.015, hspace=0.15,
@@ -547,4 +531,4 @@ if __name__ == '__main__':
         folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
     ]
 
-    main(filePath, 'Car-ViscoelasticRecoveryWithViscous')
+    main(filePath, 'Car-ViscoelasticRecovery')
