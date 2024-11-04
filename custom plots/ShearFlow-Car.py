@@ -58,19 +58,15 @@ def funcHB(sigma, k, n, sigmaZero):
 
 def getSamplesInfos(
         # quantity
-        st_n, st_kc_n, st_ic_n,
-        stCL_n, st_kcCL_n, st_icCL_n,
+        n_kc_0, n_kc_14,
+        n_ic_14, n_ic_21, n_ic_28, n_ic_42,
         # colors
-        st_color, st_kc_color, st_ic_color,
-        stCL_color, st_kcCL_color, st_icCL_color
+        color_kc_0, color_kc_14,
+        color_ic_14, color_ic_21, color_ic_28, color_ic_42
 ):
-    number_samples = [
-        st_n, st_kc_n, st_ic_n,
-        stCL_n, st_kcCL_n, st_icCL_n]
+    number_samples = [n_kc_0, n_kc_14, n_ic_14, n_ic_21, n_ic_28, n_ic_42]
 
-    colors_samples = [
-        st_color, st_kc_color, st_ic_color,
-        stCL_color, st_kcCL_color, st_icCL_color]
+    colors_samples = [color_kc_0, color_kc_14, color_ic_14, color_ic_21, color_ic_28, color_ic_42]
 
     return number_samples, colors_samples
 
@@ -98,8 +94,8 @@ def getSamplesData(dataPath, number_samples):
         return array
 
     samples = {
-        '0St': [], '0St + kCar': [], '0St + iCar': [],
-        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': []
+        'kCar': [], 'kCar/CL-14': [],
+        'iCar/CL-14': [], 'iCar/CL-21': [], 'iCar/CL-28': [], 'iCar/CL-42': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
@@ -149,7 +145,8 @@ def plotFlow(listRows, sampleName,
         ax.set_ylabel(f'{yLabel}')
         ax.set_yscale('log' if logScale else 'linear')
         ax.set_ylim(yLim)
-        ax.yaxis.set_minor_locator(MultipleLocator(25))
+        ax.yaxis.set_major_locator(MultipleLocator(10))
+        ax.yaxis.set_minor_locator(MultipleLocator(2.5))
 
     configPlot()
 
@@ -180,8 +177,8 @@ def plotFlow(listRows, sampleName,
     ax.errorbar(
         x, y, yerr=0,
         color=curveColor, alpha=.65,
-        fmt='D' if 'CL' in sampleName else 'o',
-        markersize=6.5 if 'CL' in sampleName else 7,
+        fmt='D' if '21' in sampleName else 'o',
+        markersize=7 if '21' in sampleName else 6.5,
         mfc=curveColor, mec='#383838', mew=.75,
         linestyle='',
         label=f'{sampleName}', zorder=3)
@@ -223,16 +220,16 @@ def plotBars(title, axes, data, colors, a, z):
 
     axes2, axes3 = axes.twinx(), axes.twinx()
 
-    lim1, lim2, lim3 = (0, 75), (0, 1), (0, 120)
+    lim1, lim2, lim3 = (0, 7), (0, 1), (0, 15)
 
     configPlot(axes, "$k'$", lim1)
     configPlot(axes2, "$n'$", lim2)
     configPlot(axes3, "$\sigma_0$ (Pa)", lim3)
 
     samples = [d['Sample'] for d in data]
-    kPrime, kPrime_err = [d["k"] for d in data], [d["± k"] for d in data]
-    nPrime, nPrime_err = [d["n"] for d in data], [d["± n"] for d in data]
-    sigmaZero, sigmaZero_err = [d["sigma_zero"] for d in data], [d["± sigma_zero"] for d in data]
+    kPrime, kPrime_err = [abs(d["k"]) for d in data], [d["± k"] for d in data]
+    nPrime, nPrime_err = [abs(d["n"]) for d in data], [d["± n"] for d in data]
+    sigmaZero, sigmaZero_err = [abs(d["sigma_zero"]) for d in data], [d["± sigma_zero"] for d in data]
 
     bin_width, space_samples = 0.8, 3
     x = np.arange(space_samples * len(data))
@@ -311,13 +308,13 @@ def main(dataPath, fileName):
 
     fig.suptitle(f'Steps shear rate flow')
     xTitle, xLimits = ('Shear rate ($s^{-1}$)', (0, 315))
-    yTitle, yLimits = (f'Shear stress (Pa)', (0, 500))
+    yTitle, yLimits = (f'Shear stress (Pa)', (0, 50))
 
     nSamples, colorSamples = getSamplesInfos(
-        2, 2, 3,
-        3, 1, 3,
-        'silver', 'hotpink', 'lightskyblue',
-        'grey', 'mediumvioletred', 'royalblue')
+        3, 4,
+        2, 2, 2, 3,
+        '#fb7e8f', '#e30057',
+        '#80ed99', '#57cc99', '#38a3a5', '#22577a')
     data, labels = getSamplesData(dataPath, nSamples)
 
     dictData = {
@@ -374,35 +371,6 @@ if __name__ == '__main__':
     folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
-        # 0St
-        folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
-        folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
-
-        # 0St + kCar
-        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
-        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
-
-        # 0St + iCar
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
-        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
-        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
-
-        # 0St/CL
-        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-1.xlsx",
-        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-2.xlsx",
-        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-3.xlsx",
-
-        # 0St+ kCar/CL
-        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-1.xlsx",
-        # folderPath + "/171024/10_0St_kC_CL/10_0St_CL-recovery-2.xlsx",
-
-        # 0St + iCar/CL
-        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
-        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
-        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
-
         # kC
         folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
         folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
@@ -413,6 +381,23 @@ if __name__ == '__main__':
         folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
         folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
         folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
+
+        # iC CL 14
+        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-2.xlsx",
+
+        # iC CL 21
+        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-2.xlsx",
+
+        # iC CL 28
+        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-2.xlsx",
+
+        # iC CL 42
+        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-1.xlsx",
+        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-2.xlsx",
+        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
     ]
 
-    main(dataPath=filePath, fileName='0St-Flow')
+    main(dataPath=filePath, fileName='Car-Flow')
