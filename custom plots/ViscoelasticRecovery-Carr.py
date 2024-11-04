@@ -173,6 +173,15 @@ def getSamplesData(
     return dict_data, sample_keys
 
 
+def getRecoveryByFreq(storageList, data):
+    index_freqs = [0, 1, 4, 7, 10, 14, 17, 20, 24]
+
+    for index in index_freqs:
+        storageList.append(data[index])
+
+    return storageList
+
+
 def ratioElaVis(data_elastic, data_viscous):
     result = []
 
@@ -359,7 +368,7 @@ def plotBars(
             zorder=2)
         axes.errorbar(
             y=space_samples * x[i] + bin_width / space_break,
-            x=height_aft[i] if height_aft[i] < 0.1 else 0,
+            x=height_aft[i] if height_aft_err[i] < height_aft[i] else 0,
             xerr=height_aft_err[i] if height_aft_err[i] < height_aft[i] else 0,
             color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
             zorder=3)
@@ -430,6 +439,7 @@ def main(dataPath, fileName):
     meanBeforeErr, meanAfterErr = [], []
     dataFittingBef_stor, dataFittingAft_stor = [], []
     dataFittingBef_loss, dataFittingAft_loss = [], []
+    recoveryPCT = []
 
     for key, (x, gP, gD) in listBefore.items():
         x.append(data[f'{key}_freq'])
@@ -442,8 +452,13 @@ def main(dataPath, fileName):
         gD.append(data[f'{key}_loss_broken'])
 
     for key, color in zip(listBefore, colorSamples):
+        recoveryBef, recoveryAft = [], []
+
         gP, gD = np.mean(listBefore[key][1], axis=1)[0], np.mean(listBefore[key][2], axis=1)[0]
         gPerr, gDerr = np.std(listBefore[key][1], axis=1)[0], np.std(listBefore[key][2], axis=1)[0]
+        freqs = np.mean(listBefore[key][0], axis=1)[0]
+
+        recoveryBef = getRecoveryByFreq(recoveryBef, gP)
 
         meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
         meanBefore.append(meanStorage)
@@ -452,8 +467,7 @@ def main(dataPath, fileName):
         dataFittingBef_stor, dataFittingBef_loss = plotFreqSweeps(  # Before axes
             sampleName=key,
             axTop=axPreTop, axBottom=axPreBottom,
-            x=np.mean(listBefore[key][0], axis=1)[0],
-            yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
+            x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
             axTitle='Before breakage',
             yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
             logScale=True,
@@ -467,17 +481,20 @@ def main(dataPath, fileName):
         gP = np.mean(gP, axis=1)[0] if key != '0St + kCar/CL' else gP
         gD = np.mean(gD, axis=1)[0] if key != '0St + kCar/CL' else gD
 
+        recoveryAft = getRecoveryByFreq(recoveryAft, gP)
+
         dataFittingAft_stor, dataFittingAft_loss = plotFreqSweeps(  # After axes
             sampleName=key,
             axTop=axPostTop, axBottom=axPostBottom,
-            x=np.mean(listAfter[key][0], axis=1)[0],
-            yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
+            x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
             axTitle='After breakage',
             yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
             logScale=True,
             tableDataStor=dataFittingAft_stor, tableDataLoss=dataFittingAft_loss)
         axPostTop.set_ylabel(''), axPostBottom.set_ylabel('')
         axPostTop.set_yticklabels([]), axPostBottom.set_yticklabels([])
+
+        recoveryPCT.append((np.array(recoveryAft) / np.array(recoveryBef)) * 100)  # TODO: to finish recovery heatmap
 
     ratioBef = ratioElaVis(dataFittingBef_stor, dataFittingBef_loss)
     ratioAft = ratioElaVis(dataFittingAft_stor, dataFittingAft_loss)
