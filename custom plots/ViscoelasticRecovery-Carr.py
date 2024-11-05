@@ -442,7 +442,7 @@ def plotHeatMap(
         for i in range(len(data_map)):
             for j in range(len(data_map[i])):
                 for k in range(len(data_map[i][j])):
-                    if data_map[i][j][k] > 2:
+                    if data_map[i][j][k] > 2.1:
                         data_map[i][j][k] = None
         colors = 'coolwarm'
         decimal = '.2f'
