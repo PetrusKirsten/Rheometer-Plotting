@@ -1,9 +1,8 @@
+from math import ceil, sqrt
+
 import numpy as np
 import pandas as pd
-import seaborn as sns
-
 from pathlib import Path
-from math import ceil, sqrt
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt
 from matplotlib.gridspec import GridSpec
@@ -108,15 +107,19 @@ def getCteMean(values, tolerance=100):
 
 def getSamplesInfos(
         # quantity
-        n_kc_0, n_kc_14,
-        n_ic_14, n_ic_21, n_ic_28, n_ic_42,
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_kcCL_n, st_icCL_n,
         # colors
-        color_kc_0, color_kc_14,
-        color_ic_14, color_ic_21, color_ic_28, color_ic_42
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_kcCL_color, st_icCL_color
 ):
-    number_samples = [n_kc_0, n_kc_14, n_ic_14, n_ic_21, n_ic_28, n_ic_42]
+    number_samples = [
+        st_n, st_kc_n, st_ic_n,
+        stCL_n, st_kcCL_n, st_icCL_n]
 
-    colors_samples = [color_kc_0, color_kc_14, color_ic_14, color_ic_21, color_ic_28, color_ic_42]
+    colors_samples = [
+        st_color, st_kc_color, st_ic_color,
+        stCL_color, st_kcCL_color, st_icCL_color]
 
     return number_samples, colors_samples
 
@@ -129,24 +132,26 @@ def getSamplesData(
         freq = dataframe['f in Hz'].to_numpy()
         elastic = dataframe["G' in Pa"].to_numpy()
         loss = dataframe['G" in Pa'].to_numpy()
-        delta = dataframe['tan(δ) in -'].to_numpy()
 
-        seg2, seg3, seg5, seg6 = (
-            dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1', '5|1', '5|31'])
+        if 'off' in path:
+            seg2, seg3 = (
+                dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1'])
+            segments = lambda arr: (arr[seg2:seg3], arr[seg2:seg3])
 
-        # Slice segments
-        segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6 + 1])  # Returns (constant segment, step segment)
+        else:
+            seg2, seg3, seg5, seg6 = (
+                dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1', '5|1', '5|31'])
+            segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6+1])
 
         return {
             'freq': segments(freq),
             'storage': segments(elastic),
-            'loss': segments(loss),
-            'delta': segments(delta)
+            'loss': segments(loss)
         }
 
     samples = {
-        'kCar': [], 'kCar/CL-14': [],
-        'iCar/CL-14': [], 'iCar/CL-21': [], 'iCar/CL-28': [], 'iCar/CL-42': []
+        '0St': [], '0St + kCar': [], '0St + iCar': [],
+        '0St/CL': [], '0St + kCar/CL': [], '0St + iCar/CL': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
@@ -155,7 +160,8 @@ def getSamplesData(
             [sample_keys[2]] * number_samples[2] +
             [sample_keys[3]] * number_samples[3] +
             [sample_keys[4]] * number_samples[4] +
-            [sample_keys[5]] * number_samples[5])
+            [sample_keys[5]] * number_samples[5]
+    )
 
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
@@ -167,30 +173,12 @@ def getSamplesData(
         dict_data[f'{sample_type}_freq'] = [s['freq'][0] for s in samples[sample_type]]
         dict_data[f'{sample_type}_storage'] = [s['storage'][0] for s in samples[sample_type]]
         dict_data[f'{sample_type}_loss'] = [s['loss'][0] for s in samples[sample_type]]
-        dict_data[f'{sample_type}_delta'] = [s['delta'][0] for s in samples[sample_type]]
 
         dict_data[f'{sample_type}_freq_broken'] = [s['freq'][-1] for s in samples[sample_type]]
         dict_data[f'{sample_type}_storage_broken'] = [s['storage'][-1] for s in samples[sample_type]]
         dict_data[f'{sample_type}_loss_broken'] = [s['loss'][-1] for s in samples[sample_type]]
-        dict_data[f'{sample_type}_delta_broken'] = [s['delta'][-1] for s in samples[sample_type]]
 
     return dict_data, sample_keys
-
-
-def getRecoveryByFreq(storageList, data, frequencies):
-    def round_to_nearest_125(value):
-        return round(value / 0.125) * 0.125
-
-    index_freqs = [0, 1, 4, 7, 10, 14, 17, 20, 24]
-    index_freqs = range(0, 31, 1)
-    freqList = []
-    for index in index_freqs:
-        storageList.append(data[index])
-        freqList.append(round_to_nearest_125(frequencies[index]))
-
-    freqList = [f"{freq:.3f} Hz" for freq in freqList]
-
-    return storageList, freqList
 
 
 def ratioElaVis(data_elastic, data_viscous):
@@ -219,14 +207,6 @@ def ratioElaVis(data_elastic, data_viscous):
                 result.append(new_entry)
 
     return result
-
-
-def insertKey(keys):
-    index = 1
-    while index <= len(keys):
-        keys.insert(index, 'Broken')
-        index += 2
-    return keys
 
 
 def plotFreqSweeps(sampleName, axTop, axBottom, axTitle,
@@ -352,15 +332,14 @@ def plotBars(
 
         axes.barh(
             space_samples * x[i] - bin_width / space_break,
-            width=height_bef[i] if height_bef_err[i] < height_bef[i] else 0, xerr=0,
+            width=height_bef[i], xerr=0,
             color=colors[i], edgecolor='#383838', alpha=a,
             height=bin_width, hatch=h, linewidth=.5,
             zorder=z)
         axes.errorbar(
             y=space_samples * x[i] - bin_width / space_break,
-            x=height_bef[i] if height_bef_err[i] < height_bef[i] else 0,
-            xerr=height_bef_err[i] if height_bef_err[i] < height_bef[i] else 0,
-            color='#383838', alpha=.9,
+            x=height_bef[i],
+            xerr=height_bef_err[i], color='#383838', alpha=.9,
             linewidth=1, capsize=3, capthick=1.05, zorder=3)
 
         text = (f'{ceil(height_bef[i] * text_scale_correction * 100) / 100:.{dec}f} '
@@ -368,7 +347,7 @@ def plotBars(
         axes.text(
             lim * .975,
             space_samples * x[i] + 0.1 - bin_width / space_break,
-            text if height_bef_err[i] < height_bef[i] else 'Not fitted',
+            text,
             va='center_baseline', ha='left',
             color='#383838', fontsize=9)
 
@@ -381,14 +360,14 @@ def plotBars(
 
         axes.barh(
             space_samples * x[i] + bin_width / space_break,
-            width=height_aft[i] if height_aft_err[i] < height_aft[i] else 0, xerr=0,
+            width=height_aft[i] if height_aft[i] < 10000 else 0, xerr=0,
             color=colors[i], edgecolor='#383838', alpha=a,
             height=bin_width, hatch='////', linewidth=.5,
             zorder=2)
         axes.errorbar(
             y=space_samples * x[i] + bin_width / space_break,
-            x=height_aft[i] if height_aft_err[i] < height_aft[i] else 0,
-            xerr=height_aft_err[i] if height_aft_err[i] < height_aft[i] else 0,
+            x=height_aft[i] if height_aft[i] < 10000 else 0,
+            xerr=height_aft_err[i] if height_aft[i] < 10000 else 0,
             color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
             zorder=3)
 
@@ -397,7 +376,7 @@ def plotBars(
         axes.text(
             lim * .975,
             space_samples * x[i] + 0.1 + bin_width / space_break,
-            text if height_aft_err[i] < height_aft[i] else 'Not fitted',
+            text if height_aft[i] < 10000 else 'Not fitted',
             va='center_baseline', ha='left',
             color='#383838', fontsize=9)
 
@@ -414,60 +393,6 @@ def plotBars(
     axes.invert_yaxis(), axes.invert_xaxis()
 
 
-def plotHeatMap(
-        title,
-        data_map, frequencies, formulations,
-):
-    fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
-
-    plt.rcParams['text.color'] = '#383838'  # Cor de todos os textos
-    plt.rcParams['axes.labelcolor'] = '#383838'  # Cor dos labels dos eixos
-    plt.rcParams['xtick.color'] = '#383838'  # Cor das ticks do eixo X
-    plt.rcParams['ytick.color'] = '#383838'  # Cor das ticks do eixo Y
-    plt.rcParams['axes.titlecolor'] = '#383838'  # Cor do título do gráfico
-
-    plt.style.use('seaborn-v0_8-ticks')
-    plt.figure(figsize=(18, 4.5), facecolor='snow')
-    plt.gca().set_facecolor('snow')
-
-    if title == "Elastic recovery (%)":
-        for i in range(len(data_map)):
-            for j in range(len(data_map[i])):
-                if data_map[i][j] > 100:
-                    data_map[i][j] = None
-        colors = 'RdYlGn'
-        decimal = '.0f'
-
-    if title == 'Loss factor $tan(\delta)$':
-        for i in range(len(data_map)):
-            for j in range(len(data_map[i])):
-                for k in range(len(data_map[i][j])):
-                    if data_map[i][j][k] > 2:
-                        data_map[i][j][k] = None
-        colors = 'coolwarm'
-        decimal = '.2f'
-        data_map = np.array(data_map, dtype=float).flatten().reshape(12, 31)
-
-    df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
-    sns.heatmap(
-        df,
-        annot=True, cmap=colors,
-        fmt=decimal, linewidths=0.5, cbar_kws={'label': title})
-
-    # plt.title("Elastic modulus $G'$ recovery across frequency.")
-    plt.tick_params(axis='both', which='both', length=0)
-    plt.xticks(rotation=45, ha='center', fontsize=10, color='#383838')
-    plt.yticks(rotation=0, ha='right', fontsize=10, color='#383838')
-
-    plt.subplots_adjust(
-        wspace=0, hspace=0,
-        top=0.97, bottom=0.14,
-        left=0.05, right=1.0)
-
-    dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
-    plt.savefig(f'{dirSave}' + f'\\{title[0]}' + '.png', facecolor='w', dpi=600)
-
-
 def main(dataPath, fileName):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
@@ -482,61 +407,50 @@ def main(dataPath, fileName):
                                       fig.add_subplot(gs[3, 2]))
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
-    yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 4)
+    yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 3 * 10 ** 4)
     xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
 
     nSamples, colorSamples = getSamplesInfos(
-        3, 4,
-        2, 2, 2, 3,
-        '#fb7e8f', '#e30057',
-        '#80ed99', '#57cc99', '#38a3a5', '#22577a')
+        2, 2, 3,
+        2, 3, 3,
+        'silver', 'hotpink', 'lightskyblue',
+        'grey', 'mediumvioletred', 'royalblue')
     data, labels = getSamplesData(dataPath, nSamples)
 
-    listBefore = {
-        labels[0]: ([], [], [], []),
-        labels[1]: ([], [], [], []),
-        labels[2]: ([], [], [], []),
-        labels[3]: ([], [], [], []),
-        labels[4]: ([], [], [], []),
-        labels[5]: ([], [], [], []),
-    }
-    listAfter = {
-        labels[0]: ([], [], [], []),
-        labels[1]: ([], [], [], []),
-        labels[2]: ([], [], [], []),
-        labels[3]: ([], [], [], []),
-        labels[4]: ([], [], [], []),
-        labels[5]: ([], [], [], []),
+    listBefore, listAfter = {
+        labels[0]: ([], [], []),
+        labels[1]: ([], [], []),
+        labels[2]: ([], [], []),
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], [])
+    }, {
+        labels[0]: ([], [], []),
+        labels[1]: ([], [], []),
+        labels[2]: ([], [], []),
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], [])
     }
 
     meanBefore, meanAfter = [], []
     meanBeforeErr, meanAfterErr = [], []
     dataFittingBef_stor, dataFittingAft_stor = [], []
     dataFittingBef_loss, dataFittingAft_loss = [], []
-    recoveryPCT, tan_delta = [], []
 
-    for key, (x, gP, gD, d) in listBefore.items():
+    for key, (x, gP, gD) in listBefore.items():
         x.append(data[f'{key}_freq'])
         gP.append(data[f'{key}_storage'])
         gD.append(data[f'{key}_loss'])
-        d.append(data[f'{key}_delta'])
 
-    for key, (x, gP, gD, d) in listAfter.items():
+    for key, (x, gP, gD) in listAfter.items():
         x.append(data[f'{key}_freq_broken'])
         gP.append(data[f'{key}_storage_broken'])
         gD.append(data[f'{key}_loss_broken'])
-        d.append(data[f'{key}_delta_broken'])
 
     for key, color in zip(listBefore, colorSamples):
-        recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
-
-        freqs = np.mean(listBefore[key][0], axis=1)[0]
         gP, gD = np.mean(listBefore[key][1], axis=1)[0], np.mean(listBefore[key][2], axis=1)[0]
         gPerr, gDerr = np.std(listBefore[key][1], axis=1)[0], np.std(listBefore[key][2], axis=1)[0]
-        delta, deltaErr = np.mean(listBefore[key][3], axis=1)[0], np.std(listBefore[key][3], axis=1)[0]
-
-        recoveryBef, freqsRecovery = getRecoveryByFreq(recoveryBef, gP, freqs)
-        delta_bef, freqsRecovery = getRecoveryByFreq(delta_bef, delta, freqs)
 
         meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
         meanBefore.append(meanStorage)
@@ -545,7 +459,8 @@ def main(dataPath, fileName):
         dataFittingBef_stor, dataFittingBef_loss = plotFreqSweeps(  # Before axes
             sampleName=key,
             axTop=axPreTop, axBottom=axPreBottom,
-            x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
+            x=np.mean(listBefore[key][0], axis=1)[0],
+            yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
             axTitle='Before breakage',
             yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
             logScale=True,
@@ -558,16 +473,12 @@ def main(dataPath, fileName):
         gDerr = np.std(gD, axis=1)[0] if key != '0St + kCar/CL' else np.zeros(31)
         gP = np.mean(gP, axis=1)[0] if key != '0St + kCar/CL' else gP
         gD = np.mean(gD, axis=1)[0] if key != '0St + kCar/CL' else gD
-        delta, deltaErr = np.mean(listAfter[key][3], axis=1)[0], np.std(listAfter[key][3], axis=1)[0]
-
-        recoveryAft, freqsRecovery = getRecoveryByFreq(recoveryAft, gP, freqs)
-        delta_aft, freqsRecovery = getRecoveryByFreq(delta_aft, delta, freqs)
-        tan_delta.append([delta_bef, delta_aft])
 
         dataFittingAft_stor, dataFittingAft_loss = plotFreqSweeps(  # After axes
             sampleName=key,
             axTop=axPostTop, axBottom=axPostBottom,
-            x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
+            x=np.mean(listAfter[key][0], axis=1)[0],
+            yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
             axTitle='After breakage',
             yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
             logScale=True,
@@ -575,29 +486,26 @@ def main(dataPath, fileName):
         axPostTop.set_ylabel(''), axPostBottom.set_ylabel('')
         axPostTop.set_yticklabels([]), axPostBottom.set_yticklabels([])
 
-        recoveryPCT.append(((np.array(recoveryAft) / np.array(recoveryBef)) * 100).tolist())
-        # recoveryPCT = recoveryPCT[0]
-
     ratioBef = ratioElaVis(dataFittingBef_stor, dataFittingBef_loss)
     ratioAft = ratioElaVis(dataFittingAft_stor, dataFittingAft_loss)
 
     plotBars(  # First table
-        "$n'$", axBar1, 1.1,
+        "$n'$", axBar1, 0.8,
         dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=2,
-        scale_correction=0, z=1)
+        scale_correction=None, z=1)
 
     plotBars(  # Second table
-        "$G_0'$ (Pa)", axBar2, 110,
-        dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=1,
-        scale_correction=1, z=1)
+        "$G_0'$ (Pa)", axBar2, 1800,
+        dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=0,
+        scale_correction=4, z=1)
 
     plotBars(  # Third table
-        "$G_0''$ (Pa)", axBar3, 12,
-        dataFittingBef_loss, dataFittingAft_loss, colorSamples, dec=1,
-        scale_correction=1, z=1)
+        "$G_0''$ (Pa)", axBar3, 500,
+        dataFittingBef_loss, dataFittingAft_loss, colorSamples, dec=0,
+        scale_correction=None, z=1)
 
     plotBars(  # Fourth table
-        "$G_0'\,/\,G_0''$", axBar4, 20,
+        "$G_0'\,/\,G_0''$", axBar4, 30,
         ratioBef, ratioAft, colorSamples, dec=1,
         scale_correction=None, z=1)
 
@@ -605,20 +513,11 @@ def main(dataPath, fileName):
         wspace=0.015, hspace=0.15,
         top=0.93, bottom=0.07,
         left=0.045, right=0.965)
-
-    plotHeatMap(
-        "Elastic recovery (%)",
-        recoveryPCT, freqsRecovery, labels)
-
-    brokenLabels = insertKey(labels)
-    plotHeatMap(
-        'Loss factor $tan(\delta)$',
-        tan_delta, freqsRecovery, brokenLabels)
     plt.show()
 
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
     fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
-    print(f'\n\n· Charts saved at\n{dirSave}.')
+    print(f'\n\n· Chart saved at\n{dirSave}.')
 
 
 if __name__ == '__main__':
@@ -626,33 +525,35 @@ if __name__ == '__main__':
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
 
     filePath = [
-        # kC
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+        # 0St
+        folderPath + "/031024/10_0WSt/10_0WSt-viscRec_1.xlsx",
+        folderPath + "/031024/10_0WSt/10_0WSt-viscRec_2.xlsx",
 
-        # kC/CL
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
+        # 0St + kCar
+        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
+        folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
+        # folderPath + "/091024/10_0WSt_kCar/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
 
-        # iC CL 14
-        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-2.xlsx",
+        # 0St + iCar
+        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
+        # folderPath + "10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
+        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
+        folderPath + "/031024/10_0WSt_iCar/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
 
-        # iC CL 21
-        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-2.xlsx",
+        # 0St/CL
+        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-1.xlsx",
+        # folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-2.xlsx",
+        folderPath + "/171024/10_0St_CL/10_0St_CL-recovery-3.xlsx",
 
-        # iC CL 28
-        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-2.xlsx",
+        # 0St + kCar/CL
+        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-1.xlsx",
+        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-3_off.xlsx",
+        folderPath + "/171024/10_0St_kC_CL/10_0St_kC_CL-recovery-4.xlsx",
 
-        # iC CL 42
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-2.xlsx",
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
+        # 0St + iCar/CL
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-1.xlsx",
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-2.xlsx",
+        folderPath + "/171024/10_0St_iC_CL/10_0St_iC_CL-recovery-3.xlsx",
     ]
 
-    main(filePath, 'Car-ViscoelasticRecoveryWithViscous')
+    main(filePath, '0St-ViscoelasticRecovery')
