@@ -410,7 +410,6 @@ def plotBars(
 def plotHeatMap(
         title,
         data_map, frequencies, formulations,
-
 ):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
 
@@ -421,36 +420,43 @@ def plotHeatMap(
     plt.rcParams['axes.titlecolor'] = '#383838'  # Cor do título do gráfico
 
     plt.style.use('seaborn-v0_8-ticks')
-    plt.figure(figsize=(18, 6), facecolor='snow')
-    plt.gca().set_facecolor('w')
+    plt.figure(figsize=(18, 4.5), facecolor='snow')
+    plt.gca().set_facecolor('snow')
 
-    if title == 'Elastic recovery (%)':
+    if title == "Elastic recovery (%)":
         for i in range(len(data_map)):
             for j in range(len(data_map[i])):
                 if data_map[i][j] > 100:
                     data_map[i][j] = None
+        colors = 'RdYlGn'
+        decimal = '.0f'
 
-    if title == 'tan(δ)':
+    if title == 'Loss factor $tan(\delta)$':
         for i in range(len(data_map)):
             for j in range(len(data_map[i])):
                 if data_map[i][j] > 2:
                     data_map[i][j] = None
-    df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
+        colors = 'coolwarm'
+        decimal = '.2f'
 
+    df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
     sns.heatmap(
         df,
-        annot=True, cmap='YlGn' if title != 'tan(δ)' else 'viridis',
-        fmt='.1f' if title != 'tan(δ)' else '.2f', linewidths=0.5, cbar_kws={'label': title})
+        annot=True, cmap=colors,
+        fmt=decimal, linewidths=0.5, cbar_kws={'label': title})
 
-    plt.title("Elastic modulus $G'$ recovery across frequency.")
+    # plt.title("Elastic modulus $G'$ recovery across frequency.")
     plt.tick_params(axis='both', which='both', length=0)
     plt.xticks(rotation=45, ha='center', fontsize=10, color='#383838')
     plt.yticks(rotation=0, ha='right', fontsize=10, color='#383838')
 
     plt.subplots_adjust(
         wspace=0, hspace=0,
-        top=0.93, bottom=0.12,
+        top=0.97, bottom=0.14,
         left=0.05, right=1.0)
+
+    dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
+    plt.savefig(f'{dirSave}' + f'\\{title[0]}' + '.png', facecolor='w', dpi=600)
 
 
 def main(dataPath, fileName):
@@ -590,23 +596,24 @@ def main(dataPath, fileName):
         wspace=0.015, hspace=0.15,
         top=0.93, bottom=0.07,
         left=0.045, right=0.965)
-    # plt.show()
-    #
-    # dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
-    # fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
-    # print(f'\n\n· Chart saved at\n{dirSave}.')
+
+
     plotHeatMap(
-        'Elastic recovery (%)',
+        "Elastic recovery (%)",
         recoveryPCT, freqsRecovery, labels)
     plotHeatMap(
-        'tan(δ)',
+        'Loss factor $tan(\delta)$',
         tan_delta, freqsRecovery, labels)
     plt.show()
 
+    dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
+    fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
+    print(f'\n\n· Charts saved at\n{dirSave}.')
+
 
 if __name__ == '__main__':
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"  # CEBB
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"  # CEBB
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
 
     filePath = [
         # kC
