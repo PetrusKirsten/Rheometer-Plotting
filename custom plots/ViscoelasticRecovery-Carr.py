@@ -222,6 +222,14 @@ def ratioElaVis(data_elastic, data_viscous):
     return result
 
 
+def insertKey(keys):
+    index = 1
+    while index <= len(keys):
+        keys.insert(index, 'Broken')
+        index += 2
+    return keys
+
+
 def plotFreqSweeps(sampleName, axTop, axBottom, axTitle,
                    x, yP, yD, yPerr, yDerr,
                    yLabel, yLim, xLabel, xLim,
@@ -413,10 +421,10 @@ def plotHeatMap(
 ):
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
 
-    plt.rcParams['text.color'] = '#383838'       # Cor de todos os textos
+    plt.rcParams['text.color'] = '#383838'  # Cor de todos os textos
     plt.rcParams['axes.labelcolor'] = '#383838'  # Cor dos labels dos eixos
-    plt.rcParams['xtick.color'] = '#383838'      # Cor das ticks do eixo X
-    plt.rcParams['ytick.color'] = '#383838'      # Cor das ticks do eixo Y
+    plt.rcParams['xtick.color'] = '#383838'  # Cor das ticks do eixo X
+    plt.rcParams['ytick.color'] = '#383838'  # Cor das ticks do eixo Y
     plt.rcParams['axes.titlecolor'] = '#383838'  # Cor do título do gráfico
 
     plt.style.use('seaborn-v0_8-ticks')
@@ -434,10 +442,12 @@ def plotHeatMap(
     if title == 'Loss factor $tan(\delta)$':
         for i in range(len(data_map)):
             for j in range(len(data_map[i])):
-                if data_map[i][j] > 2:
-                    data_map[i][j] = None
+                for k in range(len(data_map[i][j])):
+                    if data_map[i][j][k] > 2:
+                        data_map[i][j][k] = None
         colors = 'coolwarm'
         decimal = '.2f'
+        data_map = np.array(data_map, dtype=float).flatten().reshape(12, 31)
 
     df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
     sns.heatmap(
@@ -519,17 +529,15 @@ def main(dataPath, fileName):
         d.append(data[f'{key}_delta_broken'])
 
     for key, color in zip(listBefore, colorSamples):
-        recoveryBef, recoveryAft, delta_bef = [], [], []
+        recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
 
         freqs = np.mean(listBefore[key][0], axis=1)[0]
         gP, gD = np.mean(listBefore[key][1], axis=1)[0], np.mean(listBefore[key][2], axis=1)[0]
         gPerr, gDerr = np.std(listBefore[key][1], axis=1)[0], np.std(listBefore[key][2], axis=1)[0]
-
         delta, deltaErr = np.mean(listBefore[key][3], axis=1)[0], np.std(listBefore[key][3], axis=1)[0]
 
         recoveryBef, freqsRecovery = getRecoveryByFreq(recoveryBef, gP, freqs)
         delta_bef, freqsRecovery = getRecoveryByFreq(delta_bef, delta, freqs)
-        tan_delta.append(delta_bef)
 
         meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
         meanBefore.append(meanStorage)
@@ -551,9 +559,11 @@ def main(dataPath, fileName):
         gDerr = np.std(gD, axis=1)[0] if key != '0St + kCar/CL' else np.zeros(31)
         gP = np.mean(gP, axis=1)[0] if key != '0St + kCar/CL' else gP
         gD = np.mean(gD, axis=1)[0] if key != '0St + kCar/CL' else gD
-        delta, deltaErr = np.mean(listBefore[key][3], axis=1)[0], np.std(listBefore[key][3], axis=1)[0]
+        delta, deltaErr = np.mean(listAfter[key][3], axis=1)[0], np.std(listAfter[key][3], axis=1)[0]
 
         recoveryAft, freqsRecovery = getRecoveryByFreq(recoveryAft, gP, freqs)
+        delta_aft, freqsRecovery = getRecoveryByFreq(delta_aft, delta, freqs)
+        tan_delta.append([delta_bef, delta_aft])
 
         dataFittingAft_stor, dataFittingAft_loss = plotFreqSweeps(  # After axes
             sampleName=key,
@@ -597,13 +607,14 @@ def main(dataPath, fileName):
         top=0.93, bottom=0.07,
         left=0.045, right=0.965)
 
-
     plotHeatMap(
         "Elastic recovery (%)",
         recoveryPCT, freqsRecovery, labels)
+
+    brokenLabels = insertKey(labels)
     plotHeatMap(
         'Loss factor $tan(\delta)$',
-        tan_delta, freqsRecovery, labels)
+        tan_delta, freqsRecovery, brokenLabels)
     plt.show()
 
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
