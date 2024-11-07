@@ -108,15 +108,13 @@ def getCteMean(values, tolerance=100):
 
 def getSamplesInfos(
         # quantity
-        n_kc_0, n_kc_14,
         n_ic_14, n_ic_21, n_ic_28, n_ic_42,
         # colors
-        color_kc_0, color_kc_14,
         color_ic_14, color_ic_21, color_ic_28, color_ic_42
 ):
-    number_samples = [n_kc_0, n_kc_14, n_ic_14, n_ic_21, n_ic_28, n_ic_42]
+    number_samples = [n_ic_14, n_ic_21, n_ic_28, n_ic_42]
 
-    colors_samples = [color_kc_0, color_kc_14, color_ic_14, color_ic_21, color_ic_28, color_ic_42]
+    colors_samples = [color_ic_14, color_ic_21, color_ic_28, color_ic_42]
 
     return number_samples, colors_samples
 
@@ -145,7 +143,6 @@ def getSamplesData(
         }
 
     samples = {
-        'kCar': [], 'kCar/CL-14': [],
         'iCar/CL-14': [], 'iCar/CL-21': [], 'iCar/CL-28': [], 'iCar/CL-42': []
     }
     sample_keys = list(samples.keys())
@@ -153,9 +150,7 @@ def getSamplesData(
             [sample_keys[0]] * number_samples[0] +
             [sample_keys[1]] * number_samples[1] +
             [sample_keys[2]] * number_samples[2] +
-            [sample_keys[3]] * number_samples[3] +
-            [sample_keys[4]] * number_samples[4] +
-            [sample_keys[5]] * number_samples[5])
+            [sample_keys[3]] * number_samples[3])
 
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
@@ -446,7 +441,7 @@ def plotHeatMap(
                         data_map[i][j][k] = None
         colors = 'coolwarm'
         decimal = '.2f'
-        data_map = np.array(data_map, dtype=float).flatten().reshape(12, 31)
+        data_map = np.array(data_map, dtype=float).flatten().reshape(8, 31)
 
     df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
     sns.heatmap(
@@ -482,13 +477,11 @@ def main(dataPath, fileName):
                                       fig.add_subplot(gs[3, 2]))
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
-    yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 4)
+    yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (3 * 10 ** (-1), 3 * 10 ** 3)
     xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
 
     nSamples, colorSamples = getSamplesInfos(
-        3, 4,
         2, 2, 2, 3,
-        '#fb7e8f', '#e30057',
         '#80ed99', '#57cc99', '#38a3a5', '#22577a')
     data, labels = getSamplesData(dataPath, nSamples)
 
@@ -497,16 +490,12 @@ def main(dataPath, fileName):
         labels[1]: ([], [], [], []),
         labels[2]: ([], [], [], []),
         labels[3]: ([], [], [], []),
-        labels[4]: ([], [], [], []),
-        labels[5]: ([], [], [], []),
     }
     listAfter = {
         labels[0]: ([], [], [], []),
         labels[1]: ([], [], [], []),
         labels[2]: ([], [], [], []),
         labels[3]: ([], [], [], []),
-        labels[4]: ([], [], [], []),
-        labels[5]: ([], [], [], []),
     }
 
     meanBefore, meanAfter = [], []
@@ -584,20 +573,20 @@ def main(dataPath, fileName):
     plotBars(  # First table
         "$n'$", axBar1, 1.1,
         dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=2,
-        scale_correction=0, z=1)
+        scale_correction=None, z=1)
 
     plotBars(  # Second table
-        "$G_0'$ (Pa)", axBar2, 110,
+        "$G_0'$ (Pa)", axBar2, 50,
         dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=1,
-        scale_correction=1, z=1)
+        scale_correction=None, z=1)
 
     plotBars(  # Third table
         "$G_0''$ (Pa)", axBar3, 12,
         dataFittingBef_loss, dataFittingAft_loss, colorSamples, dec=1,
-        scale_correction=1, z=1)
+        scale_correction=None, z=1)
 
     plotBars(  # Fourth table
-        "$G_0'\,/\,G_0''$", axBar4, 20,
+        "$G_0'\,/\,G_0''$", axBar4, 10,
         ratioBef, ratioAft, colorSamples, dec=1,
         scale_correction=None, z=1)
 
@@ -626,17 +615,6 @@ if __name__ == '__main__':
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
 
     filePath = [
-        # kC
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
-
-        # kC/CL
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
-
         # iC CL 14
         folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-1.xlsx",
         folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-2.xlsx",
@@ -655,4 +633,4 @@ if __name__ == '__main__':
         folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
     ]
 
-    main(filePath, 'Car-ViscoelasticRecoveryWithViscous')
+    main(filePath, 'iCar-ViscoelasticRecovery')
