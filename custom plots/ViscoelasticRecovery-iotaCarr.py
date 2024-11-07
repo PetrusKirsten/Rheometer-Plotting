@@ -224,13 +224,14 @@ def insertKey(keys):
     return keys
 
 
-def plotFreqSweeps(sampleName, axTop, axBottom, axTitle,
-                   x, yP, yD, yPerr, yDerr,
-                   yLabel, yLim, xLabel, xLim,
-                   curveColor,
-                   logScale=True,
-                   startVal=0, endVal=16,
-                   tableDataStor=None, tableDataLoss=None):
+def plotFreqSweeps(
+        sampleName, axTop, axBottom, axTitle,
+        x, yP, yD, yPerr, yDerr,
+        yLabel, yLim, xLabel, xLim,
+        curveColor,
+        logScale=True,
+        startVal=0, endVal=16,
+        tableDataStor=None, tableDataLoss=None):
     def legendLabel(ax):
         legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
