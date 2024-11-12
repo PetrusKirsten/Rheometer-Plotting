@@ -143,8 +143,8 @@ def getSamplesData(
         }
 
     samples = {
-        'kCar': [], 'kCar/CL-14': [],
-        'iCar/CL-14': [], 'iCar/CL-21': [], 'iCar/CL-28': [], 'iCar/CL-42': []
+        'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [],
+        'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
@@ -235,7 +235,7 @@ def plotFreqSweeps(sampleName, axTop, axBottom, axTitle,
                    startVal=0, endVal=16,
                    tableDataStor=None, tableDataLoss=None):
     def legendLabel(ax):
-        legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+        legend = ax.legend(loc='lower right', fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
         legend.get_frame().set_edgecolor('whitesmoke')
 
@@ -480,14 +480,14 @@ def main(dataPath, fileName):
                                       fig.add_subplot(gs[3, 2]))
 
     fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
-    yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 4)
+    yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
     xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
 
     nSamples, colorSamples = getSamplesInfos(
-        3, 4,
-        2, 2, 2, 3,
-        '#fb7e8f', '#e30057',
-        '#80ed99', '#57cc99', '#38a3a5', '#22577a')
+        3, 4, 2,
+        3, 2, 4,
+        'lightsteelblue', '#A773FF',  '#892F99',
+        '#AB247B', '#E64B83', '#FF0831')
     data, labels = getSamplesData(dataPath, nSamples)
 
     listBefore = {
@@ -580,22 +580,22 @@ def main(dataPath, fileName):
     ratioAft = ratioElaVis(dataFittingAft_stor, dataFittingAft_loss)
 
     plotBars(  # First table
-        "$n'$", axBar1, 1.1,
+        "$n'$", axBar1, .6,
         dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=2,
         scale_correction=0, z=1)
 
     plotBars(  # Second table
-        "$G_0'$ (Pa)", axBar2, 110,
+        "$G_0'$ (Pa)", axBar2, 10000,
         dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=1,
-        scale_correction=1, z=1)
+        scale_correction=None, z=1)
 
     plotBars(  # Third table
-        "$G_0''$ (Pa)", axBar3, 12,
+        "$G_0''$ (Pa)", axBar3, 850,
         dataFittingBef_loss, dataFittingAft_loss, colorSamples, dec=1,
-        scale_correction=1, z=1)
+        scale_correction=None, z=1)
 
     plotBars(  # Fourth table
-        "$G_0'\,/\,G_0''$", axBar4, 20,
+        "$G_0'\,/\,G_0''$", axBar4, 15,
         ratioBef, ratioAft, colorSamples, dec=1,
         scale_correction=None, z=1)
 
@@ -629,28 +629,31 @@ if __name__ == '__main__':
         folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
         folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
 
-        # kC/CL
+        # kC CL 7
         folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
         folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
         folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
         folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
 
-        # iC CL 14
-        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-2.xlsx",
+        # kC CL 14
+        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-2.xlsx",
 
-        # iC CL 21
-        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-2.xlsx",
+        # kC CL 21
+        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-2.xlsx",
+        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-3.xlsx",
 
-        # iC CL 28
-        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-2.xlsx",
+        # kC CL 28
+        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-2.xlsx",
 
-        # iC CL 42
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-2.xlsx",
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
+        # kC CL 42
+        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-1.xlsx",
+        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-2.xlsx",
+        # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
+
     ]
 
-    main(filePath, 'Car-ViscoelasticRecoveryWithViscous')
+    main(filePath, 'kappaCar-ViscoelasticRecoveryWithViscous')

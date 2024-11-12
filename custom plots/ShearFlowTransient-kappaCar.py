@@ -56,12 +56,13 @@ def funcTransient(t, tau_0, tau_e, time_cte):
 
 def getSamplesInfos(
         # quantity
-        n_ic_14, n_ic_21, n_ic_28, n_ic_42,
+        n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42,
         # colors
-        color_ic_14, color_ic_21, color_ic_28, color_ic_42
+        color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42,
 ):
-    number_samples = [n_ic_14, n_ic_21, n_ic_28, n_ic_42]
-    colors_samples = [color_ic_14, color_ic_21, color_ic_28, color_ic_42]
+    number_samples = [n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42]
+
+    colors_samples = [color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42]
 
     return number_samples, colors_samples
 
@@ -86,14 +87,17 @@ def getSamplesData(dataPath, number_samples):
         }
 
     samples = {
-        'iCar/CL-14': [], 'iCar/CL-21': [], 'iCar/CL-28': [], 'iCar/CL-42': []
+        'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [],
+        'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
     }
     sample_keys = list(samples.keys())
     sample_labels = (
             [sample_keys[0]] * number_samples[0] +
             [sample_keys[1]] * number_samples[1] +
             [sample_keys[2]] * number_samples[2] +
-            [sample_keys[3]] * number_samples[3])
+            [sample_keys[3]] * number_samples[3] +
+            [sample_keys[4]] * number_samples[4] +
+            [sample_keys[5]] * number_samples[5])
 
     for sample_type, path in zip(sample_labels, dataPath):
         df = pd.read_excel(path)
@@ -200,11 +204,11 @@ def plotBars(title, axes, data, colors, a, z):
         ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
         ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
 
-        ax.set_xticks([]), ax.set_xlim([-2, 11]), ax.set_yticks([]), ax.set_ylim(yLim)
+        ax.set_xticks([]), ax.set_xlim([-2, 17]), ax.set_yticks([]), ax.set_ylim(yLim)
 
     axes3 = axes.twinx()
 
-    lim1, lim3 = (0, 80), (0, 65)
+    lim1, lim3 = (0, 350), (0, 50)
 
     configPlot(axes, "$\\tau_0$ (Pa) and $\\tau_e$ (Pa)", lim1)
     configPlot(axes3, "$\lambda$ (s)", lim3)
@@ -291,7 +295,7 @@ def main(dataPath):
 
     fig.suptitle(f'Constant shear rate flow')
     xTitle, xLimits = (f'Time (s)', (0, 180))
-    yTitle, yLimits = (f'Shear stress (Pa)', (0, 70))
+    yTitle, yLimits = (f'Shear stress (Pa)', (0, 340))
     yTitleVisc, yLimitsVisc = f'Viscosity (mPa·s)', (yLimits[0] * 3.33, yLimits[1] * 3.33)
 
     axesVisc = axStress.twinx()
@@ -302,8 +306,10 @@ def main(dataPath):
     axesVisc.yaxis.set_minor_locator(MultipleLocator(25))
 
     nSamples, colorSamples = getSamplesInfos(
-        2, 2, 2, 3,
-        '#80ed99', '#57cc99', '#38a3a5', '#22577a')
+        3, 4, 2,
+        3, 2, 4,
+        'lightsteelblue', '#A773FF',  '#892F99',
+        '#AB247B', '#E64B83', '#FF0831')
     data, labels = getSamplesData(dataPath, nSamples)
 
     fitModeStress, fitModeVisc = 'transient', ''
@@ -312,7 +318,9 @@ def main(dataPath):
         labels[0]: ([], [], []),
         labels[1]: ([], [], []),
         labels[2]: ([], [], []),
-        labels[3]: ([], [], [])
+        labels[3]: ([], [], []),
+        labels[4]: ([], [], []),
+        labels[5]: ([], [], [])
     }
 
     tableStress = []
@@ -358,7 +366,7 @@ def main(dataPath):
         left=0.045, right=0.96)
     plt.show()
 
-    fileName = 'Car-Thixotropy'
+    fileName = 'kappaCar-Thixotropy'
     dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
     fig.savefig(f'{dirSave}' + f'\\{fileName}' + '.png', facecolor='w', dpi=600)
 
@@ -369,25 +377,39 @@ def main(dataPath):
 
 
 if __name__ == '__main__':
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
-        # iC CL 14
-        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_14/iC_CL_14-viscoelasticRecovery-2.xlsx",
+        # kC
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
 
-        # iC CL 21
-        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_21/iC_CL_21-viscoelasticRecovery-2.xlsx",
+        # kC CL 7
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
 
-        # iC CL 28
-        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_28/iC_CL_28-viscoelasticRecovery-2.xlsx",
+        # kC CL 14
+        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-2.xlsx",
 
-        # iC CL 42
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-1.xlsx",
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-2.xlsx",
-        folderPath + "/311024/iC_CL_42/iC_CL_42-viscoelasticRecovery-3.xlsx",
+        # kC CL 21
+        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-2.xlsx",
+        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-3.xlsx",
+
+        # kC CL 28
+        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-2.xlsx",
+
+        # kC CL 42
+        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-1.xlsx",
+        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-2.xlsx",
+        # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
+
     ]
 
     main(dataPath=filePath)
