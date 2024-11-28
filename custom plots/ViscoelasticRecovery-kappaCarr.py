@@ -142,6 +142,9 @@ def getSamplesData(
             'delta': segments(delta)
         }
 
+    def create_dict_with_labels(labels):
+        return {label: ([], [], [], []) for label in labels}
+
     samples = {
         'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [],
         'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
@@ -172,7 +175,7 @@ def getSamplesData(
         dict_data[f'{sample_type}_loss_broken'] = [s['loss'][-1] for s in samples[sample_type]]
         dict_data[f'{sample_type}_delta_broken'] = [s['delta'][-1] for s in samples[sample_type]]
 
-    return dict_data, sample_keys
+    return dict_data, sample_keys, create_dict_with_labels(sample_keys), create_dict_with_labels(sample_keys)
 
 
 def getDataByFreq(storageList, data, frequencies):
@@ -484,7 +487,7 @@ def main(dataPath, fileName):
                                       fig.add_subplot(gs[2, 2]),
                                       fig.add_subplot(gs[3, 2]))
 
-    fig.suptitle(f'Viscoelastic recovery by frequency sweeps assay.')
+    fig.suptitle(f'')
     yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
     xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
 
@@ -493,24 +496,24 @@ def main(dataPath, fileName):
         3, 2, 4,
         'lightsteelblue', '#A773FF',  '#892F99',
         '#AB247B', '#E64B83', '#FF0831')
-    data, labels = getSamplesData(dataPath, nSamples)
+    data, labels, listBefore, listAfter = getSamplesData(dataPath, nSamples)
 
-    listBefore = {
-        labels[0]: ([], [], [], []),
-        labels[1]: ([], [], [], []),
-        labels[2]: ([], [], [], []),
-        labels[3]: ([], [], [], []),
-        labels[4]: ([], [], [], []),
-        labels[5]: ([], [], [], []),
-    }
-    listAfter = {
-        labels[0]: ([], [], [], []),
-        labels[1]: ([], [], [], []),
-        labels[2]: ([], [], [], []),
-        labels[3]: ([], [], [], []),
-        labels[4]: ([], [], [], []),
-        labels[5]: ([], [], [], []),
-    }
+    # listBefore = {
+    #     labels[0]: ([], [], [], []),
+    #     labels[1]: ([], [], [], []),
+    #     labels[2]: ([], [], [], []),
+    #     labels[3]: ([], [], [], []),
+    #     labels[4]: ([], [], [], []),
+    #     labels[5]: ([], [], [], []),
+    # }
+    # listAfter = {
+    #     labels[0]: ([], [], [], []),
+    #     labels[1]: ([], [], [], []),
+    #     labels[2]: ([], [], [], []),
+    #     labels[3]: ([], [], [], []),
+    #     labels[4]: ([], [], [], []),
+    #     labels[5]: ([], [], [], []),
+    # }
 
     meanBefore, meanAfter = [], []
     meanBeforeErr, meanAfterErr = [], []
@@ -606,7 +609,7 @@ def main(dataPath, fileName):
 
     plt.subplots_adjust(
         wspace=0.015, hspace=0.15,
-        top=0.93, bottom=0.07,
+        top=0.97, bottom=0.07,
         left=0.045, right=0.965)
 
     plotHeatMap(
@@ -625,40 +628,39 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"  # CEBB
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
 
     filePath = [
         # kC
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+        folderPath + "/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC/kC-viscoelasticRecovery-3.xlsx",
 
         # kC CL 7
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-4.xlsx",
 
         # kC CL 14
-        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_14/kC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_14/kC_CL_14-viscoelasticRecovery-2.xlsx",
 
         # kC CL 21
-        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-1.xlsx",
-        # folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-2.xlsx",
-        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-3.xlsx",
+        folderPath + "/kC_CL_21/kC_CL_21-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/kC_CL_21/kC_CL_21-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_21/kC_CL_21-viscoelasticRecovery-3.xlsx",
 
         # kC CL 28
-        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-1.xlsx",
-        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_28/kC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_28/kC_CL_28-viscoelasticRecovery-2.xlsx",
 
         # kC CL 42
-        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-1.xlsx",
-        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-2.xlsx",
-        # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-3.xlsx",
-        # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
-
+        folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-2.xlsx",
+        # folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
     ]
 
     main(filePath, 'kappaCar-ViscoelasticRecoveryWithViscous')
