@@ -28,12 +28,13 @@ def fonts(folder_path, small=10, medium=12):  # To config different fonts but it
 
 def plotFormulas3D(
         axes, formulas, legend, axWidth=0.75, gridColor='w',
-        markerColor='crimson', markerStyle='o', lineColor='dimgrey',
-        paneColor='whitesmoke', edgeColor='w',
+        markerColor='crimson', markerStyle='o', markerSize=8, edgeWidth=.5, edgeColor='k',
+        lineColor='dimgrey', paneColor='whitesmoke', paneEdgeColor='w',
 ):
     def configPlot():
-        axes.set_proj_type('ortho')
-        axes.view_init(elev=10, azim=-18, roll=0)
+        # axes.set_proj_type('ortho')
+        axes.view_init(elev=9, azim=-130, roll=0)
+        axes.set_box_aspect([1., 1.45, 1.5])
 
         for axis in axes.xaxis, axes.yaxis, axes.zaxis:
             axis._axinfo['grid'].update({
@@ -41,30 +42,31 @@ def plotFormulas3D(
                 'linewidth': 1,
                 'linestyle': '-'})
             axis.set_label_position('lower'), axis.set_ticks_position('lower')
-            axis.set_pane_color(paneColor), axis.pane.set_edgecolor(edgeColor), axis.pane.set_linewidth(axWidth)
+            axis.set_pane_color(paneColor), axis.pane.set_edgecolor(paneEdgeColor), axis.pane.set_linewidth(axWidth)
         axes.zaxis.pane.set_edgecolor('k')
+        axes.zaxis.set_label_position('upper'), axes.zaxis.set_ticks_position('upper')
 
         # x axis
         axes.set_xlabel('')
         axes.xaxis.line.set_linewidth(axWidth)
         axes.set_xlim([-0.5, 2.5])
         axes.set_xticks([0, 1, 2])
-        axes.set_xticklabels(['No Car', '1% kCar', '1% iCar'])
-        ax.invert_xaxis()
+        axes.set_xticklabels(['No St', '5% St', '10% St'])
         axes.xaxis.pane.fill = False
 
         # y axis
         axes.set_ylabel('')
         axes.yaxis.line.set_linewidth(axWidth)
-        axes.set_ylim([-.5, 2.5])
-        axes.set_yticks([0, 1, 2])
-        axes.set_yticklabels(['No St', '5% St', '10% St'])
+        axes.set_ylim([-1, 5])
+        axes.set_yticks([0, 1, 2, 3, 4])
+        axes.set_yticklabels(['No Car', '0.5% kCar', '0.5% iCar', '1% kCar', '1% iCar'])
+        # ax.invert_xaxis()
         axes.yaxis.pane.fill = False
 
         # z axis
         axes.set_zlabel(f'Calcium ions concentration (mM)')
         axes.zaxis.line.set_linewidth(axWidth)
-        axes.set_zlim([0, 45])
+        axes.set_zlim([1, 45])
         axes.set_zticks([0, 7, 14, 21, 28, 42])
         axes.set_zticklabels(['0', '7', '14', '21', '28', '42'])
 
@@ -79,14 +81,14 @@ def plotFormulas3D(
 
     configPlot()
     for formulation in formulas:
-        car, starch, cacl2 = formulation
-        axes.plot(car, starch, cacl2,
+        carWeight, carType, cacl2 = formulation
+        axes.plot(carType, carWeight, cacl2,
                   c=markerColor, marker=markerStyle,
-                  alpha=1, ms=8, mew=.5, mec='k', ls='',
+                  alpha=1, ms=markerSize, mew=edgeWidth, mec=edgeColor, ls='',
                   label='' if formulation != formulas[-1] else legend,
                   zorder=2)
 
-        axes.plot([car, car], [starch, starch], [0, cacl2 - 0.06],
+        axes.plot([carType, carType], [carWeight, carWeight], [0, cacl2 - 0.06],
                   color=lineColor, linestyle='-', alpha=1, lw=.6,
                   zorder=1)
     legendLabel()
@@ -125,49 +127,52 @@ def plot2D(
     #     label=f'{sampleName}', zorder=3)
 
 
-# [Car, St, CaCl2]
-finalForms = [
-    [0, 2, 0], [0, 2, 7], [0, 2, 14], [0, 2, 28],  # St
+# [Car type, Starch, CaCl2]
+
+fivePct = [
+    [0, 1, 7], [0, 1, 14], [0, 1, 28],
+    [3, 1, 7], [3, 1, 14], [3, 1, 28],
+    [4, 1, 7], [4, 1, 14], [4, 1, 28]]
+
+propForms = [
     [1, 2, 0], [1, 2, 7], [1, 2, 14], [1, 2, 28],  # St + kappaCar
     [2, 2, 0], [2, 2, 7], [2, 2, 14], [2, 2, 28]]  # St + iotaCar
 
-fivePct = [
-    [0, 1, 7], [0, 1, 14], [0, 1, 28],  # St
-    [1, 1, 7], [1, 1, 14], [1, 1, 28],  # St + kappaCar
-    [2, 1, 7], [2, 1, 14], [2, 1, 28]]  # St + iotaCar
-
-noCaFivePct = [
-    [0, 1, 0],  # St
-    [1, 1, 0],  # St + kappaCar
-    [2, 1, 0]]  # St + iotaCar
-
-cars = [
-    [1, 0, 0], [1, 0, 7], [1, 0, 14], [1, 0, 21], [1, 0, 28], [1, 0, 42],  # St + kappaCar
-    [2, 0, 0], [2, 0, 7], [2, 0, 14], [2, 0, 21], [2, 0, 28], [2, 0, 42]]  # St + iotaCar
+doneForms = [
+    [0, 1, 0], [3, 1, 0], [4, 1, 0],
+    [0, 2, 0], [0, 2, 7], [0, 2, 14], [0, 2, 28],
+    [3, 2, 0], [3, 2, 7], [3, 2, 14], [3, 2, 28],
+    [4, 2, 0], [4, 2, 7], [4, 2, 14], [4, 2, 28],
+    [3, 0, 0], [3, 0, 7], [3, 0, 14], [3, 0, 21], [3, 0, 28], [3, 0, 42],
+    [4, 0, 0], [4, 0, 7], [4, 0, 14], [4, 0, 21], [4, 0, 28], [4, 0, 42],]
 
 plt.style.use('seaborn-v0_8-ticks')
-fig = plt.figure(figsize=(8.8, 9), constrained_layout=False)
+fig = plt.figure(figsize=(11, 9), constrained_layout=False)
 fig.suptitle('')
 
 ax = fig.add_subplot(111, projection='3d')
-fig.tight_layout()
 
-
-plotFormulas3D(
-    ax, cars, legend='Car crosslinking evaluation',
-    markerColor='lightskyblue')
+# plotFormulas3D(
+#     ax, screen, legend='Car crosslinking evaluation',
+#     markerColor='lightskyblue')
 
 plotFormulas3D(
-    ax, noCaFivePct, legend='Suspended formulations',
-    markerColor='lightcoral')
+    ax, fivePct, legend='Suspended',
+    edgeColor='tomato', markerStyle='x',
+    markerSize=9, edgeWidth='1.3')
 plotFormulas3D(
-    ax, fivePct, legend='',
-    markerColor='lightcoral', markerStyle='x')
-
-plotFormulas3D(
-    ax, finalForms, legend='Chosen formulations',
+    ax, doneForms, legend='Done',
     markerColor='lightgreen')
+plotFormulas3D(
+    ax, propForms, legend='Proposed',
+    markerColor='mediumslateblue')
 
-filename = 'Hydrogels-Formulations-Plot-NEW'
+
+plt.subplots_adjust(
+    hspace=0, wspace=0.120,
+    top=1, bottom=0,
+    left=0, right=0.91)
+
+filename = 'Hydrogels-Formulations-Plot-Proposition'
 plt.show()
 fig.savefig(f'{filename}.png', dpi=600, bbox_inches='tight')
