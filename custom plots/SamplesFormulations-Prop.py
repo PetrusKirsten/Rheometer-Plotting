@@ -130,7 +130,7 @@ def plot2D(
 # [Car type, Starch, CaCl2]
 
 fivePct = [
-    [0, 1, 7], [0, 1, 14], [0, 1, 28],
+    [3, 1, 0], [4, 1, 0], [0, 1, 7], [0, 1, 14], [0, 1, 28],
     [3, 1, 7], [3, 1, 14], [3, 1, 28],
     [4, 1, 7], [4, 1, 14], [4, 1, 28]]
 
@@ -139,7 +139,7 @@ propForms = [
     [2, 2, 0], [2, 2, 7], [2, 2, 14], [2, 2, 28]]  # St + iotaCar
 
 doneForms = [
-    [0, 1, 0], [3, 1, 0], [4, 1, 0],
+    [0, 1, 0],
     [0, 2, 0], [0, 2, 7], [0, 2, 14], [0, 2, 28],
     [3, 2, 0], [3, 2, 7], [3, 2, 14], [3, 2, 28],
     [4, 2, 0], [4, 2, 7], [4, 2, 14], [4, 2, 28],
@@ -161,17 +161,17 @@ plotFormulas3D(
     edgeColor='tomato', markerStyle='x',
     markerSize=9, edgeWidth='1.3')
 plotFormulas3D(
-    ax, doneForms, legend='Done',
-    markerColor='lightgreen')
-plotFormulas3D(
     ax, propForms, legend='Proposed',
     markerColor='mediumslateblue')
+plotFormulas3D(
+    ax, doneForms, legend='Done',
+    markerColor='lightgreen')
 
 
 plt.subplots_adjust(
     hspace=0, wspace=0.120,
     top=1, bottom=0,
-    left=0, right=0.91)
+    left=0, right=1)
 
 filename = 'Hydrogels-Formulations-Plot-Proposition'
 plt.show()
