@@ -123,7 +123,6 @@ def plotFlow(listRows, sampleName,
              curveColor, markerStyle,
              fit='', logScale=False):
     def legendLabel():
-        """Applies consistent styling to legends in plots."""
         legend = ax.legend(
             fancybox=False, frameon=False,
             framealpha=0.9, fontsize=9, ncols=2,
