@@ -108,11 +108,11 @@ def getCteMean(values, tolerance=100):
 
 def getSamplesInfos(
         # quantity
-        n_kc_0,  n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42,
+        n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42,
         # colors
         color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42,
 ):
-    number_samples = [n_kc_0,  n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42]
+    number_samples = [n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42]
 
     colors_samples = [color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42]
 
@@ -230,13 +230,13 @@ def insertKey(keys):
     return keys
 
 
-def plotFreqSweeps(sampleName, axTop, axBottom, axTitle,
-                   x, yP, yD, yPerr, yDerr,
-                   yLabel, yLim, xLabel, xLim,
-                   curveColor,
-                   logScale=True,
-                   startVal=0, endVal=16,
-                   tableDataStor=None, tableDataLoss=None):
+def gModulus(sampleName, axTop, axBottom, axTitle,
+             x, yP, yD, yPerr, yDerr,
+             yLabel, yLim, xLabel, xLim,
+             curveColor,
+             logScale=True,
+             startVal=0, endVal=16,
+             tableDataStor=None, tableDataLoss=None):
     def legendLabel(ax):
         legend = ax.legend(loc='lower right', fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
         legend.get_frame().set_facecolor('w')
@@ -474,64 +474,189 @@ def plotHeatMap(
     plt.savefig(f'{dirSave}' + f'\\{title[0]}' + '.png', facecolor='w', dpi=600)
 
 
+class ViscoelasticRecovery:
+    def __init__(
+            self,
+            dataPath,
+            fileName
+    ):
+        def getInfo(
+                # quantity
+                n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42,
+                # colors
+                color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42,
+        ):
+
+            number_samples = [n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42]
+            colors_samples = [color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42]
+
+            return number_samples, colors_samples
+
+        def getData(
+                number_samples
+        ):
+            def getSegments(dataframe):
+                freq = dataframe['f in Hz'].to_numpy()
+                elastic = dataframe["G' in Pa"].to_numpy()
+                loss = dataframe['G" in Pa'].to_numpy()
+                delta = dataframe['tan(δ) in -'].to_numpy()
+
+                seg2, seg3, seg5, seg6 = (
+                    dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1', '5|1', '5|31'])
+
+                # Slice segments
+                segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6 + 1])  # Returns (constant segment, step segment)
+
+                return {
+                    'freq': segments(freq),
+                    'storage': segments(elastic),
+                    'loss': segments(loss),
+                    'delta': segments(delta)
+                }
+
+            def create_dict_with_labels(labels):
+                return {label: ([], [], [], []) for label in labels}
+
+            samples = {
+                'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [],
+                'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
+            }
+            sample_keys = list(samples.keys())
+            sample_labels = (
+                    [sample_keys[0]] * number_samples[0] +
+                    [sample_keys[1]] * number_samples[1] +
+                    [sample_keys[2]] * number_samples[2] +
+                    [sample_keys[3]] * number_samples[3] +
+                    [sample_keys[4]] * number_samples[4] +
+                    [sample_keys[5]] * number_samples[5])
+
+            for sample_type, path in zip(sample_labels, self.dataPath):
+                df = pd.read_excel(path)
+                segments = getSegments(df)
+                samples[sample_type].append(segments)
+
+            dict_data = {}
+            for sample_type in samples:
+                dict_data[f'{sample_type}_freq'] = [s['freq'][0] for s in samples[sample_type]]
+                dict_data[f'{sample_type}_storage'] = [s['storage'][0] for s in samples[sample_type]]
+                dict_data[f'{sample_type}_loss'] = [s['loss'][0] for s in samples[sample_type]]
+                dict_data[f'{sample_type}_delta'] = [s['delta'][0] for s in samples[sample_type]]
+
+                dict_data[f'{sample_type}_freq_broken'] = [s['freq'][-1] for s in samples[sample_type]]
+                dict_data[f'{sample_type}_storage_broken'] = [s['storage'][-1] for s in samples[sample_type]]
+                dict_data[f'{sample_type}_loss_broken'] = [s['loss'][-1] for s in samples[sample_type]]
+                dict_data[f'{sample_type}_delta_broken'] = [s['delta'][-1] for s in samples[sample_type]]
+
+            return dict_data, sample_keys, create_dict_with_labels(sample_keys), create_dict_with_labels(sample_keys)
+
+        def appendData(
+                inputList,
+                isBroken=False
+        ):
+            broken = ''
+            if isBroken:
+                broken = '_broken'
+            for key, (x, gP, gD, d) in inputList.items():
+                x.append(self.data[f'{key}_freq' + f'{broken}'])
+                gP.append(self.data[f'{key}_storage' + f'{broken}'])
+                gD.append(self.data[f'{key}_loss' + f'{broken}'])
+                d.append(self.data[f'{key}_delta' + f'{broken}'])
+
+            return inputList
+
+        # input vars
+        self.dataPath = dataPath
+        self.fileName = fileName
+
+        # figure vars
+        self.fig = plt.figure(figsize=(18, 10), facecolor='snow')
+        self.gs = GridSpec(4, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1, 1, 1])
+        # TODO: plot the bars plots in a different figure
+        self.xPreTop, self.axPostTop = self.fig.add_subplot(self.gs[:2, 0]), self.fig.add_subplot(self.gs[:2, 1])
+        self.axPreBottom, self.axPostBottom = self.fig.add_subplot(self.gs[2:, 0]), self.fig.add_subplot(self.gs[2:, 1])
+        self.axBar1, self.axBar2, self.axBar3, self.axBar4 = (
+            self.fig.add_subplot(self.gs[0, 2]),
+            self.fig.add_subplot(self.gs[1, 2]),
+            self.fig.add_subplot(self.gs[2, 2]),
+            self.fig.add_subplot(self.gs[3, 2]))
+
+        self.fig.suptitle(f'')
+        self.yTitle, self.yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
+        self.xTitle, self.xLimits = f'Frequency (Hz)', (.075, 100)
+
+        # data vars
+        self.meanBefore, self.meanAfter = [], []
+        self.meanBeforeErr, self.meanAfterErr = [], []
+        self.dataFittingBef_stor, self.dataFittingAft_stor = [], []
+        self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
+        self.recoveryPCT, self.tan_delta = [], []
+
+        self.nSamples, self.colorSamples = getInfo(
+            3, 4, 2,
+            3, 2, 4,
+            'lightsteelblue', '#A773FF', '#892F99',
+            '#AB247B', '#E64B83', '#FF0831')
+        self.data, self.labels, self.listBefore, self.listAfter = getData(self.nSamples)
+
+        self.listBefore = appendData(self.listBefore)
+        self.listAfter = appendData(self.listAfter, True)
+
+    def plotRecovery(self):
+        def getValues(inputList, loopKey):
+            frequencies = np.mean(inputList[loopKey][0], axis=1)[0]
+            elasticMod, viscousMod = (np.mean(inputList[loopKey][1], axis=1)[0],
+                                      np.mean(inputList[loopKey][2], axis=1)[0])
+            elasticModErr, viscousModErr = (np.std(inputList[loopKey][1], axis=1)[0],
+                                            np.std(inputList[loopKey][2], axis=1)[0])
+            lossFactor, lossFactorErr = (np.mean(inputList[loopKey][3], axis=1)[0],
+                                         np.std(inputList[loopKey][3], axis=1)[0])
+
+            return frequencies, elasticMod, viscousMod, elasticModErr, viscousModErr, lossFactor, lossFactorErr
+
+        for key, color in zip(self.listBefore, self.colorSamples):
+            recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
+
+            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)  # TODO: stoppd here
+
 def main(dataPath, fileName):
-    fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
-    plt.style.use('seaborn-v0_8-ticks')
-    fig = plt.figure(figsize=(18, 10), facecolor='snow')
-    gs = GridSpec(4, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1, 1, 1])
-
-    axPreTop, axPostTop = fig.add_subplot(gs[:2, 0]), fig.add_subplot(gs[:2, 1])
-    axPreBottom, axPostBottom = fig.add_subplot(gs[2:, 0]), fig.add_subplot(gs[2:, 1])
-    axBar1, axBar2, axBar3, axBar4 = (fig.add_subplot(gs[0, 2]),
-                                      fig.add_subplot(gs[1, 2]),
-                                      fig.add_subplot(gs[2, 2]),
-                                      fig.add_subplot(gs[3, 2]))
-
-    fig.suptitle(f'')
-    yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
-    xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
-
-    nSamples, colorSamples = getSamplesInfos(
-        3, 4, 2,
-        3, 2, 4,
-        'lightsteelblue', '#A773FF',  '#892F99',
-        '#AB247B', '#E64B83', '#FF0831')
-    data, labels, listBefore, listAfter = getSamplesData(dataPath, nSamples)
-
-    # listBefore = {
-    #     labels[0]: ([], [], [], []),
-    #     labels[1]: ([], [], [], []),
-    #     labels[2]: ([], [], [], []),
-    #     labels[3]: ([], [], [], []),
-    #     labels[4]: ([], [], [], []),
-    #     labels[5]: ([], [], [], []),
-    # }
-    # listAfter = {
-    #     labels[0]: ([], [], [], []),
-    #     labels[1]: ([], [], [], []),
-    #     labels[2]: ([], [], [], []),
-    #     labels[3]: ([], [], [], []),
-    #     labels[4]: ([], [], [], []),
-    #     labels[5]: ([], [], [], []),
-    # }
-
-    meanBefore, meanAfter = [], []
-    meanBeforeErr, meanAfterErr = [], []
-    dataFittingBef_stor, dataFittingAft_stor = [], []
-    dataFittingBef_loss, dataFittingAft_loss = [], []
-    recoveryPCT, tan_delta = [], []
-
-    for key, (x, gP, gD, d) in listBefore.items():
-        x.append(data[f'{key}_freq'])
-        gP.append(data[f'{key}_storage'])
-        gD.append(data[f'{key}_loss'])
-        d.append(data[f'{key}_delta'])
-
-    for key, (x, gP, gD, d) in listAfter.items():
-        x.append(data[f'{key}_freq_broken'])
-        gP.append(data[f'{key}_storage_broken'])
-        gD.append(data[f'{key}_loss_broken'])
-        d.append(data[f'{key}_delta_broken'])
+    # fig = plt.figure(figsize=(18, 10), facecolor='snow')
+    # gs = GridSpec(4, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1, 1, 1])
+    #
+    # axPreTop, axPostTop = fig.add_subplot(gs[:2, 0]), fig.add_subplot(gs[:2, 1])
+    # axPreBottom, axPostBottom = fig.add_subplot(gs[2:, 0]), fig.add_subplot(gs[2:, 1])
+    # axBar1, axBar2, axBar3, axBar4 = (fig.add_subplot(gs[0, 2]),
+    #                                   fig.add_subplot(gs[1, 2]),
+    #                                   fig.add_subplot(gs[2, 2]),
+    #                                   fig.add_subplot(gs[3, 2]))
+    #
+    # fig.suptitle(f'')
+    # yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
+    # xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
+    #
+    # nSamples, colorSamples = getSamplesInfos(
+    #     3, 4, 2,
+    #     3, 2, 4,
+    #     'lightsteelblue', '#A773FF', '#892F99',
+    #     '#AB247B', '#E64B83', '#FF0831')
+    # data, labels, listBefore, listAfter = getSamplesData(dataPath, nSamples)
+    #
+    # meanBefore, meanAfter = [], []
+    # meanBeforeErr, meanAfterErr = [], []
+    # dataFittingBef_stor, dataFittingAft_stor = [], []
+    # dataFittingBef_loss, dataFittingAft_loss = [], []
+    # recoveryPCT, tan_delta = [], []
+    #
+    # for key, (x, gP, gD, d) in listBefore.items():
+    #     x.append(data[f'{key}_freq'])
+    #     gP.append(data[f'{key}_storage'])
+    #     gD.append(data[f'{key}_loss'])
+    #     d.append(data[f'{key}_delta'])
+    #
+    # for key, (x, gP, gD, d) in listAfter.items():
+    #     x.append(data[f'{key}_freq_broken'])
+    #     gP.append(data[f'{key}_storage_broken'])
+    #     gD.append(data[f'{key}_loss_broken'])
+    #     d.append(data[f'{key}_delta_broken'])
 
     for key, color in zip(listBefore, colorSamples):
         recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
@@ -548,7 +673,7 @@ def main(dataPath, fileName):
         meanBefore.append(meanStorage)
         meanBeforeErr.append(storageMeanErr)
 
-        dataFittingBef_stor, dataFittingBef_loss = plotFreqSweeps(  # Before axes
+        dataFittingBef_stor, dataFittingBef_loss = gModulus(  # Before axes
             sampleName=key,
             axTop=axPreTop, axBottom=axPreBottom,
             x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
@@ -570,7 +695,7 @@ def main(dataPath, fileName):
         delta_aft, freqsRecovery = getDataByFreq(delta_aft, delta, freqs)
         tan_delta.append([delta_bef, delta_aft])
 
-        dataFittingAft_stor, dataFittingAft_loss = plotFreqSweeps(  # After axes
+        dataFittingAft_stor, dataFittingAft_loss = gModulus(  # After axes
             sampleName=key,
             axTop=axPostTop, axBottom=axPostBottom,
             x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
@@ -628,6 +753,9 @@ def main(dataPath, fileName):
 
 
 if __name__ == '__main__':
+    fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
+    plt.style.use('seaborn-v0_8-ticks')
+
     folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
 

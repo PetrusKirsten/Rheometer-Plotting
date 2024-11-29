@@ -160,9 +160,9 @@ plotFormulas3D(
     ax, fivePct, legend='Suspended',
     edgeColor='tomato', markerStyle='x',
     markerSize=9, edgeWidth='1.3')
-plotFormulas3D(
-    ax, propForms, legend='Proposed',
-    markerColor='mediumslateblue')
+# plotFormulas3D(
+#     ax, propForms, legend='Proposed',
+#     markerColor='mediumslateblue')
 plotFormulas3D(
     ax, doneForms, legend='Done',
     markerColor='lightgreen')
