@@ -71,19 +71,18 @@ class DynamicCompression:
             cycles,
             mode,
             figure_size=(34, 14),
-            dpi=100
+            dpi=300
     ):
         self.data_path = data_path
         self.nCycles = cycles
         self.fileTitle = os.path.basename(self.data_path[0]).split("/")[-1].split(".")[0]
+        self.fileFolder = os.path.dirname(self.data_path[0])
+        self.filePath = self.fileFolder + '\\' + self.fileTitle
         self.figSize = figure_size
         self.dpi = dpi  # TODO: ajustar a config do DPI
 
         # Figure vars
-        self.fig = plt.figure(
-            self.fileTitle,
-            figsize=(self.figSize[0] * cm, self.figSize[1] * cm),
-            dpi=self.dpi)
+        self.fig = plt.figure(self.fileTitle, figsize=(self.figSize[0] * cm, self.figSize[1] * cm))
         self.fig.subplots_adjust(hspace=0)
         self.gs = None
         # Plot vars
@@ -98,7 +97,7 @@ class DynamicCompression:
         # Linear fitting vars
         self.slope_val, self.slope_std = np.array([]), np.array([])
         # Data vars
-        self.data = pd.read_csv(self.data_path[0])
+        self.data = pd.read_excel(self.data_path[0])
         self.timeData, self.heightData, self.forceData, self.stressData = self.getData(mode)
 
     def getData(
@@ -241,6 +240,8 @@ class DynamicCompression:
         self.fig.tight_layout()  # otherwise the right y-label is slightly clipped
         ax1.legend(loc=1, ncol=2, frameon=False)
         # ax1.text(13.7 * cm, 7.7 * cm, 'Damping coef.: -0.02', )  # Show the damping coef in chart]
+        self.fig.savefig(f'{self.filePath}.png', dpi=self.dpi)
+        print(f'Chart saved at {self.fileFolder}')
 
         return self.fig
 
@@ -307,6 +308,9 @@ class DynamicCompression:
 
             if not self.plotStress and not self.plotPeak and self.plotYoung:
                 self.cyclicYoung(colorSeries)
+
+        self.fig.savefig(f'{self.filePath}.png', dpi=self.dpi)
+        print(f'Chart saved at {self.fileFolder}')
 
         return self.fig
 
@@ -586,22 +590,24 @@ class Sweep:
             self,
             data_path,
             figure_size=(22, 15),
-            dpi=100
+            dpi=300
     ):
         self.data_path = data_path
         self.fileTitle = os.path.basename(self.data_path[0]).split("/")[-1].split(".")[0]
+        self.fileFolder = os.path.dirname(self.data_path[0])
+        self.filePath = self.fileFolder + '\\' + self.fileTitle
         self.figure_size = figure_size
         self.dpi = dpi
 
-        self.fig = plt.figure(
-            self.fileTitle,
-            figsize=(self.figure_size[0] * cm, self.figure_size[1] * cm),
-            dpi=self.dpi)
+        self.fig = plt.figure(self.fileTitle, figsize=(self.figure_size[0] * cm, self.figure_size[1] * cm))
         self.gs = GridSpec(1, 1)
         self.fig.subplots_adjust(hspace=0)
 
         # Collecting the data
-        self.data, self.timeTotal, self.timeElement, self.strainStress, self.compViscosity, self.temperature, self.storageModulus, self.storageModulusErr, self.lossModulus, self.lossModulusErr, self.shearStress, self.frequency, self.angVeloc = None, None, None, None, None, None, None, None, None, None, None, None, None
+        self.data, self.timeTotal, self.timeElement, self.strainStress, \
+            self.compViscosity, self.temperature, self.storageModulus, \
+            self.storageModulusErr, self.lossModulus, self.lossModulusErr, \
+            self.shearStress, self.frequency, self.angVeloc = (None,) * 13
 
     def plotStress(
             self,
@@ -625,8 +631,8 @@ class Sweep:
 
         ax.legend(ncol=1, frameon=False)
         self.fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        self.fig.savefig(f'{self.fileTitle}.png', dpi=300)
-        print(f'Chart saved as {self.fileTitle}.png')
+        self.fig.savefig(f'{self.filePath}.png', dpi=self.dpi)
+        print(f'Chart saved at {self.fileFolder}')
 
     def plotOscilatory(
             self,
@@ -650,7 +656,8 @@ class Sweep:
 
         ax.legend(ncol=2, frameon=False)
         self.fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        self.fig.savefig(f'{self.fileTitle}.png', dpi=300)  # TODO: add savefig
+        self.fig.savefig(f'{self.filePath}.png', dpi=self.dpi)
+        print(f'Chart saved at {self.fileFolder}')
 
     def plotRecSide(
             self,
@@ -725,6 +732,8 @@ class Sweep:
         ax2.legend(loc=3, ncol=1, frameon=False)
         self.fig.tight_layout()  # otherwise the right y-label is slightly clipped
         plt.subplots_adjust(wspace=0, bottom=0.1)
+        self.fig.savefig(f'{self.filePath}.png', dpi=self.dpi)
+        print(f'Chart saved at {self.fileFolder}')
 
     def plotRecOverlap(
             self,
@@ -762,6 +771,8 @@ class Sweep:
         ax.legend(loc=3, ncol=2, frameon=False)
         self.fig.tight_layout()  # otherwise the right y-label is slightly clipped
         plt.subplots_adjust(wspace=0, bottom=0.1)
+        self.fig.savefig(f'{self.filePath}.png', dpi=self.dpi)
+        print(f'Chart saved at {self.fileFolder}')
 
     def getData(
             self, mode
@@ -770,16 +781,16 @@ class Sweep:
         xData, gPrime, gDouble = np.array([]), np.array([]), np.array([])
 
         for file in range(nFiles):
-            self.data = pd.read_csv(self.data_path[file])
+            self.data = pd.read_excel(self.data_path[file])
 
             self.timeTotal = self.data['t in s'].to_numpy()
             self.timeElement = self.data['t_seg in s'].to_numpy()
-            self.strainStress = self.data['ɣ in %'].to_numpy()
-            self.compViscosity = self.data['|η*| in mPas'].to_numpy()
-            self.temperature = self.data['T in °C'].to_numpy()
+            self.strainStress = self.data['Gamma in %'].to_numpy()
+            # self.compViscosity = self.data['|η*| in mPas'].to_numpy()
+            # self.temperature = self.data['T in °C'].to_numpy()
 
             if mode == 'Shear Stress':
-                xData = self.data['τ in Pa'].to_numpy()
+                xData = self.data['Tau in Pa'].to_numpy()
             if mode == 'Freq':
                 freq = self.data['f in Hz'].to_numpy()
                 xData = 2 * np.pi * freq
@@ -803,7 +814,7 @@ class Sweep:
         gPrime_aft, gDouble_aft = np.array([]), np.array([])
 
         for file in range(nFiles):
-            self.data = pd.read_csv(self.data_path[file])
+            self.data = pd.read_excel(self.data_path[file])
 
             self.timeTotal = self.data['t in s'].to_numpy()
             self.timeElement = self.data['t_seg in s'].to_numpy()
@@ -912,55 +923,38 @@ class General:
     def __init__(
             self,
             data_path,
-            colorSeries,
-            colorLinRange,
             figure_size=(22, 15),
-            dpi=100
+            dpi=300
     ):
         self.data_path = data_path
         self.fileTitle = os.path.basename(self.data_path[0]).split("/")[-1].split(".")[0]
+        self.fileFolder = os.path.dirname(self.data_path[0])
+        self.filePath = self.fileFolder + '\\' + self.fileTitle
         self.figure_size = figure_size
         self.dpi = dpi
 
-        self.fig = plt.figure(
-            self.fileTitle,
-            figsize=(self.figure_size[0] * cm, self.figure_size[1] * cm),
-            dpi=self.dpi)
+        self.fig = plt.figure(self.fileTitle, figsize=(self.figure_size[0]*cm, self.figure_size[1]*cm))
         self.gs = GridSpec(1, 1)
         self.fig.subplots_adjust(hspace=0)
 
         # Collecting the data
         self.nFiles = len(self.data_path)
-        self.data = pd.read_csv(self.data_path[0])
+        self.data = pd.read_excel(self.data_path[0])
+        # store the dataframe's heads label in a dict
 
-        self.head = list(self.data.columns)
-        self.arrays = np.array([])
+        # self.arrays = np.array([])
+        # self.dataLabel = self.getCol()
 
-        ax = self.configPlot('Freq')
-
-        gPrime = gPrime.reshape(
-            nFiles, len(gPrime) // nFiles)
-
-        ax.errorbar(
-            self.angVeloc, self.storageModulus, yerr=self.storageModulusErr,
-            label="G '",
-            c=colorStorage, fmt='o', ms=6, alpha=0.9,
-            ecolor=colorStorage, capthick=1, capsize=3, elinewidth=1)
-        ax.legend(ncol=2, frameon=False)
-        self.fig.tight_layout()  # otherwise the right y-label is slightly clipped
-
-    def getCol(
-            self,
-            columnName=str
-    ):
-        return self.data[columnName].to_numpy()
+    def getCol(self):
+        # return {i: key for i, key in enumerate(list(self.data.columns), 1)}
+        return list(self.data.columns)
 
     def plot(
             self
     ):
         pass
 
-# Global configs
+
 np.set_printoptions(threshold=np.inf)  # print the entire array
 cm = 1 / 2.54  # centimeters in inches
 fonts(folder_path='C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
