@@ -65,47 +65,6 @@ def exportFit(
     return table
 
 
-def getCteMean(values, tolerance=100):
-    """
-    :param values: to be analysed
-    :param tolerance: the difference betweem two points data
-    :return: the mean of the "cte" region and its indexes
-    """
-    diffs = np.abs(np.diff(values))  # Calcular as diferenças entre valores consecutivos
-
-    constantRegions = diffs < tolerance  # Identificar regiões onde a diferença está abaixo do valor de tolerância
-
-    # Encontrar os índices onde a condição é satisfeita
-    iStart, iEnd = None, None
-    lengthMax, lengthCurrent, currentStart = 0, 0, 0
-    for i, is_constant in enumerate(constantRegions):
-        if is_constant:
-            if lengthCurrent == 0:
-                currentStart = i
-            lengthCurrent += 1
-        else:
-            if lengthCurrent > lengthMax:
-                lengthMax = lengthCurrent
-                iStart = currentStart
-                iEnd = i
-            lengthCurrent = 0
-
-    if lengthCurrent > lengthMax:  # Checar se a última sequência é a maior constante
-        iStart = currentStart
-        iEnd = len(values) - 1
-
-    if iStart is None or iEnd is None:  # Se nenhuma região constante foi encontrada
-        return None, None, None
-
-    mean = np.mean(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
-    stddev = np.std(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
-
-    mean = round(mean, -1)
-    stddev = round(stddev, -1)
-
-    return mean, stddev, iStart, iEnd
-
-
 def getSamplesInfos(
         # quantity
         n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42,
@@ -228,88 +187,6 @@ def insertKey(keys):
         keys.insert(index, 'Broken')
         index += 2
     return keys
-
-
-def gModulus(sampleName, axTop, axBottom, axTitle,
-             x, yP, yD, yPerr, yDerr,
-             yLabel, yLim, xLabel, xLim,
-             curveColor,
-             logScale=True,
-             startVal=0, endVal=16,
-             tableDataStor=None, tableDataLoss=None):
-    def legendLabel(ax):
-        legend = ax.legend(loc='lower right', fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
-        legend.get_frame().set_facecolor('w')
-        legend.get_frame().set_edgecolor('whitesmoke')
-
-    def configPlot(ax, axisColor='#303030'):
-        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
-        ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
-        ax.tick_params(axis='both', which='both', colors=axisColor)
-
-        ax.grid(True, which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5)
-        ax.grid(True, which='minor', axis='y', linestyle='-', linewidth=.5, color='lightgray', alpha=0.5)
-
-        ax.set_xscale('log' if logScale else 'linear')
-        ax.set_xlim(xLim)
-
-        ax.set_ylabel(f'{yLabel}', color=axisColor)
-        ax.set_yscale('log' if logScale else 'linear')
-        ax.set_ylim(yLim)
-
-    yTitleBottom = f"Viscous modulus $G''$ (Pa)"
-    configPlot(axTop), configPlot(axBottom)
-    axTop.set_title(axTitle, size=10, color='k'), axTop.set_xticklabels([])
-    axBottom.set_xlabel(f'{xLabel}', color='#303030'), axBottom.set_ylabel(f'{yTitleBottom}', color='#303030')
-
-    x_toFit_stor, y_toFit_stor = arraySplit(x, yP, startVal, endVal)
-    params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor, y_toFit_stor)  # p0=(y_mean[0], y_mean[-1], 100))
-    errors_stor = np.sqrt(np.diag(covariance_stor))
-    tableDataStor = exportFit(
-        f'{sampleName}',
-        params_stor, errors_stor,
-        tableDataStor)
-
-    axTop.errorbar(
-        x[:-1], yP[:-1], yPerr[:-1],
-        color=curveColor, alpha=.85,
-        fmt='none', mfc=curveColor,
-        capsize=2.5, capthick=1, linestyle='', lw=1,
-        label=f'', zorder=2)
-    axTop.errorbar(
-        x[:-1], yP[:-1], 0,
-        color=curveColor, alpha=.65,
-        fmt='o', markersize=5.4,
-        mfc=curveColor, mec='#383838', mew=.75,
-        linestyle='',
-        label=f'{sampleName}', zorder=3)
-
-    x_toFit_loss, y_toFit_loss = arraySplit(x, yD, startVal, endVal)
-    params_loss, covariance_loss = curve_fit(powerLaw, x_toFit_loss, y_toFit_loss)  # p0=(y_mean[0], y_mean[-1], 100))
-    errors_loss = np.sqrt(np.diag(covariance_loss))
-    tableDataLoss = exportFit(
-        f'{sampleName}',
-        params_loss, errors_loss,
-        tableDataLoss)
-
-    axBottom.errorbar(
-        x[:-1], yD[:-1], yDerr[:-1],
-        color=curveColor, alpha=.85,
-        fmt='none', mfc=curveColor,
-        capsize=2.5, capthick=1, linestyle='', lw=1,
-        label=f'', zorder=2)
-    axBottom.errorbar(
-        x[:-1], yD[:-1], 0,
-        color=curveColor, alpha=.75,
-        fmt='o', markersize=5.4,
-        mfc='w', mec=curveColor, mew=1,
-        linestyle='',
-        label=f'{sampleName}', zorder=3)
-
-    if axTitle == 'After breakage':
-        legendLabel(axTop)
-
-    return tableDataStor, tableDataLoss
 
 
 def plotBars(
@@ -480,7 +357,7 @@ class ViscoelasticRecovery:
             dataPath,
             fileName
     ):
-        def getInfo(
+        def getInfo(  # TODO: criar uma função que recebe os nomes das variáveis e importa as qtds e cores
                 # quantity
                 n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42,
                 # colors
@@ -517,7 +394,7 @@ class ViscoelasticRecovery:
             def create_dict_with_labels(labels):
                 return {label: ([], [], [], []) for label in labels}
 
-            samples = {
+            samples = {  # TODO: criar uma função para receber o nome das formulações
                 'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [],
                 'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
             }
@@ -572,7 +449,7 @@ class ViscoelasticRecovery:
         self.fig = plt.figure(figsize=(18, 10), facecolor='snow')
         self.gs = GridSpec(4, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1, 1, 1])
         # TODO: plot the bars plots in a different figure
-        self.xPreTop, self.axPostTop = self.fig.add_subplot(self.gs[:2, 0]), self.fig.add_subplot(self.gs[:2, 1])
+        self.axPreTop, self.axPostTop = self.fig.add_subplot(self.gs[:2, 0]), self.fig.add_subplot(self.gs[:2, 1])
         self.axPreBottom, self.axPostBottom = self.fig.add_subplot(self.gs[2:, 0]), self.fig.add_subplot(self.gs[2:, 1])
         self.axBar1, self.axBar2, self.axBar3, self.axBar4 = (
             self.fig.add_subplot(self.gs[0, 2]),
@@ -591,7 +468,7 @@ class ViscoelasticRecovery:
         self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
         self.recoveryPCT, self.tan_delta = [], []
 
-        self.nSamples, self.colorSamples = getInfo(
+        self.nSamples, self.colorSamples = getInfo(  # TODO: update function
             3, 4, 2,
             3, 2, 4,
             'lightsteelblue', '#A773FF', '#892F99',
@@ -613,10 +490,147 @@ class ViscoelasticRecovery:
 
             return frequencies, elasticMod, viscousMod, elasticModErr, viscousModErr, lossFactor, lossFactorErr
 
+        def getCteMean(values, tolerance=100):
+            """
+            :param values: to be analysed
+            :param tolerance: the difference betweem two points data
+            :return: the mean of the "cte" region and its indexes
+            """
+            diffs = np.abs(np.diff(values))  # Calcular as diferenças entre valores consecutivos
+            constantRegions = diffs < tolerance  # Identificar regiões onde a diferença está abaixo do valor de tolerância
+
+            # Encontrar os índices onde a condição é satisfeita
+            iStart, iEnd = None, None
+            lengthMax, lengthCurrent, currentStart = 0, 0, 0
+            for i, is_constant in enumerate(constantRegions):
+                if is_constant:
+                    if lengthCurrent == 0:
+                        currentStart = i
+                    lengthCurrent += 1
+                else:
+                    if lengthCurrent > lengthMax:
+                        lengthMax = lengthCurrent
+                        iStart = currentStart
+                        iEnd = i
+                    lengthCurrent = 0
+
+            if lengthCurrent > lengthMax:  # Checar se a última sequência é a maior constante
+                iStart = currentStart
+                iEnd = len(values) - 1
+
+            if iStart is None or iEnd is None:  # Se nenhuma região constante foi encontrada
+                return None, None, None
+
+            mean = np.mean(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
+            stddev = np.std(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
+
+            mean = round(mean, -1)
+            stddev = round(stddev, -1)
+
+            return mean, stddev, iStart, iEnd
+
+        def gModulus(
+                sampleName, axTop, axBottom, axTitle,
+                x, yP, yD, yPerr, yDerr,
+                yLabel, yLim, xLabel, xLim,
+                curveColor,
+                logScale=True,
+                startVal=0, endVal=16,
+                tableDataStor=None, tableDataLoss=None
+        ):
+            def legendLabel(ax):
+                legend = ax.legend(loc='lower right', fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('whitesmoke')
+
+            def configPlot(ax, axisColor='#303030'):
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+                ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
+                ax.tick_params(axis='both', which='both', colors=axisColor)
+
+                ax.grid(True, which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5)
+                ax.grid(True, which='minor', axis='y', linestyle='-', linewidth=.5, color='lightgray', alpha=0.5)
+
+                ax.set_xscale('log' if logScale else 'linear')
+                ax.set_xlim(xLim)
+
+                ax.set_ylabel(f'{yLabel}', color=axisColor)
+                ax.set_yscale('log' if logScale else 'linear')
+                ax.set_ylim(yLim)
+
+            yTitleBottom = f"Viscous modulus $G''$ (Pa)"
+            configPlot(axTop), configPlot(axBottom)
+            axTop.set_title(axTitle, size=10, color='k'), axTop.set_xticklabels([])
+            axBottom.set_xlabel(f'{xLabel}', color='#303030'), axBottom.set_ylabel(f'{yTitleBottom}', color='#303030')
+
+            x_toFit_stor, y_toFit_stor = arraySplit(x, yP, startVal, endVal)
+            params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor,
+                                                     y_toFit_stor)  # p0=(y_mean[0], y_mean[-1], 100))
+            errors_stor = np.sqrt(np.diag(covariance_stor))
+            tableDataStor = exportFit(
+                f'{sampleName}',
+                params_stor, errors_stor,
+                tableDataStor)
+
+            axTop.errorbar(
+                x[:-1], yP[:-1], yPerr[:-1],
+                color=curveColor, alpha=.85,
+                fmt='none', mfc=curveColor,
+                capsize=2.5, capthick=1, linestyle='', lw=1,
+                label=f'', zorder=2)
+            axTop.errorbar(
+                x[:-1], yP[:-1], 0,
+                color=curveColor, alpha=.65,
+                fmt='o', markersize=5.4,
+                mfc=curveColor, mec='#383838', mew=.75,
+                linestyle='',
+                label=f'{sampleName}', zorder=3)
+
+            x_toFit_loss, y_toFit_loss = arraySplit(x, yD, startVal, endVal)
+            params_loss, covariance_loss = curve_fit(powerLaw, x_toFit_loss,
+                                                     y_toFit_loss)  # p0=(y_mean[0], y_mean[-1], 100))
+            errors_loss = np.sqrt(np.diag(covariance_loss))
+            tableDataLoss = exportFit(
+                f'{sampleName}',
+                params_loss, errors_loss,
+                tableDataLoss)
+
+            axBottom.errorbar(
+                x[:-1], yD[:-1], yDerr[:-1],
+                color=curveColor, alpha=.85,
+                fmt='none', mfc=curveColor,
+                capsize=2.5, capthick=1, linestyle='', lw=1,
+                label=f'', zorder=2)
+            axBottom.errorbar(
+                x[:-1], yD[:-1], 0,
+                color=curveColor, alpha=.75,
+                fmt='o', markersize=5.4,
+                mfc='w', mec=curveColor, mew=1,
+                linestyle='',
+                label=f'{sampleName}', zorder=3)
+
+            if axTitle == 'After breakage':
+                legendLabel(axTop)
+
+            return tableDataStor, tableDataLoss
+
         for key, color in zip(self.listBefore, self.colorSamples):
             recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
 
-            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)  # TODO: stoppd here
+            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)
+
+            meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
+            self.meanBefore.append(meanStorage), self.meanBeforeErr.append(meanStorageErr)
+
+            dataFittingBef_stor, dataFittingBef_loss = gModulus(  # Before axes
+                sampleName=key,
+                axTop=self.axPreTop, axBottom=self.axPreBottom,
+                x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
+                axTitle='Before breakage',
+                yLabel=self.yTitle, yLim=self.yLimits, xLabel=self.xTitle, xLim=self.xLimits, curveColor=color,
+                logScale=True,
+                tableDataStor=self.dataFittingBef_stor, tableDataLoss=self.dataFittingBef_loss)
+
 
 def main(dataPath, fileName):
     # fig = plt.figure(figsize=(18, 10), facecolor='snow')
