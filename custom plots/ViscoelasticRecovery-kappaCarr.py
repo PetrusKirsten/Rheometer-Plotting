@@ -354,24 +354,10 @@ def plotHeatMap(
 class ViscoelasticRecovery:
     def __init__(
             self,
-            dataPath,
-            fileName
+            dataPath, fileName,
+            names_samples, number_samples, colors_samples
     ):
-        def getInfo(  # TODO: criar uma função que recebe os nomes das variáveis e importa as qtds e cores
-                # quantity
-                n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42,
-                # colors
-                color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42,
-        ):
-
-            number_samples = [n_kc_0, n_kc_7, n_kc_14, n_kc_21, n_kc_28, n_kc_42]
-            colors_samples = [color_kc_0, color_kc_7, color_kc_14, color_kc_21, color_kc_28, color_kc_42]
-
-            return number_samples, colors_samples
-
-        def getData(
-                number_samples
-        ):
+        def getData():
             def getSegments(dataframe):
                 freq = dataframe['f in Hz'].to_numpy()
                 elastic = dataframe["G' in Pa"].to_numpy()
@@ -391,40 +377,34 @@ class ViscoelasticRecovery:
                     'delta': segments(delta)
                 }
 
-            def create_dict_with_labels(labels):
+            def dict_OscFreqSweeps(labels):
                 return {label: ([], [], [], []) for label in labels}
 
-            samples = {  # TODO: criar uma função para receber o nome das formulações
-                'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [],
-                'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
-            }
-            sample_keys = list(samples.keys())
-            sample_labels = (
-                    [sample_keys[0]] * number_samples[0] +
-                    [sample_keys[1]] * number_samples[1] +
-                    [sample_keys[2]] * number_samples[2] +
-                    [sample_keys[3]] * number_samples[3] +
-                    [sample_keys[4]] * number_samples[4] +
-                    [sample_keys[5]] * number_samples[5])
+            self.sample_keys = list(self.names_samples.keys())
+            if len(self.sample_keys) != len(self.number_samples):
+                raise ValueError('The length of "number_samples" must match the number of sample keys.')
+            sample_labels = [
+                key for key, count in zip(self.sample_keys, self.number_samples) for _ in range(count)
+            ]
 
             for sample_type, path in zip(sample_labels, self.dataPath):
                 df = pd.read_excel(path)
                 segments = getSegments(df)
-                samples[sample_type].append(segments)
+                self.names_samples[sample_type].append(segments)
 
             dict_data = {}
-            for sample_type in samples:
-                dict_data[f'{sample_type}_freq'] = [s['freq'][0] for s in samples[sample_type]]
-                dict_data[f'{sample_type}_storage'] = [s['storage'][0] for s in samples[sample_type]]
-                dict_data[f'{sample_type}_loss'] = [s['loss'][0] for s in samples[sample_type]]
-                dict_data[f'{sample_type}_delta'] = [s['delta'][0] for s in samples[sample_type]]
+            for sample_type in self.names_samples:
+                dict_data[f'{sample_type}_freq'] = [s['freq'][0] for s in self.names_samples[sample_type]]
+                dict_data[f'{sample_type}_storage'] = [s['storage'][0] for s in self.names_samples[sample_type]]
+                dict_data[f'{sample_type}_loss'] = [s['loss'][0] for s in self.names_samples[sample_type]]
+                dict_data[f'{sample_type}_delta'] = [s['delta'][0] for s in self.names_samples[sample_type]]
 
-                dict_data[f'{sample_type}_freq_broken'] = [s['freq'][-1] for s in samples[sample_type]]
-                dict_data[f'{sample_type}_storage_broken'] = [s['storage'][-1] for s in samples[sample_type]]
-                dict_data[f'{sample_type}_loss_broken'] = [s['loss'][-1] for s in samples[sample_type]]
-                dict_data[f'{sample_type}_delta_broken'] = [s['delta'][-1] for s in samples[sample_type]]
+                dict_data[f'{sample_type}_freq_broken'] = [s['freq'][-1] for s in self.names_samples[sample_type]]
+                dict_data[f'{sample_type}_storage_broken'] = [s['storage'][-1] for s in self.names_samples[sample_type]]
+                dict_data[f'{sample_type}_loss_broken'] = [s['loss'][-1] for s in self.names_samples[sample_type]]
+                dict_data[f'{sample_type}_delta_broken'] = [s['delta'][-1] for s in self.names_samples[sample_type]]
 
-            return dict_data, sample_keys, create_dict_with_labels(sample_keys), create_dict_with_labels(sample_keys)
+            return dict_data, dict_OscFreqSweeps(self.sample_keys), dict_OscFreqSweeps(self.sample_keys)
 
         def appendData(
                 inputList,
@@ -444,22 +424,16 @@ class ViscoelasticRecovery:
         # input vars
         self.dataPath = dataPath
         self.fileName = fileName
+        self.names_samples = names_samples
+        self.number_samples = number_samples
+        self.colors_samples = colors_samples
 
         # figure vars
-        self.fig = plt.figure(figsize=(18, 10), facecolor='snow')
-        self.gs = GridSpec(4, 3, width_ratios=[1.5, 1.5, 1.2], height_ratios=[1, 1, 1, 1])
-        # TODO: plot the bars plots in a different figure
-        self.axPreTop, self.axPostTop = self.fig.add_subplot(self.gs[:2, 0]), self.fig.add_subplot(self.gs[:2, 1])
-        self.axPreBottom, self.axPostBottom = self.fig.add_subplot(self.gs[2:, 0]), self.fig.add_subplot(self.gs[2:, 1])
-        self.axBar1, self.axBar2, self.axBar3, self.axBar4 = (
-            self.fig.add_subplot(self.gs[0, 2]),
-            self.fig.add_subplot(self.gs[1, 2]),
-            self.fig.add_subplot(self.gs[2, 2]),
-            self.fig.add_subplot(self.gs[3, 2]))
-
-        self.fig.suptitle(f'')
-        self.yTitle, self.yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
-        self.xTitle, self.xLimits = f'Frequency (Hz)', (.075, 100)
+        # self.axBar1, self.axBar2, self.axBar3, self.axBar4 = (
+        #     self.fig.add_subplot(self.gs[0, 2]),
+        #     self.fig.add_subplot(self.gs[1, 2]),
+        #     self.fig.add_subplot(self.gs[2, 2]),
+        #     self.fig.add_subplot(self.gs[3, 2]))
 
         # data vars
         self.meanBefore, self.meanAfter = [], []
@@ -468,12 +442,7 @@ class ViscoelasticRecovery:
         self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
         self.recoveryPCT, self.tan_delta = [], []
 
-        self.nSamples, self.colorSamples = getInfo(  # TODO: update function
-            3, 4, 2,
-            3, 2, 4,
-            'lightsteelblue', '#A773FF', '#892F99',
-            '#AB247B', '#E64B83', '#FF0831')
-        self.data, self.labels, self.listBefore, self.listAfter = getData(self.nSamples)
+        self.data, self.listBefore, self.listAfter = getData()
 
         self.listBefore = appendData(self.listBefore)
         self.listAfter = appendData(self.listAfter, True)
@@ -632,8 +601,19 @@ class ViscoelasticRecovery:
                 legendLabel(axTop)
 
             return tableDataStor, tableDataLoss
+        
+        fig = plt.figure(figsize=(13, 9), facecolor='snow')
+        fig.canvas.manager.set_window_title(self.fileName + ' - Elastic and viscous moduli')
+        gs = GridSpec(2, 2, width_ratios=[1, 1], height_ratios=[1, 1])
 
-        for key, color in zip(self.listBefore, self.colorSamples):
+        axPreTop, axPostTop = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])
+        axPreBottom, axPostBottom = fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
+
+        fig.suptitle(f'')
+        yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
+        xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
+        
+        for key, color in zip(self.listBefore, self.colors_samples):
             recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
 
             freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)
@@ -641,38 +621,43 @@ class ViscoelasticRecovery:
             meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
             self.meanBefore.append(meanStorage), self.meanBeforeErr.append(meanStorageErr)
 
-            dataFittingBef_stor, dataFittingBef_loss = gModulus(  # Before axes
+            self.dataFittingBef_stor, self.dataFittingBef_loss = gModulus(  # Before axes
                 sampleName=key,
-                axTop=self.axPreTop, axBottom=self.axPreBottom,
+                axTop=axPreTop, axBottom=axPreBottom,
                 x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
                 axTitle='Before breakage',
-                yLabel=self.yTitle, yLim=self.yLimits, xLabel=self.xTitle, xLim=self.xLimits, curveColor=color,
+                yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
                 logScale=True,
                 tableDataStor=self.dataFittingBef_stor, tableDataLoss=self.dataFittingBef_loss)
 
-            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)
+            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listAfter, key, '0St + kC/CL')
 
             meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
 
-            dataFittingAft_stor, dataFittingAft_loss = gModulus(  # Before axes
+            self.dataFittingAft_stor, self.dataFittingAft_loss = gModulus(  # After axes
                 sampleName=key,
-                axTop=self.axPostTop, axBottom=self.axPostBottom,
+                axTop=axPostTop, axBottom=axPostBottom,
                 x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
                 axTitle='After breakage',
-                yLabel=self.yTitle, yLim=self.yLimits,
-                xLabel=self.xTitle, xLim=self.xLimits,
+                yLabel=yTitle, yLim=yLimits,
+                xLabel=xTitle, xLim=xLimits,
                 curveColor=color, logScale=True,
                 tableDataStor=self.dataFittingAft_stor, tableDataLoss=self.dataFittingAft_loss)
 
-            self.axPostTop.set_ylabel(''), self.axPostBottom.set_ylabel('')
-            self.axPostTop.set_yticklabels([]), self.axPostBottom.set_yticklabels([])
+            axPostTop.set_ylabel(''), axPostBottom.set_ylabel('')
+            axPostTop.set_yticklabels([]), axPostBottom.set_yticklabels([])
 
         plt.subplots_adjust(
-            wspace=0.015, hspace=0.15,
+            wspace=0.015, hspace=0.025,
             top=0.97, bottom=0.07,
             left=0.045, right=0.965)
-        
         plt.show()
+
+        dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+        fig.savefig(
+            f'{dirSave}' + f'\\{self.fileName}' + ' - Elastic and viscous moduli' + '.png',
+            facecolor='w', dpi=600)
+        print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
 
 def main(dataPath, fileName):
@@ -806,7 +791,6 @@ if __name__ == '__main__':
 
     # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
     folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
-
     filePath = [
         # kC
         folderPath + "/kC/kC-viscoelasticRecovery-1.xlsx",
@@ -839,6 +823,15 @@ if __name__ == '__main__':
         # folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
     ]
 
-    kappas = ViscoelasticRecovery(filePath, 'kappas-teste')
+    keySamples = {
+        'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [], 'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
+    }
+    nSamples = [3, 4, 2, 3, 2, 4]
+    cSamples = 'lightsteelblue', '#A773FF', '#892F99', '#AB247B', '#E64B83', '#FF0831'
+
+    kappas = ViscoelasticRecovery(
+        filePath, 'kappas-teste',
+        keySamples, nSamples, cSamples)
+
     kappas.plotRecovery()
-    # main(filePath, 'kappaCar-ViscoelasticRecoveryWithViscous')
+
