@@ -479,14 +479,33 @@ class ViscoelasticRecovery:
         self.listAfter = appendData(self.listAfter, True)
 
     def plotRecovery(self):
-        def getValues(inputList, loopKey):
-            frequencies = np.mean(inputList[loopKey][0], axis=1)[0]
-            elasticMod, viscousMod = (np.mean(inputList[loopKey][1], axis=1)[0],
-                                      np.mean(inputList[loopKey][2], axis=1)[0])
-            elasticModErr, viscousModErr = (np.std(inputList[loopKey][1], axis=1)[0],
-                                            np.std(inputList[loopKey][2], axis=1)[0])
-            lossFactor, lossFactorErr = (np.mean(inputList[loopKey][3], axis=1)[0],
-                                         np.std(inputList[loopKey][3], axis=1)[0])
+        def getValues(inputList, loopKey, condition=False):
+            if not condition:
+                frequencies = np.mean(inputList[loopKey][0], axis=1)[0]
+
+                elasticMod, viscousMod = (np.mean(inputList[loopKey][1], axis=1)[0],
+                                          np.mean(inputList[loopKey][2], axis=1)[0])
+
+                elasticModErr, viscousModErr = (np.std(inputList[loopKey][1], axis=1)[0],
+                                                np.std(inputList[loopKey][2], axis=1)[0])
+
+                lossFactor, lossFactorErr = (np.mean(inputList[loopKey][3], axis=1)[0],
+                                             np.std(inputList[loopKey][3], axis=1)[0])
+
+            else:
+                frequencies = np.mean(inputList[loopKey][0], axis=1)[0]
+
+                elasticMod, viscousMod = (inputList[key][1] if key != condition else inputList[key][1][0][0],
+                                          inputList[key][2] if key != condition else inputList[key][2][0][0])
+
+                elasticModErr, viscousModErr = (np.std(elasticMod, axis=1)[0] if key != condition else np.zeros(31),
+                                                np.std(viscousMod, axis=1)[0] if key != condition else np.zeros(31))
+
+                elasticMod, viscousMod = (np.mean(elasticMod, axis=1)[0] if key != condition else elasticMod,
+                                          np.mean(viscousMod, axis=1)[0] if key != condition else viscousMod)
+
+                lossFactor, lossFactorErr = (np.mean(inputList[loopKey][3], axis=1)[0],
+                                             np.std(inputList[loopKey][3], axis=1)[0])
 
             return frequencies, elasticMod, viscousMod, elasticModErr, viscousModErr, lossFactor, lossFactorErr
 
@@ -564,8 +583,8 @@ class ViscoelasticRecovery:
             axBottom.set_xlabel(f'{xLabel}', color='#303030'), axBottom.set_ylabel(f'{yTitleBottom}', color='#303030')
 
             x_toFit_stor, y_toFit_stor = arraySplit(x, yP, startVal, endVal)
-            params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor,
-                                                     y_toFit_stor)  # p0=(y_mean[0], y_mean[-1], 100))
+            params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor, y_toFit_stor)
+            # p0=(y_mean[0], y_mean[-1], 100))
             errors_stor = np.sqrt(np.diag(covariance_stor))
             tableDataStor = exportFit(
                 f'{sampleName}',
@@ -587,8 +606,8 @@ class ViscoelasticRecovery:
                 label=f'{sampleName}', zorder=3)
 
             x_toFit_loss, y_toFit_loss = arraySplit(x, yD, startVal, endVal)
-            params_loss, covariance_loss = curve_fit(powerLaw, x_toFit_loss,
-                                                     y_toFit_loss)  # p0=(y_mean[0], y_mean[-1], 100))
+            params_loss, covariance_loss = curve_fit(powerLaw, x_toFit_loss, y_toFit_loss)
+            # p0=(y_mean[0], y_mean[-1], 100))
             errors_loss = np.sqrt(np.diag(covariance_loss))
             tableDataLoss = exportFit(
                 f'{sampleName}',
@@ -630,6 +649,30 @@ class ViscoelasticRecovery:
                 yLabel=self.yTitle, yLim=self.yLimits, xLabel=self.xTitle, xLim=self.xLimits, curveColor=color,
                 logScale=True,
                 tableDataStor=self.dataFittingBef_stor, tableDataLoss=self.dataFittingBef_loss)
+
+            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)
+
+            meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
+
+            dataFittingAft_stor, dataFittingAft_loss = gModulus(  # Before axes
+                sampleName=key,
+                axTop=self.axPostTop, axBottom=self.axPostBottom,
+                x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
+                axTitle='After breakage',
+                yLabel=self.yTitle, yLim=self.yLimits,
+                xLabel=self.xTitle, xLim=self.xLimits,
+                curveColor=color, logScale=True,
+                tableDataStor=self.dataFittingAft_stor, tableDataLoss=self.dataFittingAft_loss)
+
+            self.axPostTop.set_ylabel(''), self.axPostBottom.set_ylabel('')
+            self.axPostTop.set_yticklabels([]), self.axPostBottom.set_yticklabels([])
+
+        plt.subplots_adjust(
+            wspace=0.015, hspace=0.15,
+            top=0.97, bottom=0.07,
+            left=0.045, right=0.965)
+        
+        plt.show()
 
 
 def main(dataPath, fileName):
@@ -696,15 +739,6 @@ def main(dataPath, fileName):
             logScale=True,
             tableDataStor=dataFittingBef_stor, tableDataLoss=dataFittingBef_loss)
 
-        gP = listAfter[key][1] if key != '0St + kCar/CL' else listAfter[key][1][0][0]
-        gD = listAfter[key][2] if key != '0St + kCar/CL' else listAfter[key][2][0][0]
-
-        gPerr = np.std(gP, axis=1)[0] if key != '0St + kCar/CL' else np.zeros(31)
-        gDerr = np.std(gD, axis=1)[0] if key != '0St + kCar/CL' else np.zeros(31)
-        gP = np.mean(gP, axis=1)[0] if key != '0St + kCar/CL' else gP
-        gD = np.mean(gD, axis=1)[0] if key != '0St + kCar/CL' else gD
-        delta, deltaErr = np.mean(listAfter[key][3], axis=1)[0], np.std(listAfter[key][3], axis=1)[0]
-
         recoveryAft, freqsRecovery = getDataByFreq(recoveryAft, gP, freqs)
         delta_aft, freqsRecovery = getDataByFreq(delta_aft, delta, freqs)
         tan_delta.append([delta_bef, delta_aft])
@@ -770,8 +804,8 @@ if __name__ == '__main__':
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
 
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
-    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"  # Personal
+    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
+    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     filePath = [
         # kC
@@ -805,4 +839,6 @@ if __name__ == '__main__':
         # folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
     ]
 
-    main(filePath, 'kappaCar-ViscoelasticRecoveryWithViscous')
+    kappas = ViscoelasticRecovery(filePath, 'kappas-teste')
+    kappas.plotRecovery()
+    # main(filePath, 'kappaCar-ViscoelasticRecoveryWithViscous')
