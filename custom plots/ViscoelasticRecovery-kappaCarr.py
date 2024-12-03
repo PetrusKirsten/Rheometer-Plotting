@@ -447,7 +447,7 @@ class ViscoelasticRecovery:
         self.listBefore = appendData(self.listBefore)
         self.listAfter = appendData(self.listAfter, True)
 
-    def plotRecovery(self):
+    def plotRecovery(self, show=True, save=False):
         def getValues(inputList, loopKey, condition=False):
             if not condition:
                 frequencies = np.mean(inputList[loopKey][0], axis=1)[0]
@@ -484,8 +484,8 @@ class ViscoelasticRecovery:
             :param tolerance: the difference betweem two points data
             :return: the mean of the "cte" region and its indexes
             """
-            diffs = np.abs(np.diff(values))  # Calcular as diferenças entre valores consecutivos
-            constantRegions = diffs < tolerance  # Identificar regiões onde a diferença está abaixo do valor de tolerância
+            diffs = np.abs(np.diff(values))
+            constantRegions = diffs < tolerance
 
             # Encontrar os índices onde a condição é satisfeita
             iStart, iEnd = None, None
@@ -517,7 +517,7 @@ class ViscoelasticRecovery:
 
             return mean, stddev, iStart, iEnd
 
-        def gModulus(
+        def drawGmodulus(
                 sampleName, axTop, axBottom, axTitle,
                 x, yP, yD, yPerr, yDerr,
                 yLabel, yLim, xLabel, xLim,
@@ -621,7 +621,7 @@ class ViscoelasticRecovery:
             meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
             self.meanBefore.append(meanStorage), self.meanBeforeErr.append(meanStorageErr)
 
-            self.dataFittingBef_stor, self.dataFittingBef_loss = gModulus(  # Before axes
+            self.dataFittingBef_stor, self.dataFittingBef_loss = drawGmodulus(  # Before axes
                 sampleName=key,
                 axTop=axPreTop, axBottom=axPreBottom,
                 x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
@@ -634,7 +634,7 @@ class ViscoelasticRecovery:
 
             meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
 
-            self.dataFittingAft_stor, self.dataFittingAft_loss = gModulus(  # After axes
+            self.dataFittingAft_stor, self.dataFittingAft_loss = drawGmodulus(  # After axes
                 sampleName=key,
                 axTop=axPostTop, axBottom=axPostBottom,
                 x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
@@ -648,16 +648,17 @@ class ViscoelasticRecovery:
             axPostTop.set_yticklabels([]), axPostBottom.set_yticklabels([])
 
         plt.subplots_adjust(
-            wspace=0.015, hspace=0.025,
-            top=0.97, bottom=0.07,
-            left=0.045, right=0.965)
-        plt.show()
-
-        dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
-        fig.savefig(
-            f'{dirSave}' + f'\\{self.fileName}' + ' - Elastic and viscous moduli' + '.png',
-            facecolor='w', dpi=600)
-        print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
+            wspace=0.015, hspace=0.060,
+            top=0.970, bottom=0.070,
+            left=0.060, right=0.985)
+        if show:
+            plt.show()
+        if save:
+            dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+            fig.savefig(
+                f'{dirSave}' + f'\\{self.fileName}' + ' - Elastic and viscous moduli' + '.png',
+                facecolor='w', dpi=600)
+            print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
 
 def main(dataPath, fileName):
@@ -789,8 +790,8 @@ if __name__ == '__main__':
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
 
-    # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
+    # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
     filePath = [
         # kC
         folderPath + "/kC/kC-viscoelasticRecovery-1.xlsx",
@@ -823,15 +824,15 @@ if __name__ == '__main__':
         # folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
     ]
 
-    keySamples = {
+    kappa_keySamples = {
         'kCar': [], 'kCar/CL-7': [], 'kCar/CL-14': [], 'kCar/CL-21': [], 'kCar/CL-28': [], 'kCar/CL-42': []
     }
-    nSamples = [3, 4, 2, 3, 2, 4]
-    cSamples = 'lightsteelblue', '#A773FF', '#892F99', '#AB247B', '#E64B83', '#FF0831'
+    kappa_nSamples = [3, 4, 2, 3, 2, 4]
+    kappa_cSamples = 'lightsteelblue', '#A773FF', '#892F99', '#AB247B', '#E64B83', '#FF0831'
 
     kappas = ViscoelasticRecovery(
         filePath, 'kappas-teste',
-        keySamples, nSamples, cSamples)
+        kappa_keySamples, kappa_nSamples, kappa_cSamples)
 
-    kappas.plotRecovery()
+    kappas.plotRecovery(show=True)
 
