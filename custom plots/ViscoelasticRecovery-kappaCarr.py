@@ -335,7 +335,7 @@ def plotHeatMap(
     plt.savefig(f'{dirSave}' + f'\\{title[0]}' + '.png', facecolor='w', dpi=600)
 
 
-class ViscoelasticRecovery:
+class Recovery:
     def __init__(
             self,
             dataPath, fileName,
@@ -987,7 +987,7 @@ if __name__ == '__main__':
     kappa_nSamples = [3, 4, 2, 3, 2, 4]
     kappa_cSamples = 'lightsteelblue', '#A773FF', '#892F99', '#AB247B', '#E64B83', '#FF0831'
 
-    kappas = ViscoelasticRecovery(
+    kappas = Recovery(
         filePath, 'kappas-teste',
         kappa_keySamples, kappa_nSamples, kappa_cSamples)
 
