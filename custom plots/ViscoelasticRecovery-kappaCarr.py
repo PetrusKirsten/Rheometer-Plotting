@@ -137,7 +137,7 @@ def getSamplesData(
     return dict_data, sample_keys, create_dict_with_labels(sample_keys), create_dict_with_labels(sample_keys)
 
 
-def ratioElaVis(data_elastic, data_viscous):
+def lossFactor(data_elastic, data_viscous):
     result = []
 
     for entry1 in data_elastic:
@@ -341,6 +341,7 @@ class ViscoelasticRecovery:
             dataPath, fileName,
             names_samples, number_samples, colors_samples
     ):
+
         def getData():
             def getSegments(dataframe):
                 freq = dataframe['f in Hz'].to_numpy()
@@ -412,26 +413,20 @@ class ViscoelasticRecovery:
         self.number_samples = number_samples
         self.colors_samples = colors_samples
 
-        # figure vars
-        # self.axBar1, self.axBar2, self.axBar3, self.axBar4 = (
-        #     self.fig.add_subplot(self.gs[0, 2]),
-        #     self.fig.add_subplot(self.gs[1, 2]),
-        #     self.fig.add_subplot(self.gs[2, 2]),
-        #     self.fig.add_subplot(self.gs[3, 2]))
-
         # data vars
         self.meanBefore, self.meanAfter = [], []
         self.meanBeforeErr, self.meanAfterErr = [], []
         self.dataFittingBef_stor, self.dataFittingAft_stor = [], []
         self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
-        self.recoveryPCT, self.tan_delta = [], []
+        self.recoveryPCT, self.freqsRecovery, self.tan_delta = [], [], []
+        self.ratioBef, self.ratioAft, self.ratioReady = None, None, False
 
         self.data, self.listBefore, self.listAfter = getData()
 
         self.listBefore = appendData(self.listBefore)
         self.listAfter = appendData(self.listAfter, True)
 
-    def plotRecovery(self, show=True, save=False):
+    def plotGmodulus(self, show=True, save=False):
         def getValues(inputList, loopKey, condition=False):
             if not condition:
                 frequencies = np.mean(inputList[loopKey][0], axis=1)[0]
@@ -514,7 +509,7 @@ class ViscoelasticRecovery:
 
             return mean, stddev, iStart, iEnd
 
-        def drawGmodulus(
+        def drawPlot(
                 sampleName, axTop, axBottom, axTitle,
                 x, yP, yD, yPerr, yDerr,
                 yLabel, yLim, xLabel, xLim,
@@ -598,7 +593,7 @@ class ViscoelasticRecovery:
                 legendLabel(axTop)
 
             return tableDataStor, tableDataLoss
-        
+
         fig = plt.figure(figsize=(13, 9), facecolor='snow')
         fig.canvas.manager.set_window_title(self.fileName + ' - Elastic and viscous moduli')
         gs = GridSpec(2, 2, width_ratios=[1, 1], height_ratios=[1, 1])
@@ -609,19 +604,19 @@ class ViscoelasticRecovery:
         fig.suptitle(f'')
         yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
         xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
-        
+
         for key, color in zip(self.listBefore, self.colors_samples):
             recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
 
             freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)
 
-            recoveryBef, freqsRecovery = getValuesByFreq(recoveryBef, gP, freqs)
-            delta_bef, freqsRecovery = getValuesByFreq(delta_bef, delta, freqs)
+            recoveryBef, _ = getValuesByFreq(recoveryBef, gP, freqs)
+            delta_bef, _ = getValuesByFreq(delta_bef, delta, freqs)
 
             meanStorage, meanStorageErr, fitStart, fitEnd = cteRegionMean(gP)
             self.meanBefore.append(meanStorage), self.meanBeforeErr.append(meanStorageErr)
 
-            self.dataFittingBef_stor, self.dataFittingBef_loss = drawGmodulus(  # Before axes
+            self.dataFittingBef_stor, self.dataFittingBef_loss = drawPlot(  # Before axes
                 sampleName=key,
                 axTop=axPreTop, axBottom=axPreBottom,
                 x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
@@ -633,13 +628,14 @@ class ViscoelasticRecovery:
 
             freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listAfter, key, '0St + kC/CL')
 
-            recoveryAft, freqsRecovery = getValuesByFreq(recoveryAft, gP, freqs)
-            delta_aft, freqsRecovery = getValuesByFreq(delta_aft, delta, freqs)
+            recoveryAft, _ = getValuesByFreq(recoveryAft, gP, freqs)
+            delta_aft, self.freqsRecovery = getValuesByFreq(delta_aft, delta, freqs)
             self.tan_delta.append([delta_bef, delta_aft])
 
             meanStorage, meanStorageErr, fitStart, fitEnd = cteRegionMean(gP)
+            self.meanAfter.append(meanStorage), self.meanAfterErr.append(meanStorageErr)
 
-            self.dataFittingAft_stor, self.dataFittingAft_loss = drawGmodulus(  # After axes
+            self.dataFittingAft_stor, self.dataFittingAft_loss = drawPlot(  # After axes
                 sampleName=key,
                 axTop=axPostTop, axBottom=axPostBottom,
                 x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
@@ -655,8 +651,9 @@ class ViscoelasticRecovery:
 
             self.recoveryPCT.append(((np.array(recoveryAft) / np.array(recoveryBef)) * 100).tolist())
 
-        ratioBef = ratioElaVis(self.dataFittingBef_stor, self.dataFittingBef_loss)
-        ratioAft = ratioElaVis(self.dataFittingAft_stor, self.dataFittingAft_loss)
+        self.ratioBef = lossFactor(self.dataFittingBef_stor, self.dataFittingBef_loss)
+        self.ratioAft = lossFactor(self.dataFittingAft_stor, self.dataFittingAft_loss)
+        self.ratioReady = True
 
         plt.subplots_adjust(
             wspace=0.015, hspace=0.060,
@@ -670,6 +667,225 @@ class ViscoelasticRecovery:
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Elastic and viscous moduli' + '.png',
                 facecolor='w', dpi=600)
             print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
+
+    def plotBars(self, show=True, save=False):
+
+        def drawBars(
+                title, axes, lim,
+                data_before, data_after,
+                colors, dec, scale_correction=None,
+                a=.9, h='', z=1
+        ):
+
+            def configPlot(ax, yTitle, yLim, xLim):
+                ax.tick_params(axis='y', labelsize=10, length=4)
+                ax.tick_params(
+                    axis='x', which='both', labelsize=9, pad=1, length=0,
+                    labeltop=False, top=False,
+                    labelbottom=False, bottom=False)
+
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+                ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+                ax.set_yticks([]), ax.set_ylim(xLim), ax.set_xlim(yLim)
+                ax.set_xlabel(yTitle, size=10, labelpad=5, loc='center')
+
+                ax.xaxis.tick_top(), ax.xaxis.set_label_position('top')
+                ax.xaxis.set_major_locator(MultipleLocator(yLim[1] / 5))
+                ax.xaxis.set_minor_locator(MultipleLocator(yLim[1] / 20))
+
+            samples = [d['Sample'] for d in data_before]
+            key = "n'" if "n'" in title else "k'"
+            height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
+            height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
+
+            bin_width, space_samples, space_break = 1, 2.5, 2
+            x = np.arange(space_samples * len(data_before))
+            posList, labelsList = [], []
+
+            configPlot(axes, title, (.0, lim), (x.min() - bin_width - .5, x.max()))
+
+            # data from before
+            for i in range(len(height_bef)):
+                text_scale_correction = 1
+                if scale_correction is not None:
+                    height_bef[i] = height_bef[i] / 10 if i == scale_correction else height_bef[i]
+                    height_bef_err[i] = height_bef_err[i] / 10 if i == scale_correction else height_bef_err[i]
+                    text_scale_correction = 10 if i == scale_correction else 1
+
+                axes.barh(
+                    space_samples * x[i] - bin_width / space_break,
+                    width=height_bef[i] if height_bef_err[i] < height_bef[i] / 2 else 0, xerr=0,
+                    color=colors[i], edgecolor='#383838', alpha=a,
+                    height=bin_width, hatch=h, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    y=space_samples * x[i] - bin_width / space_break,
+                    x=height_bef[i] if height_bef_err[i] < height_bef[i] / 2 else 0,
+                    xerr=height_bef_err[i] if height_bef_err[i] < height_bef[i] / 2 else 0,
+                    color='#383838', alpha=.9,
+                    linewidth=1, capsize=3, capthick=1.05, zorder=3)
+
+                text = (f'{ceil(height_bef[i] * text_scale_correction * 100) / 100:.{dec}f} '
+                        f'± {ceil(height_bef_err[i] * text_scale_correction * 100) / 100:.{dec}f}')
+                axes.text(
+                    lim * .975,
+                    space_samples * x[i] + 0.1 - bin_width / space_break,
+                    text if height_bef_err[i] < height_bef[i] / 2 else 'Not fitted',
+                    va='center_baseline', ha='left',
+                    color='#383838', fontsize=9)
+            # data from after
+            for i in range(len(height_aft)):
+                text_scale_correction = 1
+                if scale_correction is not None:
+                    height_aft[i] = height_aft[i] / 10 if i == scale_correction else height_aft[i]
+                    height_aft_err[i] = height_aft_err[i] / 10 if i == scale_correction else height_aft_err[i]
+                    text_scale_correction = 10 if i == scale_correction else 1
+
+                axes.barh(
+                    space_samples * x[i] + bin_width / space_break,
+                    width=height_aft[i] if height_aft_err[i] < height_aft[i] / 2 else 0, xerr=0,
+                    color=colors[i], edgecolor='#383838', alpha=a,
+                    height=bin_width, hatch='////', linewidth=.5,
+                    zorder=2)
+                axes.errorbar(
+                    y=space_samples * x[i] + bin_width / space_break,
+                    x=height_aft[i] if height_aft_err[i] < height_aft[i] / 2 else 0,
+                    xerr=height_aft_err[i] if height_aft_err[i] < height_aft[i] / 2 else 0,
+                    color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
+                    zorder=3)
+
+                text = (f'{ceil(height_aft[i] * text_scale_correction * 100) / 100:.{dec}f} '
+                        f'± {ceil(height_aft_err[i] * text_scale_correction * 100) / 100:.{dec}f}')
+                axes.text(
+                    lim * .975,
+                    space_samples * x[i] + 0.1 + bin_width / space_break,
+                    text if height_aft_err[i] < height_aft[i] / 2 else 'Not fitted',
+                    va='center_baseline', ha='left',
+                    color='#383838', fontsize=9)
+
+                if i == 5:
+                    posList.append(space_samples * x[i] - bin_width / space_break)
+                    posList.append(space_samples * x[i] + bin_width / space_break)
+                    labelsList.append('Before'), labelsList.append('After')
+                if scale_correction is not None and i == scale_correction:
+                    posList.append(space_samples * x[i]), labelsList.append('10×')
+
+            axes.yaxis.tick_right()
+            axes.set_yticks(posList)
+            axes.set_yticklabels(labelsList)
+            # axes.invert_yaxis()
+            axes.invert_xaxis()
+
+        # figure configs
+        fig = plt.figure(figsize=(5, 9), facecolor='snow')
+        fig.canvas.manager.set_window_title(self.fileName + ' - Bars plots')
+        gs = GridSpec(4, 1, height_ratios=[1, 1, 1, 1], width_ratios=[1])
+
+        axBar1, axBar2, axBar3, axBar4 = (
+            fig.add_subplot(gs[0, 0]),
+            fig.add_subplot(gs[1, 0]),
+            fig.add_subplot(gs[2, 0]),
+            fig.add_subplot(gs[3, 0]))
+
+        fig.suptitle(f'')
+        yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
+        xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
+
+        # bars data
+        drawBars(  # First table
+            "$n'$", axBar1, .6,
+            self.dataFittingBef_stor, self.dataFittingAft_stor, self.colors_samples, dec=2,
+            scale_correction=0, z=1)
+
+        drawBars(  # Second table
+            "$G_0'$ (Pa)", axBar2, 10000,
+            self.dataFittingBef_stor, self.dataFittingAft_stor, self.colors_samples, dec=1,
+            scale_correction=None, z=1)
+
+        drawBars(  # Third table
+            "$G_0''$ (Pa)", axBar3, 850,
+            self.dataFittingBef_loss, self.dataFittingAft_loss, self.colors_samples, dec=1,
+            scale_correction=None, z=1)
+
+        drawBars(  # Fourth table
+            "Loss factor $G_0''\,/\,G_0'$", axBar4, 15,
+            self.ratioBef, self.ratioAft, self.colors_samples, dec=1,
+            scale_correction=None, z=1)
+
+        plt.subplots_adjust(
+            wspace=0.015, hspace=0.15,
+            top=0.97, bottom=0.07,
+            left=0.045, right=0.965)
+
+        if show:
+            plt.show()
+        if save:
+            dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+            fig.savefig(
+                f'{dirSave}' + f'\\{self.fileName}' + ' - Bars plots' + '.png',
+                facecolor='w', dpi=600)
+            print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
+
+    def plotHeatMap(self, show=True, save=False):
+
+        def drawMap(
+                title,
+                data_map, frequencies, formulations,
+        ):
+            plt.figure(figsize=(12, 4.5), facecolor='whitesmoke')
+            plt.gca().set_facecolor('gainsboro')
+
+            if title == "Elastic recovery (%)":
+                for i in range(len(data_map)):
+                    for j in range(len(data_map[i])):
+                        if data_map[i][j] > 100:
+                            data_map[i][j] = None
+                colors = 'RdYlGn'
+                decimal = '.0f'
+                minValue = 0
+                maxValue = 100
+
+            if title == "Loss factor $\\tan(G_0''\,/\,G_0')$":
+                for i in range(len(data_map)):
+                    for j in range(len(data_map[i])):
+                        for k in range(len(data_map[i][j])):
+                            if data_map[i][j][k] > 50:
+                                data_map[i][j][k] = None
+                colors = 'coolwarm'
+                decimal = '.2f'
+                minValue = 0.1
+                maxValue = 1.9
+                data_map = np.array(data_map, dtype=float).flatten().reshape(12, 20)
+
+            df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
+            sns.heatmap(
+                df,
+                vmin=minValue, vmax=maxValue, cmap=colors,
+                annot=True, annot_kws={'size': 8}, fmt=decimal, linewidths=.75, linecolor='whitesmoke')
+
+            plt.title(f"{title} across frequency.")
+            plt.tick_params(axis='both', which='both', length=0)
+            plt.xticks(rotation=90, ha='center', fontsize=10, color='#383838')
+            plt.yticks(rotation=0, ha='right', fontsize=10, color='#383838')
+
+            plt.subplots_adjust(
+                wspace=0, hspace=0,
+                top=0.93, bottom=0.14,
+                left=0.07, right=1.0)
+
+            dirSave = Path(*Path(filePath[0]).parts[:Path(filePath[0]).parts.index('data') + 1])
+            plt.savefig(f'{dirSave}' + f'\\{title[:3]}' + '.png', facecolor='w', dpi=600)
+
+        drawMap(
+            "Elastic recovery (%)",
+            self.recoveryPCT, self.freqsRecovery, self.names_samples)
+
+        brokenLabels = insertKey(self.names_samples)  # TODO: fix insert function
+        drawMap(
+            "Loss factor $\\tan(G_0''\,/\,G_0')$",
+            self.tan_delta, self.freqsRecovery, brokenLabels)
+
+        plt.show()
 
 
 def main(dataPath, fileName):
@@ -711,76 +927,6 @@ def main(dataPath, fileName):
     #     gP.append(data[f'{key}_storage_broken'])
     #     gD.append(data[f'{key}_loss_broken'])
     #     d.append(data[f'{key}_delta_broken'])
-
-    for key, color in zip(listBefore, colorSamples):
-        recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
-
-        freqs = np.mean(listBefore[key][0], axis=1)[0]
-        gP, gD = np.mean(listBefore[key][1], axis=1)[0], np.mean(listBefore[key][2], axis=1)[0]
-        gPerr, gDerr = np.std(listBefore[key][1], axis=1)[0], np.std(listBefore[key][2], axis=1)[0]
-        delta, deltaErr = np.mean(listBefore[key][3], axis=1)[0], np.std(listBefore[key][3], axis=1)[0]
-
-        recoveryBef, freqsRecovery = getDataByFreq(recoveryBef, gP, freqs)
-        delta_bef, freqsRecovery = getDataByFreq(delta_bef, delta, freqs)
-
-        meanStorage, storageMeanErr, fitStart, fitEnd = getCteMean(gP)
-        meanBefore.append(meanStorage)
-        meanBeforeErr.append(storageMeanErr)
-
-        dataFittingBef_stor, dataFittingBef_loss = gModulus(  # Before axes
-            sampleName=key,
-            axTop=axPreTop, axBottom=axPreBottom,
-            x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='Before breakage',
-            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
-            logScale=True,
-            tableDataStor=dataFittingBef_stor, tableDataLoss=dataFittingBef_loss)
-
-        recoveryAft, freqsRecovery = getDataByFreq(recoveryAft, gP, freqs)
-        delta_aft, freqsRecovery = getDataByFreq(delta_aft, delta, freqs)
-        tan_delta.append([delta_bef, delta_aft])
-
-        dataFittingAft_stor, dataFittingAft_loss = gModulus(  # After axes
-            sampleName=key,
-            axTop=axPostTop, axBottom=axPostBottom,
-            x=freqs, yP=gP, yD=gD, yPerr=gPerr, yDerr=gDerr,
-            axTitle='After breakage',
-            yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
-            logScale=True,
-            tableDataStor=dataFittingAft_stor, tableDataLoss=dataFittingAft_loss)
-        axPostTop.set_ylabel(''), axPostBottom.set_ylabel('')
-        axPostTop.set_yticklabels([]), axPostBottom.set_yticklabels([])
-
-        recoveryPCT.append(((np.array(recoveryAft) / np.array(recoveryBef)) * 100).tolist())
-        # recoveryPCT = recoveryPCT[0]
-
-    ratioBef = ratioElaVis(dataFittingBef_stor, dataFittingBef_loss)
-    ratioAft = ratioElaVis(dataFittingAft_stor, dataFittingAft_loss)
-
-    plotBars(  # First table
-        "$n'$", axBar1, .6,
-        dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=2,
-        scale_correction=0, z=1)
-
-    plotBars(  # Second table
-        "$G_0'$ (Pa)", axBar2, 10000,
-        dataFittingBef_stor, dataFittingAft_stor, colorSamples, dec=1,
-        scale_correction=None, z=1)
-
-    plotBars(  # Third table
-        "$G_0''$ (Pa)", axBar3, 850,
-        dataFittingBef_loss, dataFittingAft_loss, colorSamples, dec=1,
-        scale_correction=None, z=1)
-
-    plotBars(  # Fourth table
-        "Loss factor $G_0''\,/\,G_0'$", axBar4, 15,
-        ratioBef, ratioAft, colorSamples, dec=1,
-        scale_correction=None, z=1)
-
-    plt.subplots_adjust(
-        wspace=0.015, hspace=0.15,
-        top=0.97, bottom=0.07,
-        left=0.045, right=0.965)
 
     plotHeatMap(
         "Elastic recovery (%)",
@@ -845,5 +991,6 @@ if __name__ == '__main__':
         filePath, 'kappas-teste',
         kappa_keySamples, kappa_nSamples, kappa_cSamples)
 
-    kappas.plotRecovery(show=True)
-
+    kappas.plotGmodulus(show=False)
+    kappas.plotBars()
+    kappas.plotHeatMap()
