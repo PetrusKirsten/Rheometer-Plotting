@@ -137,22 +137,6 @@ def getSamplesData(
     return dict_data, sample_keys, create_dict_with_labels(sample_keys), create_dict_with_labels(sample_keys)
 
 
-def getDataByFreq(storageList, data, frequencies):
-    def round_to_nearest(value):
-        return round(value / 0.05) * 0.05
-
-    index_freqs = [0, 1, 4, 7, 10, 14, 17, 20, 24]
-    index_freqs = range(3, 23, 1)
-    freqList = []
-    for index in index_freqs:
-        storageList.append(data[index])
-        freqList.append(round_to_nearest(frequencies[index]))
-
-    freqList = [f"{freq:.2f} Hz" for freq in freqList]
-
-    return storageList, freqList
-
-
 def ratioElaVis(data_elastic, data_viscous):
     result = []
 
@@ -478,7 +462,20 @@ class ViscoelasticRecovery:
 
             return frequencies, elasticMod, viscousMod, elasticModErr, viscousModErr, lossFactor, lossFactorErr
 
-        def getCteMean(values, tolerance=100):
+        def getValuesByFreq(storageList, data, frequencies, index_freqs=range(3, 23, 1)):
+            def round_to_nearest(value):
+                return round(value / 0.05) * 0.05
+
+            freqList = []
+            for index in index_freqs:
+                storageList.append(data[index])
+                freqList.append(round_to_nearest(frequencies[index]))
+
+            freqList = [f"{freq:.2f} Hz" for freq in freqList]
+
+            return storageList, freqList
+
+        def cteRegionMean(values, tolerance=100):
             """
             :param values: to be analysed
             :param tolerance: the difference betweem two points data
@@ -618,7 +615,10 @@ class ViscoelasticRecovery:
 
             freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)
 
-            meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
+            recoveryBef, freqsRecovery = getValuesByFreq(recoveryBef, gP, freqs)
+            delta_bef, freqsRecovery = getValuesByFreq(delta_bef, delta, freqs)
+
+            meanStorage, meanStorageErr, fitStart, fitEnd = cteRegionMean(gP)
             self.meanBefore.append(meanStorage), self.meanBeforeErr.append(meanStorageErr)
 
             self.dataFittingBef_stor, self.dataFittingBef_loss = drawGmodulus(  # Before axes
@@ -628,11 +628,16 @@ class ViscoelasticRecovery:
                 axTitle='Before breakage',
                 yLabel=yTitle, yLim=yLimits, xLabel=xTitle, xLim=xLimits, curveColor=color,
                 logScale=True,
-                tableDataStor=self.dataFittingBef_stor, tableDataLoss=self.dataFittingBef_loss)
+                tableDataStor=self.dataFittingBef_stor, tableDataLoss=self.dataFittingBef_loss
+            )
 
             freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listAfter, key, '0St + kC/CL')
 
-            meanStorage, meanStorageErr, fitStart, fitEnd = getCteMean(gP)
+            recoveryAft, freqsRecovery = getValuesByFreq(recoveryAft, gP, freqs)
+            delta_aft, freqsRecovery = getValuesByFreq(delta_aft, delta, freqs)
+            self.tan_delta.append([delta_bef, delta_aft])
+
+            meanStorage, meanStorageErr, fitStart, fitEnd = cteRegionMean(gP)
 
             self.dataFittingAft_stor, self.dataFittingAft_loss = drawGmodulus(  # After axes
                 sampleName=key,
@@ -642,10 +647,16 @@ class ViscoelasticRecovery:
                 yLabel=yTitle, yLim=yLimits,
                 xLabel=xTitle, xLim=xLimits,
                 curveColor=color, logScale=True,
-                tableDataStor=self.dataFittingAft_stor, tableDataLoss=self.dataFittingAft_loss)
+                tableDataStor=self.dataFittingAft_stor, tableDataLoss=self.dataFittingAft_loss
+            )
 
             axPostTop.set_ylabel(''), axPostBottom.set_ylabel('')
             axPostTop.set_yticklabels([]), axPostBottom.set_yticklabels([])
+
+            self.recoveryPCT.append(((np.array(recoveryAft) / np.array(recoveryBef)) * 100).tolist())
+
+        ratioBef = ratioElaVis(self.dataFittingBef_stor, self.dataFittingBef_loss)
+        ratioAft = ratioElaVis(self.dataFittingAft_stor, self.dataFittingAft_loss)
 
         plt.subplots_adjust(
             wspace=0.015, hspace=0.060,
