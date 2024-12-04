@@ -129,17 +129,17 @@ def plot2D(
 
 # [Car type, Starch, CaCl2]
 
-fivePct = [
-    [3, 1, 0], [4, 1, 0], [0, 1, 7], [0, 1, 14], [0, 1, 28],
-    [3, 1, 7], [3, 1, 14], [3, 1, 28],
-    [4, 1, 7], [4, 1, 14], [4, 1, 28]]
+# fivePct = [
+#     [3, 1, 0], [4, 1, 0], [0, 1, 7], [0, 1, 14], [0, 1, 28],
+#     [3, 1, 7], [3, 1, 14], [3, 1, 28],
+#     [4, 1, 7], [4, 1, 14], [4, 1, 28]]
 
 propForms = [
     [1, 2, 0], [1, 2, 7], [1, 2, 14], [1, 2, 28],  # St + kappaCar
     [2, 2, 0], [2, 2, 7], [2, 2, 14], [2, 2, 28]]  # St + iotaCar
 
 doneForms = [
-    [0, 1, 0],
+    [0, 1, 0], [1, 1, 0], [2, 1, 0],
     [0, 2, 0], [0, 2, 7], [0, 2, 14], [0, 2, 28],
     [3, 2, 0], [3, 2, 7], [3, 2, 14], [3, 2, 28],
     [4, 2, 0], [4, 2, 7], [4, 2, 14], [4, 2, 28],
@@ -156,16 +156,16 @@ ax = fig.add_subplot(111, projection='3d')
 #     ax, screen, legend='Car crosslinking evaluation',
 #     markerColor='lightskyblue')
 
-plotFormulas3D(
-    ax, fivePct, legend='Suspended',
-    edgeColor='tomato', markerStyle='x',
-    markerSize=9, edgeWidth='1.3')
+# plotFormulas3D(
+#     ax, fivePct, legend='Suspended',
+#     edgeColor='tomato', markerStyle='x',
+#     markerSize=9, edgeWidth='1.3')
 # plotFormulas3D(
 #     ax, propForms, legend='Proposed',
 #     markerColor='mediumslateblue')
 plotFormulas3D(
     ax, doneForms, legend='Done',
-    markerColor='lightgreen')
+    markerColor='coral')
 
 
 plt.subplots_adjust(
@@ -173,6 +173,6 @@ plt.subplots_adjust(
     top=1, bottom=0,
     left=0, right=1)
 
-filename = 'Hydrogels-Formulations-Plot-Proposition'
+filename = 'Hydrogels-Formulations-Plot_ScientificReport'
 plt.show()
 fig.savefig(f'{filename}.png', dpi=600, bbox_inches='tight')
