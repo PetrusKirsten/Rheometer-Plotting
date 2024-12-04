@@ -129,22 +129,34 @@ def plot2D(
 
 # [Car type, Starch, CaCl2]
 
-# fivePct = [
-#     [3, 1, 0], [4, 1, 0], [0, 1, 7], [0, 1, 14], [0, 1, 28],
-#     [3, 1, 7], [3, 1, 14], [3, 1, 28],
-#     [4, 1, 7], [4, 1, 14], [4, 1, 28]]
+fivePct = [
+    [3, 1, 0], [4, 1, 0], [0, 1, 7], [0, 1, 14], [0, 1, 28],
+    [3, 1, 7], [3, 1, 14], [3, 1, 28],
+    [4, 1, 7], [4, 1, 14], [4, 1, 28]]
 
 propForms = [
     [1, 2, 0], [1, 2, 7], [1, 2, 14], [1, 2, 28],  # St + kappaCar
     [2, 2, 0], [2, 2, 7], [2, 2, 14], [2, 2, 28]]  # St + iotaCar
 
 doneForms = [
-    [0, 1, 0], [1, 1, 0], [2, 1, 0],
-    [0, 2, 0], [0, 2, 7], [0, 2, 14], [0, 2, 28],
-    [3, 2, 0], [3, 2, 7], [3, 2, 14], [3, 2, 28],
-    [4, 2, 0], [4, 2, 7], [4, 2, 14], [4, 2, 28],
+    [0, 1, 0], [1, 1, 0], [2, 1, 0],               # 5% St
+    [0, 2, 0], [0, 2, 7], [0, 2, 14], [0, 2, 28],  # 10% St
+    [3, 2, 0], [3, 2, 7], [3, 2, 14], [3, 2, 28],  # 1% kappa + St
+    [4, 2, 0], [4, 2, 7], [4, 2, 14], [4, 2, 28],  # 1% iota + St
+    [3, 0, 0], [3, 0, 7], [3, 0, 14], [3, 0, 21], [3, 0, 28], [3, 0, 42],  # 1% kappa
+    [4, 0, 0], [4, 0, 7], [4, 0, 14], [4, 0, 21], [4, 0, 28], [4, 0, 42],  # 1% iota
+]
+
+qualitative = [[0, 1, 0], [1, 1, 0], [2, 1, 0]]
+screening = [
     [3, 0, 0], [3, 0, 7], [3, 0, 14], [3, 0, 21], [3, 0, 28], [3, 0, 42],
-    [4, 0, 0], [4, 0, 7], [4, 0, 14], [4, 0, 21], [4, 0, 28], [4, 0, 42],]
+    [4, 0, 0], [4, 0, 7], [4, 0, 14], [4, 0, 21], [4, 0, 28], [4, 0, 42]
+]
+complete = [
+    [0, 2, 0], [0, 2, 7], [0, 2, 14], [0, 2, 28],  # 10% St
+    [3, 2, 0], [3, 2, 7], [3, 2, 14], [3, 2, 28],  # 1% kappa + St
+    [4, 2, 0], [4, 2, 7], [4, 2, 14], [4, 2, 28],  # 1% iota + St
+]
 
 plt.style.use('seaborn-v0_8-ticks')
 fig = plt.figure(figsize=(11, 9), constrained_layout=False)
@@ -155,7 +167,6 @@ ax = fig.add_subplot(111, projection='3d')
 # plotFormulas3D(
 #     ax, screen, legend='Car crosslinking evaluation',
 #     markerColor='lightskyblue')
-
 # plotFormulas3D(
 #     ax, fivePct, legend='Suspended',
 #     edgeColor='tomato', markerStyle='x',
@@ -163,9 +174,16 @@ ax = fig.add_subplot(111, projection='3d')
 # plotFormulas3D(
 #     ax, propForms, legend='Proposed',
 #     markerColor='mediumslateblue')
+
 plotFormulas3D(
-    ax, doneForms, legend='Done',
-    markerColor='coral')
+    ax, qualitative, legend='Qualitative tests',
+    markerColor='bisque')
+plotFormulas3D(
+    ax, screening, legend='Viscoelastic and flow properties',
+    markerColor='deepskyblue')
+plotFormulas3D(
+    ax, complete, legend='Viscoelastic, flow, and compression properties',
+    markerColor='hotpink')
 
 
 plt.subplots_adjust(
