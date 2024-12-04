@@ -947,7 +947,7 @@ if __name__ == '__main__':
     fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
 
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data/by sample"  # CEBB
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
     filePath = [
         # kC

@@ -153,19 +153,19 @@ ax1.text(xHeight[xHeight.shape[0]//2], yHeightBreak.max()+0.14,
          horizontalalignment='center', verticalalignment='bottom',
          color='k', size=10)
 ax1.vlines(xHeight[-1], -10, 10,
-           lw=1, color='orange')
+           lw=.75, color='silver')
 ax1.text(xHeightBreak[xHeightBreak.shape[0]//2]-0.13, yHeightBreak.max()+0.14,
          s='Compression until breakage to determine'
-         '\ncompressive modulus at 1 mm/s.',
+         '\ncompressive modulus at 0.5 mm/s.',
          horizontalalignment='center', verticalalignment='bottom',
          color='k', size=10)
 
 ax1.scatter(xF, yF,
-            color='deeppink', edgecolor='k', lw=.5, s=markerSize, alpha=0.75,
+            color='tomato', edgecolor='k', lw=.5, s=markerSize, alpha=.75,
             label='F', zorder=2)
 ax1.plot(xH, yH,
-         color='lightskyblue', lw=1.2, alpha=0.8,
-         label='Height', zorder=1)
+         color='lightskyblue', lw=1.2, alpha=.95,
+         label='Deformation amplitude', zorder=1)
 
 ax1.legend(loc=2, frameon=False)
 plt.subplots_adjust(wspace=0.0, top=0.93, bottom=0.08, left=0.05, right=0.95)

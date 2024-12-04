@@ -1,4 +1,5 @@
 
+<<<<<<< Updated upstream
 /__pycache__
 /__pycache__
 __pycache__/gui.cpython-311.pyc
@@ -7,3 +8,8 @@ __pycache__/gui.cpython-311.pyc
 /.idea
 /.idea
 /__pycache__
+=======
+/build
+/dist
+*.spec
+>>>>>>> Stashed changes

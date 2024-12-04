@@ -960,7 +960,7 @@ cm = 1 / 2.54  # centimeters in inches
 fonts(folder_path='C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
 
 if __name__ == "__main__":
-    print('plotting.py exec as main.')
+    print('rheoplots.py exec as main.')
 
     # data = DynamicCompression(
     #     path,
@@ -972,10 +972,10 @@ if __name__ == "__main__":
     #     plot_peak=True, plot_fit=True)
     # plt.show()
 
-    # data = rheoplots(
+    # data = rheology(
     #     data,
     #     n_points)
-    # rheoplots.total_plot(
+    # rheology.total_plot(
     #     data,
     #     True, True, True,
     #     True)

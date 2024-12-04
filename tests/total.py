@@ -1,4 +1,4 @@
-from rheoplots.plotting import DynamicCompression
+from rheology.rheoplots import DynamicCompression
 from matplotlib import pyplot as plt
 import warnings
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter

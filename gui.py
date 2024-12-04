@@ -1,9 +1,9 @@
 import wx  # pandas only works with wxPython 4.0.7
 import os
 from matplotlib import pyplot as plt
-from rheoplots.plotting import DynamicCompression
-from rheoplots.plotting import Sweep
-from rheoplots.plotting import General
+from rheology.rheoplots import DynamicCompression
+from rheology.rheoplots import Sweep
+from rheology.rheoplots import General
 
 plottypes = [
     'Stress sweeps',
