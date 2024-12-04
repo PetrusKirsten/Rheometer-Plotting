@@ -103,13 +103,13 @@ def plotShearAssay(ax, x, y, textSize):
     x_shear_s = np.linspace(x[0], 10, 20)
     y_shear_s = genShearStress(x_shear_s, k=0.65, n=0.5)
 
-    ax.text(x_shear_rcte[len(x_shear_rcte) // 2], 2.9, 'Constant strain rate\n$\dot{γ}=100 \,\,\, s^{-1}$', horizontalalignment='center', verticalalignment='bottom', color='k', size=textSize)
-    ax.text(x[len(x) // 2], 2.9, 'Decreasing strain rate.\n$100 > \dot{γ} > 0.1 \,\,\, s^{-1}$', horizontalalignment='center', verticalalignment='bottom', color='k', size=textSize)
+    ax.text(x_shear_rcte[len(x_shear_rcte) // 2], 2.9, 'Constant shear rate\n$\dot{γ}=300 \,\,\, s^{-1}$', horizontalalignment='center', verticalalignment='bottom', color='k', size=textSize)
+    ax.text(x[len(x) // 2], 2.9, 'Decreasing shear rate.\n$300 > \dot{γ} > 0.1 \,\,\, s^{-1}$', horizontalalignment='center', verticalalignment='bottom', color='k', size=textSize)
 
     ax.plot(x_shear_rcte, y_shear_rcte, color='orange', lw=1.25, alpha=0.75, zorder=2)
     ax.plot(-x + 10, y, color='orange', lw=1.25, alpha=0.75, label='$\dot{γ}$', zorder=2)
     ax.scatter(x_shear_scte - 10, y_shear_scte, lw=.5, c='hotpink', edgecolor='k', s=30, marker='o', label='σ', zorder=3)
-    ax.scatter(x_shear_s, y_shear_s, lw=.5, c='hotpink', edgecolor='k', s=30, marker='o', zorder=3)
+    ax.scatter(-x_shear_s + x_shear_s[-1], y_shear_s, lw=.5, c='hotpink', edgecolor='k', s=30, marker='o', zorder=3)
     legendLabel(ax)
 
 
