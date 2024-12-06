@@ -157,6 +157,9 @@ complete = [
     [3, 2, 0], [3, 2, 7], [3, 2, 14], [3, 2, 28],  # 1% kappa + St
     [4, 2, 0], [4, 2, 7], [4, 2, 14], [4, 2, 28],  # 1% iota + St
 ]
+tbd = [
+    [3, 2, 14], [3, 2, 28], [4, 2, 28]
+]
 
 plt.style.use('seaborn-v0_8-ticks')
 fig = plt.figure(figsize=(11, 9), constrained_layout=False)
@@ -184,7 +187,9 @@ plotFormulas3D(
 plotFormulas3D(
     ax, complete, legend='Viscoelastic, flow, and compression properties',
     markerColor='hotpink')
-
+plotFormulas3D(
+    ax, tbd, legend='To be done',
+    markerColor='whitesmoke')
 
 plt.subplots_adjust(
     hspace=0, wspace=0.120,
