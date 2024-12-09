@@ -727,25 +727,21 @@ class Flow:
             dict_data_steps = {}
             for sample_type in self.names_samples:
                 dict_data_steps[f'{sample_type} shear_rate'] = \
-                    [s['shear_rate'] for s in self.names_samples[sample_type]]
+                    [downsampler(s['shear_rate'], 15) for s in self.names_samples[sample_type]]
                 dict_data_steps[f'{sample_type} shear_stress_step'] = \
-                    [s['shear_stress_step'] for s in self.names_samples[sample_type]]
+                    [downsampler(s['shear_stress_step'], 15) for s in self.names_samples[sample_type]]
 
             return (dict_data_cte, dict_data_steps,
                     dict_FlowShearing(self.sample_keys), dict_FlowShearing(self.sample_keys))
 
-        def appendData(
-                inputList,
-        ):
-            for key, (t, ss) in inputList.items():
+        def appendData():
+            for key, (t, ss) in self.cteShearRate.items():
                 t.append(self.cteData[f'{key} time'])
                 ss.append(self.cteData[f'{key} shear_stress_cte'])
 
-            for key, (sr, ss) in inputList.items():
+            for key, (sr, ss) in self.stepShearRate.items():
                 sr.append(self.stepData[f'{key} shear_rate'])
                 ss.append(self.stepData[f'{key} shear_stress_step'])
-
-            return inputList
 
         # input vars
         self.dataPath = dataPath
@@ -760,8 +756,7 @@ class Flow:
 
         # data reading
         self.cteData, self.stepData, self.cteShearRate, self.stepShearRate = getData()
-        self.cteShearRate = appendData(self.cteShearRate)
-        self.stepShearRate = appendData(self.stepShearRate)
+        appendData()
 
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
@@ -960,14 +955,14 @@ class Flow:
                 curveColor=color,
                 sampleName=f'{key}', fit='transient')
 
-            shear, stress, stressErr = (
+            shear_plot, stress_plot, stressErr_plot = (
                 np.mean(self.stepShearRate[key][0], axis=1)[0],
                 np.mean(self.stepShearRate[key][1], axis=1)[0],
                 np.std(self.stepShearRate[key][1], axis=1)[0])
 
             tableStepSS = drawStepSS(
                 listRows=tableStepSS, ax=axStepSS,
-                x=shear, y=stress, yErr=stressErr,
+                x=shear_plot, y=stress_plot, yErr=stressErr_plot,
                 axTitle='', yLabel=stepTitle, yLim=stepLimits, xLabel=rateTitle, xLim=rateLimits,
                 curveColor=color, markerStyle='o',
                 sampleName=f'{key}', fit='HB')
