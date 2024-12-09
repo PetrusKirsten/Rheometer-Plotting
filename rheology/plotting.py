@@ -65,6 +65,7 @@ def powerLaw(omega, kPrime, nPrime):
 
 
 def insertKey(keys):
+    keys = list(keys)
     index = 1
     while index <= len(keys):
         keys.insert(index, 'Broken')
@@ -194,7 +195,12 @@ class Recovery:
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
         plt.style.use('seaborn-v0_8-ticks')
 
-    def plotGmodulus(self, show=True, save=False):
+    def plotGmodulus(
+            self,
+            yTitle, yLimits,
+            xTitle, xLimits,
+            show=True, save=False
+    ):
         def getValues(inputList, loopKey, condition=False):
             if not condition:
                 frequencies = np.mean(inputList[loopKey][0], axis=1)[0]
@@ -366,12 +372,9 @@ class Recovery:
         fig.canvas.manager.set_window_title(self.fileName + ' - Elastic and viscous moduli')
         gs = GridSpec(2, 2, width_ratios=[1, 1], height_ratios=[1, 1])
 
+        fig.suptitle(f'')
         axPreTop, axPostTop = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])
         axPreBottom, axPostBottom = fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
-
-        fig.suptitle(f'')
-        yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
-        xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
 
         for key, color in zip(self.listBefore, self.colors_samples):
             recoveryBef, recoveryAft, delta_bef, delta_aft = [], [], [], []
@@ -436,7 +439,12 @@ class Recovery:
                 facecolor='w', dpi=600)
             print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
-    def plotBars(self, show=True, save=False):
+    def plotBars(
+            self,
+            limits,
+            corrections,
+            show=True, save=False
+     ):
 
         def drawBars(
                 title, axes, lim,
@@ -556,29 +564,27 @@ class Recovery:
             fig.add_subplot(gs[3, 0]))
 
         fig.suptitle(f'')
-        yTitle, yLimits = f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 1 * 10 ** 5)
-        xTitle, xLimits = f'Frequency (Hz)', (.075, 100)
 
         # bars data
         drawBars(  # First table
-            "$n'$", axBar1, .6,
+            "$n'$", axBar1, limits[0],
             self.dataFittingBef_stor, self.dataFittingAft_stor, self.colors_samples, dec=2,
-            scale_correction=0, z=1)
+            scale_correction=corrections[0], z=1)
 
         drawBars(  # Second table
-            "$G_0'$ (Pa)", axBar2, 10000,
+            "$G_0'$ (Pa)", axBar2, limits[1],
             self.dataFittingBef_stor, self.dataFittingAft_stor, self.colors_samples, dec=1,
-            scale_correction=None, z=1)
+            scale_correction=corrections[1], z=1)
 
         drawBars(  # Third table
-            "$G_0''$ (Pa)", axBar3, 850,
+            "$G_0''$ (Pa)", axBar3, limits[2],
             self.dataFittingBef_loss, self.dataFittingAft_loss, self.colors_samples, dec=1,
-            scale_correction=None, z=1)
+            scale_correction=corrections[2], z=1)
 
         drawBars(  # Fourth table
-            "Loss factor $G_0''\,/\,G_0'$", axBar4, 15,
+            "Loss factor $G_0''\,/\,G_0'$", axBar4, limits[3],
             self.ratioBef, self.ratioAft, self.colors_samples, dec=1,
-            scale_correction=None, z=1)
+            scale_correction=corrections[3], z=1)
 
         plt.subplots_adjust(
             wspace=0.015, hspace=0.15,
@@ -600,8 +606,9 @@ class Recovery:
                 title,
                 data_map, frequencies, formulations,
         ):
-            plt.figure(figsize=(12, 4.5), facecolor='whitesmoke')
+            fig = plt.figure(figsize=(12, 4.5), facecolor='whitesmoke')
             plt.gca().set_facecolor('gainsboro')
+            fig.canvas.manager.set_window_title(self.fileName + f' - {title}')
 
             if title == "Elastic recovery (%)":
                 for i in range(len(data_map)):
@@ -623,7 +630,7 @@ class Recovery:
                 decimal = '.2f'
                 minValue = 0.1
                 maxValue = 1.9
-                data_map = np.array(data_map, dtype=float).flatten().reshape(12, 20)
+                data_map = np.array(data_map, dtype=float).flatten().reshape(len(formulations), 20)
 
             df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
             sns.heatmap(
@@ -641,16 +648,20 @@ class Recovery:
                 top=0.93, bottom=0.14,
                 left=0.07, right=1.0)
 
-            dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
-            plt.savefig(f'{dirSave}' + f'\\{title[:3]}' + '.png', facecolor='w', dpi=600)
+            if show:
+                plt.show()
+            if save:
+                dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+                fig.savefig(f'{dirSave}' + f'\\{title[:3]}' + '.png', facecolor='w', dpi=600)
+                print(f'\n\n· Heatmap {title} chart saved at:\n{dirSave}.')
 
         drawMap(
             "Elastic recovery (%)",
-            self.recoveryPCT, self.freqsRecovery, self.names_samples)
+            self.recoveryPCT, self.freqsRecovery, self.names_samples.keys())
 
-        brokenLabels = insertKey(self.names_samples)  # TODO: fix insert function
+        brokenLabels = insertKey(self.names_samples.keys())
         drawMap(
             "Loss factor $\\tan(G_0''\,/\,G_0')$",
             self.tan_delta, self.freqsRecovery, brokenLabels)
 
-        plt.show()
+
