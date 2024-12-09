@@ -820,8 +820,8 @@ class Flow:
                 ax.set_ylabel(f'{yLabel}')
                 ax.set_yscale('log' if logScale else 'linear')
                 ax.set_ylim(yLim)
-                ax.yaxis.set_major_locator(MultipleLocator(50))
-                ax.yaxis.set_minor_locator(MultipleLocator(10))
+                ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
+                ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / 20))
 
             params, covariance = curve_fit(funcTransient, x, y)
             # p0=(x[0], y[-1], 100))  # method='trf')  # method='dogbox', maxfev=5000)
@@ -838,7 +838,7 @@ class Flow:
             ax.errorbar(
                 x[::2] if sampleName == 'St + iCar' else x[::4],
                 y[::2] if sampleName == 'St + iCar' else y[::4],
-                yerr=yErr[::2] if sampleName == '0St + iCar' else yErr[::4],
+                yerr=yErr[::2] if sampleName == 'St + iCar' else yErr[::4],
                 color=curveColor, alpha=.85,
                 fmt='none', mfc=curveColor,
                 capsize=2.5, capthick=1, lw=1, linestyle='',
@@ -892,8 +892,8 @@ class Flow:
                 ax.set_ylabel(f'{yLabel}')
                 ax.set_yscale('log' if logScale else 'linear')
                 ax.set_ylim(yLim)
-                ax.yaxis.set_major_locator(MultipleLocator(25))
-                ax.yaxis.set_minor_locator(MultipleLocator(25/2))
+                ax.yaxis.set_major_locator(MultipleLocator(yLim[1] / 10))
+                ax.yaxis.set_minor_locator(MultipleLocator(yLim[1] / 20))
 
             configPlot()
 
@@ -936,6 +936,7 @@ class Flow:
         fig, axes = plt.subplots(
             figsize=(16, 7), ncols=2, nrows=1,
             gridspec_kw={'width_ratios': [1, 1]}, facecolor='snow')
+        fig.canvas.manager.set_window_title(self.fileName + ' - Flow shearing')
         axCteSS, axStepSS = axes[0], axes[1]
 
         fig.suptitle(f'')

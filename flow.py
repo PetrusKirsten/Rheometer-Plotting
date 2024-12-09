@@ -51,8 +51,9 @@ def kappa(folderPath):
         kappa_keySamples, kappa_nSamples, kappa_cSamples)
 
     kappas.plotShearFlow(
-        f'Shear stress (Pa)', (0, 340),
-        f'Shear stress (Pa)', (0, 160),
+        f'Shear stress (Pa)', (0, 300),
+        f'Shear stress (Pa)', (0, 150),
+        show=False
     )
 
 
@@ -90,21 +91,15 @@ def iota(folderPath):
     nSamples = [2, 2, 2, 2, 3, ]
     cSamples = ['greenyellow', '#80ed99', '#57cc99', '#38a3a5', '#22577a']
 
-    iotas = Recovery(
+    iotas = Flow(
         filePath, 'iota',
         keySamples, nSamples, cSamples)
 
-    iotas.plotGmodulus(
-        f"Elastic modulus $G'$ (Pa)", (1 * 10 ** (-2), 3 * 10 ** 3),
-        f'Frequency (Hz)', (.075, 100),
-        show=False)
-
-    iotas.plotBars(
-        [3.5, 45, 8.5, 7],
-        [None, None, None, None],
-        show=False)
-
-    iotas.plotHeatMap(show=False)
+    iotas.plotShearFlow(
+        f'Shear stress (Pa)', (0, 80),
+        f'Shear stress (Pa)', (0, 50),
+        show=False
+    )
 
 
 def starch(folderPath):
@@ -160,23 +155,133 @@ def starch(folderPath):
         'dimgrey',
         # CL 28
         'k',
-    ]
+    ]  # TODO: change colors
 
-    starches = Recovery(
+    starches = Flow(
         filePath, 'starches',
         keySamples, nSamples, cSamples)
 
-    starches.plotGmodulus(
-        f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
-        f'Frequency (Hz)', (.075, 100),
-        show=False)
+    starches.plotShearFlow(
+        f'Shear stress (Pa)', (0, 500),
+        f'Shear stress (Pa)', (0, 250),
+        show=False
+    )
 
-    starches.plotBars(
-        [0.5, 1800, 500, 30],
-        [None, 4, None, None],
-        show=False)
 
-    starches.plotHeatMap(show=False)
+def starch_kappa(folderPath):
+    filePath = [
+        # St + kCar
+        folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
+        folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
+        # folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
+
+        # St + kCar/CL_7
+        folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-1.xlsx",
+        # folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-3_off.xlsx",
+        # folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-4.xlsx",
+    ]
+
+    keySamples = {
+        # No CL
+        'St + kCar': [],
+        # CL 7
+        'St + kCar/CL_7': [],
+        # CL 14
+        # 'St + kCar/CL_14': [], TBD
+        # CL 28
+        # 'St + kCar/CL_28': [], TBD
+    }
+    nSamples = [
+        # No CL
+        2,
+        # CL 7
+        1,
+        # CL 14
+        # 4, TBD
+        # CL 28
+        # 4, TBD
+    ]
+    cSamples = [
+        # No CL
+        'hotpink',
+        # CL 7
+        'mediumvioletred',
+        # CL 14
+        # 'r', TBD
+        # CL 28
+        # 'k', TBD
+    ]
+
+    starches_kappas = Flow(
+        filePath, 'starches-kappas',
+        keySamples, nSamples, cSamples)
+
+    starches_kappas.plotShearFlow(
+        f'Shear stress (Pa)', (0, 600),
+        f'Shear stress (Pa)', (0, 200),
+        show=False
+    )
+
+
+def starch_iota(folderPath):
+    filePath = [
+        # St + iCar
+        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
+        # folderPath + "10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
+        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
+        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
+
+        # St + iCar/CL_7
+        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-1.xlsx",
+        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-2.xlsx",
+        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-3.xlsx",
+
+        # St + iCar/CL_14 TODO: see what happened to the cte shear rate
+        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-2.xlsx",
+        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-4.xlsx",
+    ]
+
+    keySamples = {
+        # No CL
+        'St + iCar': [],
+        # CL 7
+        'St + iCar/CL_7': [],
+        # CL 14
+        'St + iCar/CL_14': [],
+        # CL 28
+        # 'St + iCar/CL_28': [] TBD
+    }
+    nSamples = [
+        # No CL
+        3,
+        # CL 7
+        3,
+        # CL 14
+        2,
+        # CL 28
+        # 4, TBD
+    ]
+    cSamples = [
+        # No CL
+        'lightskyblue',
+        # CL 7
+        'royalblue',
+        # CL 14
+        'mediumblue',
+        # CL 28
+        # 'k', TBD
+    ]
+
+    starches_iotas = Flow(
+        filePath, 'starches-iotas',
+        keySamples, nSamples, cSamples)
+
+    starches_iotas.plotShearFlow(
+        f'Shear stress (Pa)', (0, 600),
+        f'Shear stress (Pa)', (0, 500),
+    )
 
 
 def blends(folderPath):
@@ -264,161 +369,27 @@ def blends(folderPath):
         'k',
     ]
 
-    starches = Recovery(
+    blends = Flow(
         filePath, 'blends',
         keySamples, nSamples, cSamples)
 
-    starches.plotGmodulus(
-        f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
-        f'Frequency (Hz)', (.075, 100),
-        show=False)
-
-    starches.plotBars(
-        [0.5, 1800, 500, 30],
-        [None, 4, None, None],
-        show=False)
-
-    starches.plotHeatMap(show=False)
-
-
-def starch_kappa(folderPath):
-    filePath = [
-        # St + kCar
-        folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
-        folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        # folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
-
-        # St + kCar/CL_7
-        folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-1.xlsx",
-        folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-3_off.xlsx",
-        folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-4.xlsx",
-    ]
-
-    keySamples = {
-        # No CL
-        'St + kCar': [],
-        # CL 7
-        'St + kCar/CL_7': [],
-        # CL 14
-        # 'St + kCar/CL_14': [], TBD
-        # CL 28
-        # 'St + kCar/CL_28': [], TBD
-    }
-    nSamples = [
-        # No CL
-        2,
-        # CL 7
-        3,
-        # CL 14
-        # 4, TBD
-        # CL 28
-        # 4, TBD
-    ]
-    cSamples = [
-        # No CL
-        'hotpink',
-        # CL 7
-        'mediumvioletred',
-        # CL 14
-        # 'r', TBD
-        # CL 28
-        # 'k', TBD
-    ]
-
-    starches = Recovery(
-        filePath, 'starches-kappas',
-        keySamples, nSamples, cSamples)
-
-    starches.plotGmodulus(
-        f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
-        f'Frequency (Hz)', (.075, 100),
-        show=False)
-
-    starches.plotBars(
-        [0.5, 1800, 500, 30],
-        [None, 4, None, None],
-        show=False)
-
-    starches.plotHeatMap(show=False)
-
-
-def starch_iota(folderPath):
-    filePath = [
-        # St + iCar
-        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
-        # folderPath + "10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
-        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
-        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
-
-        # St + iCar/CL_7
-        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-1.xlsx",
-        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-2.xlsx",
-        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-3.xlsx",
-
-        # St + iCar/CL_14
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-2.xlsx",
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-3.xlsx",
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-4.xlsx",
-    ]
-
-    keySamples = {
-        # No CL
-        'St + iCar': [],
-        # CL 7
-        'St + iCar/CL_7': [],
-        # CL 14
-        'St + iCar/CL_14': [],
-        # CL 28
-        # 'St + iCar/CL_28': [] TBD
-    }
-    nSamples = [
-        # No CL
-        3,
-        # CL 7
-        3,
-        # CL 14
-        4,
-        # CL 28
-        # 4, TBD
-    ]
-    cSamples = [
-        # No CL
-        'lightskyblue',
-        # CL 7
-        'royalblue',
-        # CL 14
-        'r',
-        # CL 28
-        # 'k', TBD
-    ]
-
-    starches = Recovery(
-        filePath, 'starches-iotas',
-        keySamples, nSamples, cSamples)
-
-    starches.plotGmodulus(
-        f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
-        f'Frequency (Hz)', (.075, 100),
-        show=False)
-
-    starches.plotBars(
-        [0.5, 1800, 500, 30],
-        [None, 4, None, None],
-        show=False)
-
-    starches.plotHeatMap(show=False)
+    blends.plotShearFlow(
+        f'Shear stress (Pa)', (0, 500),
+        f'Shear stress (Pa)', (0, 250),
+    )
 
 
 if __name__ == '__main__':
     path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     kappa(path)
-    # iota(path)
+    iota(path)
+    starch(path)
+    starch_kappa(path)
+    starch_iota(path)
+
     # blends(path)
-    # starch(path)
-    # starch_kappa(path)
-    # starch_iota(path)
 
     plt.show()
