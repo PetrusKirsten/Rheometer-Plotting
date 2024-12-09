@@ -377,36 +377,36 @@ def main(dataPath):
 
 
 if __name__ == '__main__':
-    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
+    folderPath = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"
     # folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
     filePath = [
         # kC
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC/kC-viscoelasticRecovery-3.xlsx",
+        folderPath + "/kC/kC-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC/kC-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC/kC-viscoelasticRecovery-3.xlsx",
 
         # kC CL 7
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-1.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-2.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-3.xlsx",
-        folderPath + "/231024/kC_CL/kC_CL-viscoelasticRecovery-4.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-3.xlsx",
+        folderPath + "/kC_CL_7/kC_CL-viscoelasticRecovery-4.xlsx",
 
         # kC CL 14
-        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/071124/kC_CL_14/kC_CL_14-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_14/kC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_14/kC_CL_14-viscoelasticRecovery-2.xlsx",
 
         # kC CL 21
-        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-1.xlsx",
-        # folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-2.xlsx",
-        folderPath + "/071124/kC_CL_21/kC_CL_21-viscoelasticRecovery-3.xlsx",
+        folderPath + "/kC_CL_21/kC_CL_21-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/kC_CL_21/kC_CL_21-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_21/kC_CL_21-viscoelasticRecovery-3.xlsx",
 
         # kC CL 28
-        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-1.xlsx",
-        folderPath + "/071124/kC_CL_28/kC_CL_28-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_28/kC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_28/kC_CL_28-viscoelasticRecovery-2.xlsx",
 
         # kC CL 42
-        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-1.xlsx",
-        folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-2.xlsx",
+        folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-1.xlsx",
+        folderPath + "/kC_CL_42/kC_CL_42-viscoelasticRecovery-2.xlsx",
         # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-3.xlsx",
         # folderPath + "/071124/kC_CL_42/kC_CL_42-viscoelasticRecovery-4.xlsx",
 

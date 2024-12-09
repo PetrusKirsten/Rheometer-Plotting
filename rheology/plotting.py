@@ -73,7 +73,7 @@ def insertKey(keys):
     return keys
 
 
-def lossFactor(data_elastic, data_viscous):
+def viscPerElas(data_elastic, data_viscous):
     result = []
 
     for entry1 in data_elastic:
@@ -99,6 +99,13 @@ def lossFactor(data_elastic, data_viscous):
                 result.append(new_entry)
 
     return result
+
+
+def downsampler(array, n=200):
+    if len(array) > n:
+        step = len(array) // n  # Calculate step size
+        return array[::step][:n]
+    return array
 
 
 class Recovery:
@@ -427,8 +434,8 @@ class Recovery:
 
             self.recoveryPCT.append(((np.array(recoveryAft) / np.array(recoveryBef)) * 100).tolist())
 
-        self.ratioBef = lossFactor(self.dataFittingBef_stor, self.dataFittingBef_loss)
-        self.ratioAft = lossFactor(self.dataFittingAft_stor, self.dataFittingAft_loss)
+        self.ratioBef = viscPerElas(self.dataFittingBef_stor, self.dataFittingBef_loss)
+        self.ratioAft = viscPerElas(self.dataFittingAft_stor, self.dataFittingAft_loss)
         self.ratioReady = True
 
         plt.subplots_adjust(
@@ -668,3 +675,296 @@ class Recovery:
         drawMap(
             "Loss factor $\\tan(G_0''\,/\,G_0')$",
             self.tan_delta, self.freqsRecovery, brokenLabels)
+
+
+class Flow:
+    def __init__(
+            self,
+            dataPath, fileName,
+            names_samples, number_samples, colors_samples
+    ):
+
+        def getData():
+            def getSegments(dataframe):
+                time = dataframe['t in s'].to_numpy()
+                shear_rate = dataframe['ɣ̇ in 1/s'].to_numpy()
+                shear_stress = dataframe['τ in Pa'].to_numpy()
+
+                seg3, seg4 = (dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['3|1', '4|1'])
+
+                segments = lambda arr: (arr[seg3:seg4])
+                t_cte = segments(time)
+
+                return {
+                    'time': [t_cte - t_cte[0]],
+                    'shear_stress': segments(shear_stress),
+                }
+
+            def dict_FlowShearing(labels):
+                return {label: ([], []) for label in labels}
+
+            self.sample_keys = list(self.names_samples.keys())
+            if len(self.sample_keys) != len(self.number_samples):
+                raise ValueError('The length of "number_samples" must match the number of sample keys.')
+            sample_labels = [
+                key for key, count in zip(self.sample_keys, self.number_samples) for _ in range(count)
+            ]
+
+            for sample_type, path in zip(sample_labels, self.dataPath):
+                df = pd.read_excel(path)
+                segments = getSegments(df)
+                self.names_samples[sample_type].append(segments)
+
+            dict_data = {}
+            for sample_type in self.names_samples:
+                dict_data[f'{sample_type} time'] = [s['time'] for s in self.names_samples[sample_type]]
+                dict_data[f'{sample_type} shear_stress'] = [s['shear_stress'] for s in self.names_samples[sample_type]]
+
+            return dict_data, dict_FlowShearing(self.sample_keys), dict_FlowShearing(self.sample_keys)
+
+        def appendData(
+                inputList,
+        ):
+            for key, (t, ss) in inputList.items():
+                t.append(self.data[f'{key} time'])
+                ss.append(self.data[f'{key} shear_stress'])
+
+            return inputList
+
+        # input vars
+        self.dataPath = dataPath
+        self.fileName = fileName
+        self.names_samples = names_samples
+        self.number_samples = number_samples
+        self.colors_samples = colors_samples
+
+        # data vars
+        self.dataFittingBef_stor, self.dataFittingAft_stor = [], []
+        self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
+
+        # data reading
+        self.data, self.cteShearRate, _ = getData()
+        self.cteShearRate = appendData(self.cteShearRate)
+
+        # chart config
+        fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
+        plt.style.use('seaborn-v0_8-ticks')
+
+    def plotCteShearRate(
+            self,
+            cteTitle, cteLimits,
+            stepTitle, stepLimits,
+            show=True, save=False
+    ):
+
+        def getSplitMean():
+            time, stress, stressErr = (
+                self.cteShearRate[key][0][0],
+                self.cteShearRate[key][1][0],
+                self.cteShearRate[key][1][0])
+
+            timeSplit, stressSplit, stressErrSplit = [], [], []
+            for t in range(len(time)):
+                index = np.where(time[t][0] <= 175)[-1][-1]
+                timeSplit.append(downsampler(time[t][0][:index]))
+                stressSplit.append(downsampler(stress[t][:index]))
+                stressErrSplit.append(downsampler(stressErr[t][:index]))
+
+            timeMean, stressMean, stressErrMean = (
+                np.mean(timeSplit, axis=0),
+                np.mean(stressSplit, axis=0),
+                np.std(stressErrSplit, axis=0))
+
+            return timeMean, stressMean, stressErrMean
+
+        def drawCteSS(listRows, sampleName, ax,
+                      x, y, yErr,
+                      axTitle, yLabel, yLim, xLabel, xLim,
+                      curveColor,
+                      fit='', logScale=False):
+
+            def funcTransient(t, tau_0, tau_e, time_cte):
+                return tau_e + (tau_0 - tau_e) * np.exp(- t / time_cte)
+
+            def legendLabel():
+                legend = ax.legend(
+                    fancybox=False, frameon=True,
+                    framealpha=0.9, fontsize=9, ncols=2,
+                    loc='upper right'
+                )
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('whitesmoke')
+
+            def configPlot():
+                ax.set_title(axTitle, size=9, color='crimson')
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+
+                ax.set_xlabel(f'{xLabel}')
+                ax.set_xscale('log' if logScale else 'linear')
+                ax.set_xlim(xLim)
+                ax.xaxis.set_major_locator(MultipleLocator(60))
+                ax.xaxis.set_minor_locator(MultipleLocator(10))
+
+                ax.set_ylabel(f'{yLabel}')
+                ax.set_yscale('log' if logScale else 'linear')
+                ax.set_ylim(yLim)
+                ax.yaxis.set_major_locator(MultipleLocator(20))
+                ax.yaxis.set_minor_locator(MultipleLocator(5))
+
+            params, covariance = curve_fit(funcTransient, x, y)
+            # p0=(x[0], y[-1], 100))  # method='trf')  # method='dogbox', maxfev=5000)
+            errors = np.sqrt(np.diag(covariance))
+
+            x_fit = np.linspace(0, 300, 300)
+            y_fit = funcTransient(x_fit, *params)
+
+            listRows = exportFit(
+                f'{sampleName}',
+                params, errors,
+                listRows)
+
+            ax.errorbar(
+                x[::2] if sampleName == 'St + iCar' else x[::4],
+                y[::2] if sampleName == 'St + iCar' else y[::4],
+                yerr=yErr[::2] if sampleName == '0St + iCar' else yErr[::4],
+                color=curveColor, alpha=.85,
+                fmt='none', mfc=curveColor,
+                capsize=2.5, capthick=1, lw=1, linestyle='',
+                label=f'', zorder=2)
+
+            ax.errorbar(
+                x[::2] if sampleName == 'St + iCar' else x[::4],
+                y[::2] if sampleName == 'St + iCar' else y[::4],
+                yerr=0,
+                color=curveColor, alpha=.65,
+                fmt='D' if 'CL' in sampleName else 'o',
+                markersize=6.5 if 'CL' in sampleName else 7,
+                mfc=curveColor, mec='#383838', mew=.75,
+                linestyle='',
+                label=f'{sampleName}', zorder=3)
+
+            ax.plot(
+                x_fit, y_fit, color=curveColor, linestyle='--', linewidth=1,
+                zorder=4)
+
+            configPlot()
+            legendLabel()
+
+            return listRows
+
+        def drawStepSS(listRows, sampleName, ax,
+                       x, y, yErr,
+                       axTitle, yLabel, yLim, xLabel, xLim,
+                       curveColor, markerStyle,
+                       fit='', logScale=False):
+
+            def funcHB(sigma, k, n, sigmaZero):
+                return sigmaZero + k * (sigma ** n)
+
+            def legendLabel():
+                legend = ax.legend(
+                    fancybox=False, frameon=False,
+                    framealpha=0.9, fontsize=9, ncols=2,
+                    loc='upper left')
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('whitesmoke')
+
+            def configPlot():
+                ax.set_title(axTitle, size=9, color='crimson')
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+
+                ax.set_xlabel(f'{xLabel}')
+                ax.set_xscale('log' if logScale else 'linear')
+                ax.set_xlim(xLim)
+
+                ax.set_ylabel(f'{yLabel}')
+                ax.set_yscale('log' if logScale else 'linear')
+                ax.set_ylim(yLim)
+                ax.yaxis.set_major_locator(MultipleLocator(10))
+                ax.yaxis.set_minor_locator(MultipleLocator(2.5))
+
+            configPlot()
+
+            if fit == 'HB':
+                params, covariance = curve_fit(
+                    funcHB, x, y,
+                    p0=(2, 1, 0))
+                errors = np.sqrt(np.diag(covariance))
+                K, n, sigmaZero = params
+                x_fit = np.linspace(.1, 1000, 1000)
+                y_fit = funcHB(x_fit, K, n, sigmaZero)
+                listRows = exportFit(
+                    f'{sampleName}',
+                    params, errors,
+                    listRows)
+
+                ax.plot(
+                    x_fit, y_fit, color=curveColor, linestyle=':', linewidth=1,
+                    zorder=2)
+
+            ax.errorbar(
+                x, y, yerr=yErr,
+                color=curveColor, alpha=.85,
+                fmt='none', mfc=curveColor,
+                capsize=2.5, capthick=1, lw=1, linestyle='',
+                label=f'', zorder=2)
+
+            ax.errorbar(
+                x, y, yerr=0,
+                color=curveColor, alpha=.65,
+                fmt='D' if '21' in sampleName else 'o',
+                markersize=7 if '21' in sampleName else 6.5,
+                mfc=curveColor, mec='#383838', mew=.75,
+                linestyle='',
+                label=f'{sampleName}', zorder=3)
+
+            legendLabel()
+
+            return listRows
+
+        fig, axes = plt.subplots(
+            figsize=(16, 7), ncols=2, nrows=1,
+            gridspec_kw={'width_ratios': [1, 1]}, facecolor='snow')
+        axCteSS, axStepSS = axes[0], axes[1]
+
+        fig.suptitle(f'')
+        timeTitle, timeLimits = (f'Time (s)', (0, 180))
+        rateTitle, rateLimits = ('Shear rate ($s^{-1}$)', (0, 315))
+
+        tableCteSS, tableStepSS = [], []
+
+        for key, color in zip(self.cteShearRate, self.colors_samples):
+            time_plot, stress_plot, stressErr_plot = getSplitMean()
+
+            tableCteSS = drawCteSS(
+                listRows=tableCteSS, ax=axCteSS,
+                x=time_plot, y=stress_plot, yErr=stressErr_plot,
+                axTitle='', yLabel=cteTitle, yLim=cteLimits, xLabel=timeTitle, xLim=timeLimits,
+                curveColor=color,
+                sampleName=f'{key}', fit='transient')
+
+            shear, stress, stressErr = (
+                np.mean(self.cteShearRate[key][0], axis=1)[0],
+                np.mean(self.cteShearRate[key][1], axis=1)[0],
+                np.std(self.cteShearRate[key][1], axis=1)[0])
+
+            tableStepSS = drawStepSS(
+                listRows=tableStepSS, ax=axStepSS,
+                x=shear, y=stress, yErr=stressErr,
+                axTitle='', yLabel=stepTitle, yLim=stepLimits, xLabel=rateTitle, xLim=rateLimits,
+                curveColor=color, markerStyle='o',
+                sampleName=f'{key}', fit='HB')
+
+        plt.subplots_adjust(
+            hspace=0, wspace=0.21,
+            top=0.92, bottom=0.075,
+            left=0.045, right=0.96)
+
+        if show:
+            plt.show()
+        if save:
+            dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+            fig.savefig(
+                f'{dirSave}' + f'\\{self.fileName}' + ' - Flow shearing' + '.png',
+                facecolor='w', dpi=600)
+            print(f'\n\n· Flow shearing charts saved at:\n{dirSave}.')
