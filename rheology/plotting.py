@@ -690,14 +690,18 @@ class Flow:
                 shear_rate = dataframe['ɣ̇ in 1/s'].to_numpy()
                 shear_stress = dataframe['τ in Pa'].to_numpy()
 
-                seg3, seg4 = (dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['3|1', '4|1'])
+                seg3, seg4, seg5 = (
+                    dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['3|1', '4|1', '5|1'])
 
-                segments = lambda arr: (arr[seg3:seg4])
-                t_cte = segments(time)
+                segments34 = lambda arr: (arr[seg3:seg4])
+                segments43 = lambda arr: (arr[seg4:seg5])
+                t_cte = segments34(time)
 
                 return {
                     'time': [t_cte - t_cte[0]],
-                    'shear_stress': segments(shear_stress),
+                    'shear_stress_cte': segments34(shear_stress),
+                    'shear_rate': segments43(shear_rate),
+                    'shear_stress_step': segments43(shear_stress),
                 }
 
             def dict_FlowShearing(labels):
@@ -715,19 +719,31 @@ class Flow:
                 segments = getSegments(df)
                 self.names_samples[sample_type].append(segments)
 
-            dict_data = {}
+            dict_data_cte = {}
             for sample_type in self.names_samples:
-                dict_data[f'{sample_type} time'] = [s['time'] for s in self.names_samples[sample_type]]
-                dict_data[f'{sample_type} shear_stress'] = [s['shear_stress'] for s in self.names_samples[sample_type]]
+                dict_data_cte[f'{sample_type} time'] = [s['time'] for s in self.names_samples[sample_type]]
+                dict_data_cte[f'{sample_type} shear_stress_cte'] = [s['shear_stress_cte'] for s in self.names_samples[sample_type]]
 
-            return dict_data, dict_FlowShearing(self.sample_keys), dict_FlowShearing(self.sample_keys)
+            dict_data_steps = {}
+            for sample_type in self.names_samples:
+                dict_data_steps[f'{sample_type} shear_rate'] = \
+                    [s['shear_rate'] for s in self.names_samples[sample_type]]
+                dict_data_steps[f'{sample_type} shear_stress_step'] = \
+                    [s['shear_stress_step'] for s in self.names_samples[sample_type]]
+
+            return (dict_data_cte, dict_data_steps,
+                    dict_FlowShearing(self.sample_keys), dict_FlowShearing(self.sample_keys))
 
         def appendData(
                 inputList,
         ):
             for key, (t, ss) in inputList.items():
-                t.append(self.data[f'{key} time'])
-                ss.append(self.data[f'{key} shear_stress'])
+                t.append(self.cteData[f'{key} time'])
+                ss.append(self.cteData[f'{key} shear_stress_cte'])
+
+            for key, (sr, ss) in inputList.items():
+                sr.append(self.stepData[f'{key} shear_rate'])
+                ss.append(self.stepData[f'{key} shear_stress_step'])
 
             return inputList
 
@@ -743,8 +759,9 @@ class Flow:
         self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
 
         # data reading
-        self.data, self.cteShearRate, _ = getData()
+        self.cteData, self.stepData, self.cteShearRate, self.stepShearRate = getData()
         self.cteShearRate = appendData(self.cteShearRate)
+        self.stepShearRate = appendData(self.stepShearRate)
 
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
@@ -943,17 +960,17 @@ class Flow:
                 curveColor=color,
                 sampleName=f'{key}', fit='transient')
 
-            # shear, stress, stressErr = (
-            #     np.mean(self.stepShearRate[key][0], axis=1)[0],
-            #     np.mean(self.stepShearRate[key][1], axis=1)[0],
-            #     np.std(self.stepShearRate[key][1], axis=1)[0])
-            #
-            # tableStepSS = drawStepSS(
-            #     listRows=tableStepSS, ax=axStepSS,
-            #     x=shear, y=stress, yErr=stressErr,
-            #     axTitle='', yLabel=stepTitle, yLim=stepLimits, xLabel=rateTitle, xLim=rateLimits,
-            #     curveColor=color, markerStyle='o',
-            #     sampleName=f'{key}', fit='HB')
+            shear, stress, stressErr = (
+                np.mean(self.stepShearRate[key][0], axis=1)[0],
+                np.mean(self.stepShearRate[key][1], axis=1)[0],
+                np.std(self.stepShearRate[key][1], axis=1)[0])
+
+            tableStepSS = drawStepSS(
+                listRows=tableStepSS, ax=axStepSS,
+                x=shear, y=stress, yErr=stressErr,
+                axTitle='', yLabel=stepTitle, yLim=stepLimits, xLabel=rateTitle, xLim=rateLimits,
+                curveColor=color, markerStyle='o',
+                sampleName=f'{key}', fit='HB')
 
         plt.subplots_adjust(
             hspace=0, wspace=0.21,
