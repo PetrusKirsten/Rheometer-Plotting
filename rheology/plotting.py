@@ -943,17 +943,17 @@ class Flow:
                 curveColor=color,
                 sampleName=f'{key}', fit='transient')
 
-            shear, stress, stressErr = (
-                np.mean(self.cteShearRate[key][0], axis=1)[0],
-                np.mean(self.cteShearRate[key][1], axis=1)[0],
-                np.std(self.cteShearRate[key][1], axis=1)[0])
-
-            tableStepSS = drawStepSS(
-                listRows=tableStepSS, ax=axStepSS,
-                x=shear, y=stress, yErr=stressErr,
-                axTitle='', yLabel=stepTitle, yLim=stepLimits, xLabel=rateTitle, xLim=rateLimits,
-                curveColor=color, markerStyle='o',
-                sampleName=f'{key}', fit='HB')
+            # shear, stress, stressErr = (
+            #     np.mean(self.stepShearRate[key][0], axis=1)[0],
+            #     np.mean(self.stepShearRate[key][1], axis=1)[0],
+            #     np.std(self.stepShearRate[key][1], axis=1)[0])
+            #
+            # tableStepSS = drawStepSS(
+            #     listRows=tableStepSS, ax=axStepSS,
+            #     x=shear, y=stress, yErr=stressErr,
+            #     axTitle='', yLabel=stepTitle, yLim=stepLimits, xLabel=rateTitle, xLim=rateLimits,
+            #     curveColor=color, markerStyle='o',
+            #     sampleName=f'{key}', fit='HB')
 
         plt.subplots_adjust(
             hspace=0, wspace=0.21,
