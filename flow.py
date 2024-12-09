@@ -50,7 +50,7 @@ def kappa(folderPath):
         filePath, 'kappas',
         kappa_keySamples, kappa_nSamples, kappa_cSamples)
 
-    kappas.plotCteShearRate(
+    kappas.plotShearFlow(
         f'Shear stress (Pa)', (0, 340),
         f'Shear stress (Pa)', (0, 160),
     )

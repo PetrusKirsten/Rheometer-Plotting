@@ -762,7 +762,7 @@ class Flow:
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
         plt.style.use('seaborn-v0_8-ticks')
 
-    def plotCteShearRate(
+    def plotShearFlow(
             self,
             cteTitle, cteLimits,
             stepTitle, stepLimits,
@@ -808,7 +808,7 @@ class Flow:
                 legend.get_frame().set_edgecolor('whitesmoke')
 
             def configPlot():
-                ax.set_title(axTitle, size=9, color='crimson')
+                ax.set_title(axTitle, size=10, color='k')
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
 
                 ax.set_xlabel(f'{xLabel}')
@@ -820,8 +820,8 @@ class Flow:
                 ax.set_ylabel(f'{yLabel}')
                 ax.set_yscale('log' if logScale else 'linear')
                 ax.set_ylim(yLim)
-                ax.yaxis.set_major_locator(MultipleLocator(20))
-                ax.yaxis.set_minor_locator(MultipleLocator(5))
+                ax.yaxis.set_major_locator(MultipleLocator(50))
+                ax.yaxis.set_minor_locator(MultipleLocator(10))
 
             params, covariance = curve_fit(funcTransient, x, y)
             # p0=(x[0], y[-1], 100))  # method='trf')  # method='dogbox', maxfev=5000)
@@ -867,7 +867,7 @@ class Flow:
         def drawStepSS(listRows, sampleName, ax,
                        x, y, yErr,
                        axTitle, yLabel, yLim, xLabel, xLim,
-                       curveColor, markerStyle,
+                       curveColor,
                        fit='', logScale=False):
 
             def funcHB(sigma, k, n, sigmaZero):
@@ -882,7 +882,7 @@ class Flow:
                 legend.get_frame().set_edgecolor('whitesmoke')
 
             def configPlot():
-                ax.set_title(axTitle, size=9, color='crimson')
+                ax.set_title(axTitle, size=10, color='k')
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
 
                 ax.set_xlabel(f'{xLabel}')
@@ -892,8 +892,8 @@ class Flow:
                 ax.set_ylabel(f'{yLabel}')
                 ax.set_yscale('log' if logScale else 'linear')
                 ax.set_ylim(yLim)
-                ax.yaxis.set_major_locator(MultipleLocator(10))
-                ax.yaxis.set_minor_locator(MultipleLocator(2.5))
+                ax.yaxis.set_major_locator(MultipleLocator(25))
+                ax.yaxis.set_minor_locator(MultipleLocator(25/2))
 
             configPlot()
 
@@ -902,9 +902,8 @@ class Flow:
                     funcHB, x, y,
                     p0=(2, 1, 0))
                 errors = np.sqrt(np.diag(covariance))
-                K, n, sigmaZero = params
                 x_fit = np.linspace(.1, 1000, 1000)
-                y_fit = funcHB(x_fit, K, n, sigmaZero)
+                y_fit = funcHB(x_fit, *params)
                 listRows = exportFit(
                     f'{sampleName}',
                     params, errors,
@@ -924,8 +923,8 @@ class Flow:
             ax.errorbar(
                 x, y, yerr=0,
                 color=curveColor, alpha=.65,
-                fmt='D' if '21' in sampleName else 'o',
-                markersize=7 if '21' in sampleName else 6.5,
+                fmt='D' if 'CL' in sampleName else 'o',
+                markersize=7 if 'CL' in sampleName else 6.5,
                 mfc=curveColor, mec='#383838', mew=.75,
                 linestyle='',
                 label=f'{sampleName}', zorder=3)
@@ -951,27 +950,30 @@ class Flow:
             tableCteSS = drawCteSS(
                 listRows=tableCteSS, ax=axCteSS,
                 x=time_plot, y=stress_plot, yErr=stressErr_plot,
-                axTitle='', yLabel=cteTitle, yLim=cteLimits, xLabel=timeTitle, xLim=timeLimits,
+                axTitle='Constant shear rate', yLabel=cteTitle, yLim=cteLimits,
+                xLabel=timeTitle, xLim=timeLimits,
                 curveColor=color,
                 sampleName=f'{key}', fit='transient')
 
             shear_plot, stress_plot, stressErr_plot = (
                 np.mean(self.stepShearRate[key][0], axis=1)[0],
                 np.mean(self.stepShearRate[key][1], axis=1)[0],
-                np.std(self.stepShearRate[key][1], axis=1)[0])
+                np.std(self.stepShearRate[key][1], axis=1)[0]
+            )
 
             tableStepSS = drawStepSS(
                 listRows=tableStepSS, ax=axStepSS,
                 x=shear_plot, y=stress_plot, yErr=stressErr_plot,
-                axTitle='', yLabel=stepTitle, yLim=stepLimits, xLabel=rateTitle, xLim=rateLimits,
-                curveColor=color, markerStyle='o',
+                axTitle='Steps shear rate', yLabel=stepTitle, yLim=stepLimits,
+                xLabel=rateTitle, xLim=rateLimits,
+                curveColor=color,
                 sampleName=f'{key}', fit='HB')
 
-        plt.subplots_adjust(
-            hspace=0, wspace=0.21,
-            top=0.92, bottom=0.075,
-            left=0.045, right=0.96)
-
+        # plt.subplots_adjust(
+        #     hspace=0, wspace=0.21,
+        #     top=0.92, bottom=0.075,
+        #     left=0.045, right=0.96)
+        plt.tight_layout()
         if show:
             plt.show()
         if save:
