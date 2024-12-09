@@ -115,11 +115,16 @@ class Recovery:
                 loss = dataframe['G" in Pa'].to_numpy()
                 delta = dataframe['tan(δ) in -'].to_numpy()
 
-                seg2, seg3, seg5, seg6 = (
-                    dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1', '5|1', '5|31'])
+                if 'off' in path:
+                    seg2, seg3 = (
+                        dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in ['2|1', '3|1'])
+                    segments = lambda arr: (arr[seg2:seg3], arr[seg2:seg3])
 
-                # Slice segments
-                segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6 + 1])  # Returns (constant segment, step segment)
+                else:
+                    seg2, seg3, seg5, seg6 = (
+                        dataframe.index[dataframe['SegIndex'] == seg].to_list()[0] for seg in
+                        ['2|1', '3|1', '5|1', '5|31'])
+                    segments = lambda arr: (arr[seg2:seg3], arr[seg5:seg6 + 1])
 
                 return {
                     'freq': segments(freq),
@@ -397,7 +402,7 @@ class Recovery:
                 tableDataStor=self.dataFittingBef_stor, tableDataLoss=self.dataFittingBef_loss
             )
 
-            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listAfter, key, '0St + kC/CL')
+            freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listAfter, key, 'St + kCar/CL_7')
 
             recoveryAft, _ = getValuesByFreq(recoveryAft, gP, freqs)
             delta_aft, self.freqsRecovery = getValuesByFreq(delta_aft, delta, freqs)
@@ -444,7 +449,7 @@ class Recovery:
             limits,
             corrections,
             show=True, save=False
-     ):
+    ):
 
         def drawBars(
                 title, axes, lim,
@@ -663,5 +668,3 @@ class Recovery:
         drawMap(
             "Loss factor $\\tan(G_0''\,/\,G_0')$",
             self.tan_delta, self.freqsRecovery, brokenLabels)
-
-

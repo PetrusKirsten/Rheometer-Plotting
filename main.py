@@ -169,7 +169,7 @@ def starch(folderPath):
         show=False)
 
     starches.plotBars(
-        [0.8, 1800, 500, 30],
+        [0.5, 1800, 500, 30],
         [None, 4, None, None],
         show=False)
 
