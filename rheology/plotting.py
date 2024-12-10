@@ -43,9 +43,15 @@ def arraySplit(xArr, yArr, startValue, endValue):
 def exportFit(
         sample,
         data, err,
-        table
+        table, mode=''
 ):
-    keys = ("k'", "n'")
+    if mode == 'thixo':
+        keys = ('$\\tau_0$', '$\\tau_e$', '$\lambda$')
+    elif mode == 'HB':
+        keys = ("k'", "n'", 'sigma_zero')
+    else:
+        keys = ("k'", "n'")
+
     values = (data, err)
 
     dictData = {'Sample': sample}
@@ -622,15 +628,13 @@ class Recovery:
             plt.gca().set_facecolor('gainsboro')
             fig.canvas.manager.set_window_title(self.fileName + f' - {title}')
 
+            colors, decimal, minValue, maxValue = None, None, None, None
             if title == "Elastic recovery (%)":
                 for i in range(len(data_map)):
                     for j in range(len(data_map[i])):
                         if data_map[i][j] > 100:
                             data_map[i][j] = None
-                colors = 'RdYlGn'
-                decimal = '.0f'
-                minValue = 0
-                maxValue = 100
+                colors, decimal, minValue, maxValue = 'RdYlGn', '.0f', 0, 100
 
             if title == "Loss factor $\\tan(G_0''\,/\,G_0')$":
                 for i in range(len(data_map)):
@@ -638,10 +642,7 @@ class Recovery:
                         for k in range(len(data_map[i][j])):
                             if data_map[i][j][k] > 50:
                                 data_map[i][j][k] = None
-                colors = 'coolwarm'
-                decimal = '.2f'
-                minValue = 0.1
-                maxValue = 1.9
+                colors, decimal, minValue, maxValue = 'coolwarm', '.2f', 0.1, 1.9
                 data_map = np.array(data_map, dtype=float).flatten().reshape(len(formulations), 20)
 
             df = pd.DataFrame(data_map, index=formulations, columns=frequencies)
@@ -751,8 +752,7 @@ class Flow:
         self.colors_samples = colors_samples
 
         # data vars
-        self.dataFittingBef_stor, self.dataFittingAft_stor = [], []
-        self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
+        self.tableCteSS, self.tableStepSS = [], []
 
         # data reading
         self.cteData, self.stepData, self.cteShearRate, self.stepShearRate = getData()
@@ -788,6 +788,14 @@ class Flow:
                 np.std(stressErrSplit, axis=0))
 
             return timeMean, stressMean, stressErrMean
+
+        def getMean():
+
+            return (
+                np.mean(self.stepShearRate[key][0], axis=1)[0],
+                np.mean(self.stepShearRate[key][1], axis=1)[0],
+                np.std(self.stepShearRate[key][1], axis=1)[0]
+            )
 
         def drawCteSS(listRows, sampleName, ax,
                       x, y, yErr,
@@ -833,7 +841,7 @@ class Flow:
             listRows = exportFit(
                 f'{sampleName}',
                 params, errors,
-                listRows)
+                listRows, mode='thixo')
 
             ax.errorbar(
                 x[::2] if sampleName == 'St + iCar' else x[::4],
@@ -907,7 +915,7 @@ class Flow:
                 listRows = exportFit(
                     f'{sampleName}',
                     params, errors,
-                    listRows)
+                    listRows, mode='HB')
 
                 ax.plot(
                     x_fit, y_fit, color=curveColor, linestyle=':', linewidth=1,
@@ -943,27 +951,20 @@ class Flow:
         timeTitle, timeLimits = (f'Time (s)', (0, 180))
         rateTitle, rateLimits = ('Shear rate ($s^{-1}$)', (0, 315))
 
-        tableCteSS, tableStepSS = [], []
-
         for key, color in zip(self.cteShearRate, self.colors_samples):
-            time_plot, stress_plot, stressErr_plot = getSplitMean()
 
-            tableCteSS = drawCteSS(
-                listRows=tableCteSS, ax=axCteSS,
+            time_plot, stress_plot, stressErr_plot = getSplitMean()
+            self.tableCteSS = drawCteSS(
+                listRows=self.tableCteSS, ax=axCteSS,
                 x=time_plot, y=stress_plot, yErr=stressErr_plot,
                 axTitle='Constant shear rate', yLabel=cteTitle, yLim=cteLimits,
                 xLabel=timeTitle, xLim=timeLimits,
                 curveColor=color,
                 sampleName=f'{key}', fit='transient')
 
-            shear_plot, stress_plot, stressErr_plot = (
-                np.mean(self.stepShearRate[key][0], axis=1)[0],
-                np.mean(self.stepShearRate[key][1], axis=1)[0],
-                np.std(self.stepShearRate[key][1], axis=1)[0]
-            )
-
-            tableStepSS = drawStepSS(
-                listRows=tableStepSS, ax=axStepSS,
+            shear_plot, stress_plot, stressErr_plot = getMean()
+            self.tableStepSS = drawStepSS(
+                listRows=self.tableStepSS, ax=axStepSS,
                 x=shear_plot, y=stress_plot, yErr=stressErr_plot,
                 axTitle='Steps shear rate', yLabel=stepTitle, yLim=stepLimits,
                 xLabel=rateTitle, xLim=rateLimits,
@@ -983,3 +984,224 @@ class Flow:
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Flow shearing' + '.png',
                 facecolor='w', dpi=600)
             print(f'\n\n· Flow shearing charts saved at:\n{dirSave}.')
+
+    def plotFits(
+            self,
+            cteLimits, stepLimits,
+            show=True, save=False
+    ):
+
+        def drawThixoData(
+                title,
+                axes, data,
+                colors, a, z
+        ):
+            def configPlot(ax, yTitle, yLim):
+                ax.set_title(title, size=10, color='k')
+
+                ax.tick_params(axis='x', labelsize=10, length=4)
+                ax.tick_params(axis='y', which='both', labelsize=9, pad=1, length=0)
+
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+                ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+
+                ax.set_xticks([]), ax.set_xlim([-2, 17]), ax.set_yticks([]), ax.set_ylim(yLim)
+
+            axes3 = axes.twinx()
+
+            configPlot(axes, "$\\tau_0$ (Pa) and $\\tau_e$ (Pa)", (0, cteLimits[0]))
+            configPlot(axes3, "$\lambda$ (s)", (0, cteLimits[1]))
+
+            samples = [d['Sample'] for d in data]
+            kPrime, kPrime_err = [d["$\\tau_0$"] for d in data], [d["± $\\tau_0$"] for d in data]
+            nPrime, nPrime_err = [d["$\\tau_e$"] for d in data], [d["± $\\tau_e$"] for d in data]
+            sigmaZero, sigmaZero_err = [d["$\lambda$"] for d in data], [d["± $\lambda$"] for d in data]
+
+            bin_width, space_samples = 0.8, 3
+            x = np.arange(space_samples * len(data))
+
+            posList, labelsList = [], []
+
+            for i in range(len(kPrime)):
+                axes.bar(
+                    space_samples * x[i] - bin_width,
+                    height=kPrime[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='////', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    x=space_samples * x[i] - bin_width, y=kPrime[i], yerr=kPrime_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes.text(
+                    space_samples * x[i] - bin_width - .15,
+                    kPrime[i] + kPrime_err[i] + cteLimits[0] * .075,
+                    f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                axes.bar(
+                    space_samples * x[i],
+                    height=nPrime[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    x=space_samples * x[i], y=nPrime[i], yerr=nPrime_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes.text(
+                    space_samples * x[i] - .15,
+                    nPrime[i] + nPrime_err[i] + cteLimits[0] * .075,
+                    f'{nPrime[i]:.{1}f} ± {nPrime_err[i]:.{1}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                axes3.bar(
+                    space_samples * x[i] + bin_width,
+                    height=sigmaZero[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes3.errorbar(
+                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes3.text(
+                    space_samples * x[i] + bin_width - .15,
+                    sigmaZero[i] + sigmaZero_err[i] + cteLimits[1] * .075,
+                    f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(
+                    space_samples * x[i] + bin_width)
+                labelsList.append("$\\tau_0$"), labelsList.append("$\\tau_e$"), labelsList.append("$\lambda$")
+
+            axes.set_xticks(posList)
+            axes.set_xticklabels(labelsList)
+
+            return nPrime
+
+        def drawHBdata(
+                title, axes,
+                data, colors, a, z
+        ):
+            def configPlot(ax, yTitle, yLim):
+                ax.set_title(title, size=10, color='k')
+                if yTitle == "$k'$":
+                    ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
+                    ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
+
+                ax.tick_params(axis='x', labelsize=10, length=4)
+                ax.tick_params(
+                    axis='y', which='both', labelsize=9, pad=1, length=0,
+                    labeltop=False, top=False,
+                    labelbottom=False, bottom=False)
+
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+                ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+
+                ax.set_xticks([]), ax.set_xlim([-2, 17]), ax.set_yticks([]), ax.set_ylim(yLim)
+
+            axes2, axes3 = axes.twinx(), axes.twinx()
+
+            configPlot(axes, "$k'$", (0, stepLimits[0]))
+            configPlot(axes2, "$n'$", (0, stepLimits[1]))
+            configPlot(axes3, "$\sigma_0$ (Pa)", (0, stepLimits[2]))
+
+            samples = [d['Sample'] for d in data]
+            kPrime, kPrime_err = [abs(d["k'"]) for d in data], [d["± k'"] for d in data]
+            nPrime, nPrime_err = [abs(d["n'"]) for d in data], [d["± n'"] for d in data]
+            sigmaZero, sigmaZero_err = [abs(d["sigma_zero"]) for d in data], [d["± sigma_zero"] for d in data]
+
+            bin_width, space_samples = 0.8, 3
+            x = np.arange(space_samples * len(data))
+
+            posList, labelsList = [], []
+
+            for i in range(len(kPrime)):
+                axes.bar(
+                    space_samples * x[i] - bin_width,
+                    height=kPrime[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='////', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    x=space_samples * x[i] - bin_width, y=kPrime[i], yerr=kPrime_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes.text(
+                    space_samples * x[i] - bin_width - .15,
+                    kPrime[i] + kPrime_err[i] + stepLimits[0]*.075,
+                    f'{kPrime[i]:.{2}f} ± {kPrime_err[i]:.{2}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                axes2.bar(
+                    space_samples * x[i],
+                    height=nPrime[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes2.errorbar(
+                    x=space_samples * x[i], y=nPrime[i], yerr=nPrime_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes2.text(
+                    space_samples * x[i] - .15,
+                    nPrime[i] + nPrime_err[i] + stepLimits[1]*.075,
+                    f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                axes3.bar(
+                    space_samples * x[i] + bin_width,
+                    height=sigmaZero[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes3.errorbar(
+                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes3.text(
+                    space_samples * x[i] + bin_width - .15,
+                    sigmaZero[i] + sigmaZero_err[i] + stepLimits[2]*.075,
+                    f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(space_samples * x[i] + bin_width)
+                labelsList.append("$k'$"), labelsList.append("$n'$"), labelsList.append("$\sigma_0$")
+
+            axes.set_xticks(posList)
+            axes.set_xticklabels(labelsList)
+
+            return nPrime
+
+        fig, axs = plt.subplots(
+            figsize=(16, 7), ncols=2, nrows=1,
+            gridspec_kw={'width_ratios': [1, 1]}, facecolor='snow')
+        fig.canvas.manager.set_window_title(self.fileName + ' - Flow shearing fit parameters')
+        axCteSS, axStepSS = axs[0], axs[1]
+
+        _ = drawThixoData(
+            '',
+            axCteSS, self.tableCteSS,
+            self.colors_samples, a=.85, z=2)
+
+        _ = drawHBdata(
+            '',
+            axStepSS, self.tableStepSS,
+            self.colors_samples, a=.85, z=2)
+
+        plt.tight_layout()
+        if show:
+            plt.show()
+        if save:
+            dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+            fig.savefig(
+                f'{dirSave}' + f'\\{self.fileName}' + ' - Flow shearing fit parameters' + '.png',
+                facecolor='w', dpi=600)
+            print(f'\n\n· Flow fit parameters charts saved at:\n{dirSave}.')

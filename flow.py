@@ -55,6 +55,9 @@ def kappa(folderPath):
         f'Shear stress (Pa)', (0, 150),
         show=False
     )
+    kappas.plotFits(
+        [350, 50], [50, 2, 25]
+    )
 
 
 def iota(folderPath):
@@ -99,6 +102,9 @@ def iota(folderPath):
         f'Shear stress (Pa)', (0, 80),
         f'Shear stress (Pa)', (0, 50),
         show=False
+    )
+    iotas.plotFits(
+        [75, 120], [7, .75, 2]
     )
 
 
@@ -166,6 +172,9 @@ def starch(folderPath):
         f'Shear stress (Pa)', (0, 250),
         show=False
     )
+    starches.plotFits(
+        [2000, 60], [75, 1, 120]
+    )
 
 
 def starch_kappa(folderPath):
@@ -220,6 +229,9 @@ def starch_kappa(folderPath):
         f'Shear stress (Pa)', (0, 600),
         f'Shear stress (Pa)', (0, 200),
         show=False
+    )
+    starches_kappas.plotFits(
+        [2000, 60], [75, 1, 120]
     )
 
 
@@ -281,6 +293,9 @@ def starch_iota(folderPath):
     starches_iotas.plotShearFlow(
         f'Shear stress (Pa)', (0, 600),
         f'Shear stress (Pa)', (0, 500),
+    )
+    starches_iotas.plotFits(
+        [2000, 60], [75, 1, 120]
     )
 
 
@@ -384,11 +399,11 @@ if __name__ == '__main__':
 
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
-    kappa(path)
+    # kappa(path)
     iota(path)
-    starch(path)
-    starch_kappa(path)
-    starch_iota(path)
+    # starch(path)
+    # starch_kappa(path)
+    # starch_iota(path)
 
     # blends(path)
 
