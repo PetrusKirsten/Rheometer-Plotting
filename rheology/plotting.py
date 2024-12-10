@@ -1372,7 +1372,7 @@ class Compression:
                     zorder=7 - self.colors_samples.index(color))
                 legendLabel()
 
-        fig, gs = (plt.figure(figsize=(12, 10), facecolor='snow'),
+        fig, gs = (plt.figure(figsize=(16, 9), facecolor='snow'),
                    GridSpec(2, 2, height_ratios=[1, 1.5], width_ratios=[1, 1]))
         fig.canvas.manager.set_window_title(self.fileName + ' - Dynamic compression')
         axStress, axCycles, axBars = fig.add_subplot(gs[0, :]), fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
