@@ -56,7 +56,8 @@ def kappa(folderPath):
         show=False
     )
     kappas.plotFits(
-        [350, 50], [50, 2, 25]
+        [350, 50], [50, 2, 25],
+        show=False
     )
 
 
@@ -104,7 +105,8 @@ def iota(folderPath):
         show=False
     )
     iotas.plotFits(
-        [75, 120], [7, .75, 2]
+        [75, 120], [7, .75, 2],
+        show=False
     )
 
 
@@ -173,7 +175,8 @@ def starch(folderPath):
         show=False
     )
     starches.plotFits(
-        [2000, 60], [75, 1, 120]
+        [2000, 60], [75, 1, 120],
+        show=False
     )
 
 
@@ -231,7 +234,8 @@ def starch_kappa(folderPath):
         show=False
     )
     starches_kappas.plotFits(
-        [2000, 60], [75, 1, 120]
+        [2000, 60], [75, 1, 120],
+        show=False
     )
 
 
@@ -295,7 +299,8 @@ def starch_iota(folderPath):
         f'Shear stress (Pa)', (0, 500),
     )
     starches_iotas.plotFits(
-        [2000, 60], [75, 1, 120]
+        [2000, 60], [75, 1, 120],
+        show=False
     )
 
 
