@@ -1215,7 +1215,7 @@ class Compression:
             names_samples, number_samples, colors_samples
     ):
 
-        def getData():
+        def getData(cut=500):
 
             def getSegments(dataframe, segInit, segEnd):
                 time = dataframe['t in s'].to_numpy()
@@ -1253,11 +1253,11 @@ class Compression:
             dict_data_dynamic = {}
             for sample_type in self.names_samples:
                 dict_data_dynamic[f'{sample_type} time'] = \
-                    [downsampler(s['time'], 1121) for s in self.names_samples[sample_type]]
+                    [downsampler(s['time'], cut) for s in self.names_samples[sample_type]]
                 dict_data_dynamic[f'{sample_type} height'] = \
-                    [downsampler(s['height'], 1121) for s in self.names_samples[sample_type]]
+                    [downsampler(s['height'], cut) for s in self.names_samples[sample_type]]
                 dict_data_dynamic[f'{sample_type} force'] = \
-                    [downsampler(s['force'], 1121) for s in self.names_samples[sample_type]]
+                    [downsampler(s['force'], cut) for s in self.names_samples[sample_type]]
 
             # dict_data_steps = {}
             # for sample_type in self.names_samples:
@@ -1296,6 +1296,9 @@ class Compression:
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
         plt.style.use('seaborn-v0_8-ticks')
+        self.figGraphs = plt.figure(figsize=(16, 9), facecolor='snow')
+        self.gsGraphs = GridSpec(2, 2, height_ratios=[1, 1.5], width_ratios=[1, 1])
+        self.figGraphs.canvas.manager.set_window_title(self.fileName + ' - Compression')
 
     def plotDynamic(
             self,
@@ -1372,10 +1375,93 @@ class Compression:
                     zorder=7 - self.colors_samples.index(color))
                 legendLabel()
 
-        fig, gs = (plt.figure(figsize=(16, 9), facecolor='snow'),
-                   GridSpec(2, 2, height_ratios=[1, 1.5], width_ratios=[1, 1]))
-        fig.canvas.manager.set_window_title(self.fileName + ' - Dynamic compression')
-        axStress, axCycles, axBars = fig.add_subplot(gs[0, :]), fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
+        def drawCycles(
+                sampleName,
+                ax, y, yErr,
+                axTitle, yLabel, yLim, xLabel, xLim, axisColor,
+                curveColor, markerFColor, markerEColor, paramsList, markerEWidth=0.75,
+                lineStyle='', logScale=False
+        ):
+
+            def funcRelaxation(t, sigma_0, sigma_e, time_cte):
+                return sigma_e + (sigma_0 - sigma_e) * np.exp(- t / time_cte)
+
+            def configPlot():
+                ax.set_title(axTitle, size=10, color='crimson')
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+                # ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color='silver', alpha=0.5)
+
+                ax.set_xlabel(f'{xLabel}')
+                # ax.set_xscale('log' if logScale else 'linear')
+                ax.set_xlim(xLim)
+                ax.xaxis.set_minor_locator(MultipleLocator(1))
+
+                ax.set_ylabel(f'{yLabel}', color=axisColor)
+                ax.set_yscale('log' if logScale else 'linear')
+                ax.set_ylim(yLim)
+                ax.tick_params(axis='y', colors=axisColor, which='both')
+
+            # reshape to each cycle
+            target_size = 29 * (len(y) // 29)
+            y, yErr = y[:target_size], yErr[:target_size]
+            y, yErr = y.reshape(29, -1), yErr.reshape(29, -1)
+
+            # find and append maxs and mins
+            listYmax, listYmaxErr = [], []
+            listYmin, listYminErr = [], []
+            for cycle in range(len(y)):
+                yMax, yMin = y[cycle][np.argmax(y[cycle])], y[cycle][np.argmin(y[cycle])]
+                yMaxErr, yMinErr = yErr[cycle][np.argmax(y[cycle])], yErr[cycle][np.argmin(y[cycle])]
+
+                listYmax.append(yMax), listYmaxErr.append(yMaxErr)
+                listYmin.append(yMin), listYminErr.append(yMinErr)
+            yMax_values, yMin_values = np.array(listYmax), np.array(listYmin)
+            yMax_errors, yMin_errors = np.array(listYmaxErr), np.array(listYminErr)
+
+            x_values = np.arange(1, len(listYmax) + 1)
+
+            # Fitting
+            params, covariance = curve_fit(
+                funcRelaxation, x_values, yMax_values,
+                p0=(yMax_values[0], yMax_values[-1], 5))  # method='trf')  # method='dogbox', maxfev=5000)
+            errors = np.sqrt(np.diag(covariance))
+            x_fit = np.linspace(0, 30, 120)
+            y_fit = funcRelaxation(x_fit, *params)
+
+            paramsList.append([params.tolist(), errors.tolist()])
+
+            configPlot()
+
+            ax.errorbar(
+                x_values, yMax_values, yMax_errors,
+                color=curveColor, alpha=.85,
+                fmt='none', mfc=curveColor,
+                capsize=2.5, capthick=1, linestyle='', lw=1,
+                label=f'', zorder=5 - self.colors_samples.index(color))
+
+            ax.errorbar(
+                x_values, yMax_values, 0,
+                color=curveColor, alpha=.65,
+                fmt='^', markersize=6.5,
+                mfc=curveColor, mec='#383838', mew=markerEWidth,
+                linestyle='',
+                label=f'{sampleName}', zorder=6 - self.colors_samples.index(color))
+
+            ax.plot(
+                x_fit, y_fit, color=curveColor, linestyle='-.', linewidth=.75,
+                zorder=1)
+            # ax.errorbar(
+            #     x_values, yMin_values, yMin_errors,
+            #     color=curveColor, alpha=.65,
+            #     fmt='v', markersize=5, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
+            #     capsize=2.5, lw=.75, linestyle=lineStyle,
+            #     label=f'{sampleName}',
+            #     zorder=4)
+            return paramsList
+
+        axOscillation, axCycles, axBars = (self.figGraphs.add_subplot(self.gsGraphs[0, :]),
+                                           self.figGraphs.add_subplot(self.gsGraphs[1, 0]),
+                                           self.figGraphs.add_subplot(self.gsGraphs[1, 1]))
 
         s1Title, s1Limits = f'Stress (Pa)', (0, sLimits)
         s2Title, s2Limits = f'Stress peak (Pa)', (0, 210)
@@ -1386,11 +1472,18 @@ class Compression:
             timeMean, stressMean, stressErrMean = getValues()
 
             drawDynamicStress(
-                ax=axStress, axisColor='#303030',
+                ax=axOscillation, axisColor='#303030',
                 x=timeMean, y=stressMean, yErr=stressErrMean,
                 axTitle='', yLabel=s1Title, yLim=s1Limits, xLabel=x1Title, xLim=x1Limits,
                 curveColor=color, markerStyle='o', markerFColor=color, markerEColor='#303030',
                 sampleName=f'{key}')
+
+            self.tableDynamic = drawCycles(
+                ax=axCycles, axisColor='#303030',
+                y=stressMean, yErr=stressErrMean,
+                axTitle='', yLabel=s2Title, yLim=s2Limits, xLabel=x2Title, xLim=x2Limits,
+                curveColor=color, markerFColor=color, markerEColor=color,
+                paramsList=self.tableDynamic, sampleName=f'{key}')
 
             plt.subplots_adjust(
                 wspace=0.015, hspace=0.060,
@@ -1401,8 +1494,7 @@ class Compression:
                 plt.show()
             if save:
                 dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
-                fig.savefig(
+                self.figGraphs.savefig(
                     f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
                     facecolor='w', dpi=600)
                 print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
-
