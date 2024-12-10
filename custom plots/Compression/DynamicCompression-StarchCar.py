@@ -420,7 +420,7 @@ def main(dataPath):
 
 if __name__ == '__main__':
     # folderPath = "C:/Users/petrus.kirsten/PycharmProjects/RheometerPlots/data"
-    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data"
+    folderPath = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"
     # filePath = [
     #     folderPath + "/old/200924/7PSt_2_Compression.xlsx"
     # ]

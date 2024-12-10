@@ -1204,3 +1204,91 @@ class Flow:
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Flow shearing fit parameters' + '.png',
                 facecolor='w', dpi=600)
             print(f'\n\n· Flow fit parameters charts saved at:\n{dirSave}.')
+
+
+class Compression:
+    def __init__(
+            self,
+            dataPath, fileName,
+            names_samples, number_samples, colors_samples
+    ):
+
+        def getData():
+            def getSegments(dataframe, segInit, segEnd):
+                time = dataframe['t in s'].to_numpy()
+                height = dataframe['h in mm'].to_numpy()
+                force = dataframe['Fn in N'].to_numpy()
+
+                indexInit, indexEnd = (
+                    dataframe.index[dataframe['SegIndex'] == seg].to_list()[0]
+                    for seg in [segInit, segEnd])
+                segments = lambda arr: (arr[indexInit:indexEnd])
+
+                return {
+                    'time': segments(time) - np.min(segments(time)),
+                    'height': segments(height),
+                    'force': segments(force)}
+
+            def dict_Compression(labels):
+                return {label: ([], []) for label in labels}
+
+            self.sample_keys = list(self.names_samples.keys())
+            if len(self.sample_keys) != len(self.number_samples):
+                raise ValueError('The length of "number_samples" must match the number of sample keys.')
+            sample_labels = [
+                key for key, count in zip(self.sample_keys, self.number_samples) for _ in range(count)
+            ]
+
+            for sample_type, path in zip(sample_labels, self.dataPath):
+                df = pd.read_excel(path)
+                segments = getSegments(
+                    df,
+                    segInit='2|1' if '171024' in path or not 'kC-compression-4' in path else '1|1', segEnd='62|1')
+                self.names_samples[sample_type].append(segments)
+
+            dict_data_dynamic = {}
+            for sample_type in self.names_samples:
+                dict_data_dynamic[f'{sample_type} time'] = \
+                    [downsampler(s['time']) for s in self.names_samples[sample_type]]
+                dict_data_dynamic[f'{sample_type} height'] = \
+                    [downsampler(s['height']) for s in self.names_samples[sample_type]]
+                dict_data_dynamic[f'{sample_type} force'] = \
+                    [downsampler(s['force']) for s in self.names_samples[sample_type]]
+
+            # dict_data_steps = {}
+            # for sample_type in self.names_samples:
+            #     dict_data_steps[f'{sample_type} shear_rate'] = \
+            #         [downsampler(s['shear_rate'], 15) for s in self.names_samples[sample_type]]
+            #     dict_data_steps[f'{sample_type} shear_stress_step'] = \
+            #         [downsampler(s['shear_stress_step'], 15) for s in self.names_samples[sample_type]]
+
+            return (dict_data_dynamic,   # dict_data_steps,
+                    dict_Compression(self.sample_keys)),  # dict_FlowShearing(self.sample_keys))
+
+        def appendData():
+            for key, (x, height, f) in self.listDynamic.items():
+                x.append(self.dynamicData[f'{key} time'])
+                height.append(self.dynamicData[f'{key} height'])
+                f.append(self.dynamicData[f'{key} force'])
+
+            # for key, (sr, ss) in self.stepShearRate.items():
+            #     sr.append(self.stepData[f'{key} shear_rate'])
+            #     ss.append(self.stepData[f'{key} shear_stress_step'])
+
+        # input vars
+        self.dataPath = dataPath
+        self.fileName = fileName
+        self.names_samples = names_samples
+        self.number_samples = number_samples
+        self.colors_samples = colors_samples
+
+        # data vars
+        self.tableDynamic, self.tableCompression = [], []
+
+        # data reading
+        self.dynamicData, self.listDynamic = getData()
+        appendData()
+
+        # chart config
+        fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
+        plt.style.use('seaborn-v0_8-ticks')
