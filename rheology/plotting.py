@@ -4,8 +4,10 @@ import seaborn as sns
 
 from pathlib import Path
 from math import ceil, sqrt
+
+from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, ticker
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
 from matplotlib.font_manager import FontProperties
@@ -1214,6 +1216,7 @@ class Compression:
     ):
 
         def getData():
+
             def getSegments(dataframe, segInit, segEnd):
                 time = dataframe['t in s'].to_numpy()
                 height = dataframe['h in mm'].to_numpy()
@@ -1230,7 +1233,7 @@ class Compression:
                     'force': segments(force)}
 
             def dict_Compression(labels):
-                return {label: ([], []) for label in labels}
+                return {label: ([], [], []) for label in labels}
 
             self.sample_keys = list(self.names_samples.keys())
             if len(self.sample_keys) != len(self.number_samples):
@@ -1243,17 +1246,18 @@ class Compression:
                 df = pd.read_excel(path)
                 segments = getSegments(
                     df,
-                    segInit='2|1' if '171024' in path or not 'kC-compression-4' in path else '1|1', segEnd='62|1')
+                    segInit='2|1' if '171024' in path or not 'kC-compression-4' in path else '1|1',
+                    segEnd='62|1' if '10St_CL_7' in path else '61|1')
                 self.names_samples[sample_type].append(segments)
 
             dict_data_dynamic = {}
             for sample_type in self.names_samples:
                 dict_data_dynamic[f'{sample_type} time'] = \
-                    [downsampler(s['time']) for s in self.names_samples[sample_type]]
+                    [downsampler(s['time'], 1121) for s in self.names_samples[sample_type]]
                 dict_data_dynamic[f'{sample_type} height'] = \
-                    [downsampler(s['height']) for s in self.names_samples[sample_type]]
+                    [downsampler(s['height'], 1121) for s in self.names_samples[sample_type]]
                 dict_data_dynamic[f'{sample_type} force'] = \
-                    [downsampler(s['force']) for s in self.names_samples[sample_type]]
+                    [downsampler(s['force'], 1121) for s in self.names_samples[sample_type]]
 
             # dict_data_steps = {}
             # for sample_type in self.names_samples:
@@ -1262,8 +1266,7 @@ class Compression:
             #     dict_data_steps[f'{sample_type} shear_stress_step'] = \
             #         [downsampler(s['shear_stress_step'], 15) for s in self.names_samples[sample_type]]
 
-            return (dict_data_dynamic,   # dict_data_steps,
-                    dict_Compression(self.sample_keys)),  # dict_FlowShearing(self.sample_keys))
+            return dict_data_dynamic, dict_Compression(self.sample_keys)
 
         def appendData():
             for key, (x, height, f) in self.listDynamic.items():
@@ -1284,6 +1287,7 @@ class Compression:
 
         # data vars
         self.tableDynamic, self.tableCompression = [], []
+        self.means_hMax = []
 
         # data reading
         self.dynamicData, self.listDynamic = getData()
@@ -1292,3 +1296,113 @@ class Compression:
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
         plt.style.use('seaborn-v0_8-ticks')
+
+    def plotDynamic(
+            self,
+            sLimits,
+            show=True, save=False
+    ):
+
+        def getValues():
+            time, height, stress = (self.listDynamic[key][0][0],
+                                    self.listDynamic[key][1][0],
+                                    self.listDynamic[key][2][0])
+
+            hMax_mean = np.max(height, axis=1)
+            self.means_hMax.append(hMax_mean.tolist())
+
+            return (np.mean(time, axis=0),
+                    np.mean(stress, axis=0) / (35 / 1000) + 7.5,
+                    np.std(stress, axis=0) / (35 / 1000))
+
+        def drawDynamicStress(
+                sampleName,
+                ax, x, y, yErr,
+                axTitle, yLabel, yLim, xLabel, xLim, axisColor,
+                curveColor, markerStyle, markerFColor, markerEColor, markerEWidth=0.5,
+                strain=False, lineStyle='', logScale=False
+        ):
+            def legendLabel():
+                legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('whitesmoke')
+
+            def configPlot():
+                ax.set_title(axTitle, size=10, color='crimson')
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+                ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color='silver', alpha=0.5)
+
+                ax.set_xlabel(f'{xLabel}')
+                # ax.set_xscale('log' if logScale else 'linear')
+                ax.set_xlim(xLim)
+                ax.xaxis.set_minor_locator(MultipleLocator(2))
+
+                ax.set_ylabel(f'{yLabel}', color=axisColor)
+                ax.set_yscale('log' if logScale else 'linear')
+                ax.set_ylim(yLim)
+                ax.tick_params(axis='y', colors=axisColor, which='both')
+
+            configPlot()
+
+            if strain:
+                ax.yaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}%"))
+                ax.plot(
+                    x[0], y[0],
+                    color=curveColor, alpha=0.8, lw=1.5, linestyle=':',
+                    label=f'{sampleName}', zorder=3)
+
+            else:
+                configPlot()
+
+                x_smooth = np.linspace(x.min(), x.max(), len(x) * 5)
+                interp_yErr_lower, interp_yErr_upper = interp1d(x, y - yErr, kind='cubic'), interp1d(x, y + yErr,
+                                                                                                     kind='cubic')
+                yErr_lower_smooth, yErr_upper_smooth = interp_yErr_upper(x_smooth), interp_yErr_lower(x_smooth)
+
+                ax.fill_between(
+                    x_smooth, yErr_lower_smooth, yErr_upper_smooth,
+                    color=curveColor, alpha=0.15, lw=0,
+                    zorder=6 - self.colors_samples.index(color))
+                ax.errorbar(
+                    x, y, 0,
+                    color=curveColor, alpha=.35,
+                    fmt=markerStyle, markersize=3.5, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
+                    capsize=0, lw=.5, linestyle=lineStyle,
+                    label=f'{sampleName}',
+                    zorder=7 - self.colors_samples.index(color))
+                legendLabel()
+
+        fig, gs = (plt.figure(figsize=(12, 10), facecolor='snow'),
+                   GridSpec(2, 2, height_ratios=[1, 1.5], width_ratios=[1, 1]))
+        fig.canvas.manager.set_window_title(self.fileName + ' - Dynamic compression')
+        axStress, axCycles, axBars = fig.add_subplot(gs[0, :]), fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
+
+        s1Title, s1Limits = f'Stress (Pa)', (0, sLimits)
+        s2Title, s2Limits = f'Stress peak (Pa)', (0, 210)
+        x1Title, x1Limits = f'Time (s)', (0, 75)
+        x2Title, x2Limits = f'Cycle', (0, 30)
+
+        for key, color in zip(self.listDynamic, self.colors_samples):
+            timeMean, stressMean, stressErrMean = getValues()
+
+            drawDynamicStress(
+                ax=axStress, axisColor='#303030',
+                x=timeMean, y=stressMean, yErr=stressErrMean,
+                axTitle='', yLabel=s1Title, yLim=s1Limits, xLabel=x1Title, xLim=x1Limits,
+                curveColor=color, markerStyle='o', markerFColor=color, markerEColor='#303030',
+                sampleName=f'{key}')
+
+            plt.subplots_adjust(
+                wspace=0.015, hspace=0.060,
+                top=0.970, bottom=0.070,
+                left=0.060, right=0.985)
+
+            if show:
+                plt.show()
+            if save:
+                dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+                fig.savefig(
+                    f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
+                    facecolor='w', dpi=600)
+                print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
+

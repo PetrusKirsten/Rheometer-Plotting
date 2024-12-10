@@ -173,7 +173,10 @@ def starch(folderPath):
         filePath, 'starches',
         keySamples, nSamples, cSamples)
 
-    # starches.
+    starches.plotDynamic(
+        130,
+        show=False
+    )
 
 
 def starch_kappa(folderPath):
