@@ -66,47 +66,6 @@ def exportFit(
     return table
 
 
-def powerLaw(omega, kPrime, nPrime):
-    return kPrime * (omega ** nPrime)
-
-
-def insertKey(keys):
-    keys = list(keys)
-    index = 1
-    while index <= len(keys):
-        keys.insert(index, 'Broken')
-        index += 2
-    return keys
-
-
-def viscPerElas(data_elastic, data_viscous):
-    result = []
-
-    for entry1 in data_elastic:
-        for entry2 in data_viscous:
-            if entry1['Sample'] == entry2['Sample']:
-                if entry2["k'"] == 0:
-                    new_entry = {
-                        'Sample': entry1['Sample'],
-                        "k'": None,
-                        "± k'": None}
-                else:
-                    ratio_k_prime = entry1["k'"] / entry2["k'"]
-                    uncertainty_k_prime = ratio_k_prime * sqrt(
-                        (entry1["± k'"] / entry1["k'"]) ** 2 + (entry2["± k'"] / entry2["k'"]) ** 2)
-
-                    rounded_ratio_k_prime = ceil(ratio_k_prime * 10) / 10
-                    rounded_uncertainty_k_prime = ceil(uncertainty_k_prime * 10) / 10
-
-                    new_entry = {
-                        'Sample': entry1['Sample'],
-                        "k'": rounded_ratio_k_prime,
-                        "± k'": rounded_uncertainty_k_prime}
-                result.append(new_entry)
-
-    return result
-
-
 def downsampler(array, n=200):
     if len(array) > n:
         step = len(array) // n  # Calculate step size
@@ -300,6 +259,36 @@ class Recovery:
             stddev = round(stddev, -1)
 
             return mean, stddev, iStart, iEnd
+
+        def powerLaw(omega, kPrime, nPrime):
+            return kPrime * (omega ** nPrime)
+
+        def viscPerElas(data_elastic, data_viscous):
+            result = []
+
+            for entry1 in data_elastic:
+                for entry2 in data_viscous:
+                    if entry1['Sample'] == entry2['Sample']:
+                        if entry2["k'"] == 0:
+                            new_entry = {
+                                'Sample': entry1['Sample'],
+                                "k'": None,
+                                "± k'": None}
+                        else:
+                            ratio_k_prime = entry1["k'"] / entry2["k'"]
+                            uncertainty_k_prime = ratio_k_prime * sqrt(
+                                (entry1["± k'"] / entry1["k'"]) ** 2 + (entry2["± k'"] / entry2["k'"]) ** 2)
+
+                            rounded_ratio_k_prime = ceil(ratio_k_prime * 10) / 10
+                            rounded_uncertainty_k_prime = ceil(uncertainty_k_prime * 10) / 10
+
+                            new_entry = {
+                                'Sample': entry1['Sample'],
+                                "k'": rounded_ratio_k_prime,
+                                "± k'": rounded_uncertainty_k_prime}
+                        result.append(new_entry)
+
+            return result
 
         def drawPlot(
                 sampleName, axTop, axBottom, axTitle,
@@ -620,6 +609,14 @@ class Recovery:
 
     def plotHeatMap(self, show=True, save=False):
 
+        def insertKey(keys):
+            keys = list(keys)
+            index = 1
+            while index <= len(keys):
+                keys.insert(index, 'Broken')
+                index += 2
+            return keys
+
         def drawMap(
                 title,
                 data_map, frequencies, formulations,
@@ -723,7 +720,8 @@ class Flow:
             dict_data_cte = {}
             for sample_type in self.names_samples:
                 dict_data_cte[f'{sample_type} time'] = [s['time'] for s in self.names_samples[sample_type]]
-                dict_data_cte[f'{sample_type} shear_stress_cte'] = [s['shear_stress_cte'] for s in self.names_samples[sample_type]]
+                dict_data_cte[f'{sample_type} shear_stress_cte'] = [s['shear_stress_cte'] for s in
+                                                                    self.names_samples[sample_type]]
 
             dict_data_steps = {}
             for sample_type in self.names_samples:
@@ -952,7 +950,6 @@ class Flow:
         rateTitle, rateLimits = ('Shear rate ($s^{-1}$)', (0, 315))
 
         for key, color in zip(self.cteShearRate, self.colors_samples):
-
             time_plot, stress_plot, stressErr_plot = getSplitMean()
             self.tableCteSS = drawCteSS(
                 listRows=self.tableCteSS, ax=axCteSS,
@@ -1089,8 +1086,10 @@ class Flow:
             def configPlot(ax, yTitle, yLim):
                 ax.set_title(title, size=10, color='k')
                 if yTitle == "$k'$":
-                    ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5, zorder=-1)
-                    ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5, zorder=-1)
+                    ax.grid(which='major', axis='y', linestyle='-', linewidth=1, color='lightgray', alpha=0.5,
+                            zorder=-1)
+                    ax.grid(which='minor', axis='y', linestyle='--', linewidth=.75, color='lightgray', alpha=0.5,
+                            zorder=-1)
 
                 ax.tick_params(axis='x', labelsize=10, length=4)
                 ax.tick_params(
@@ -1132,7 +1131,7 @@ class Flow:
                     zorder=3)
                 axes.text(
                     space_samples * x[i] - bin_width - .15,
-                    kPrime[i] + kPrime_err[i] + stepLimits[0]*.075,
+                    kPrime[i] + kPrime_err[i] + stepLimits[0] * .075,
                     f'{kPrime[i]:.{2}f} ± {kPrime_err[i]:.{2}f}',
                     va='center', ha='left', rotation=90,
                     color='#383838', fontsize=9)
@@ -1149,7 +1148,7 @@ class Flow:
                     zorder=3)
                 axes2.text(
                     space_samples * x[i] - .15,
-                    nPrime[i] + nPrime_err[i] + stepLimits[1]*.075,
+                    nPrime[i] + nPrime_err[i] + stepLimits[1] * .075,
                     f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}',
                     va='center', ha='left', rotation=90,
                     color='#383838', fontsize=9)
@@ -1166,12 +1165,13 @@ class Flow:
                     zorder=3)
                 axes3.text(
                     space_samples * x[i] + bin_width - .15,
-                    sigmaZero[i] + sigmaZero_err[i] + stepLimits[2]*.075,
+                    sigmaZero[i] + sigmaZero_err[i] + stepLimits[2] * .075,
                     f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
                     va='center', ha='left', rotation=90,
                     color='#383838', fontsize=9)
 
-                posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(space_samples * x[i] + bin_width)
+                posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(
+                    space_samples * x[i] + bin_width)
                 labelsList.append("$k'$"), labelsList.append("$n'$"), labelsList.append("$\sigma_0$")
 
             axes.set_xticks(posList)
