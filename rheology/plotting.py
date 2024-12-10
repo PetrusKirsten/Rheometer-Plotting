@@ -1005,9 +1005,12 @@ class Flow:
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
                 ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
 
-                ax.set_xticks([]), ax.set_xlim([-2, 17]), ax.set_yticks([]), ax.set_ylim(yLim)
+                ax.set_xticks([]), ax.set_xlim([x[0] - 2, x[-1]]), ax.set_yticks([]), ax.set_ylim(yLim)
 
             axes3 = axes.twinx()
+
+            bin_width, space_samples = 0.8, 3
+            x = np.arange(space_samples * len(data))
 
             configPlot(axes, "$\\tau_0$ (Pa) and $\\tau_e$ (Pa)", (0, cteLimits[0]))
             configPlot(axes3, "$\lambda$ (s)", (0, cteLimits[1]))
@@ -1017,11 +1020,7 @@ class Flow:
             nPrime, nPrime_err = [d["$\\tau_e$"] for d in data], [d["± $\\tau_e$"] for d in data]
             sigmaZero, sigmaZero_err = [d["$\lambda$"] for d in data], [d["± $\lambda$"] for d in data]
 
-            bin_width, space_samples = 0.8, 3
-            x = np.arange(space_samples * len(data))
-
             posList, labelsList = [], []
-
             for i in range(len(kPrime)):
                 axes.bar(
                     space_samples * x[i] - bin_width,
@@ -1102,9 +1101,12 @@ class Flow:
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
                 ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
 
-                ax.set_xticks([]), ax.set_xlim([-2, 17]), ax.set_yticks([]), ax.set_ylim(yLim)
+                ax.set_xticks([]), ax.set_xlim([x[0] - 2, x[-1]]), ax.set_yticks([]), ax.set_ylim(yLim)
 
             axes2, axes3 = axes.twinx(), axes.twinx()
+
+            bin_width, space_samples = 0.8, 3
+            x = np.arange(space_samples * len(data))
 
             configPlot(axes, "$k'$", (0, stepLimits[0]))
             configPlot(axes2, "$n'$", (0, stepLimits[1]))
@@ -1114,9 +1116,6 @@ class Flow:
             kPrime, kPrime_err = [abs(d["k'"]) for d in data], [d["± k'"] for d in data]
             nPrime, nPrime_err = [abs(d["n'"]) for d in data], [d["± n'"] for d in data]
             sigmaZero, sigmaZero_err = [abs(d["sigma_zero"]) for d in data], [d["± sigma_zero"] for d in data]
-
-            bin_width, space_samples = 0.8, 3
-            x = np.arange(space_samples * len(data))
 
             posList, labelsList = [], []
 
