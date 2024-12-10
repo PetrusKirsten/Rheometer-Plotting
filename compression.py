@@ -173,7 +173,7 @@ def starch(folderPath):
         filePath, 'starches',
         keySamples, nSamples, cSamples)
 
-    starches.plotDynamic(
+    starches.plotGraphs(
         130,
         show=False
     )

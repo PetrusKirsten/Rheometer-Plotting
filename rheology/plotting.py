@@ -1215,7 +1215,7 @@ class Compression:
             names_samples, number_samples, colors_samples
     ):
 
-        def getData(cut=500):
+        def getData(cut=500, breakage=False):
 
             def getSegments(dataframe, segInit, segEnd):
                 time = dataframe['t in s'].to_numpy()
@@ -1227,10 +1227,17 @@ class Compression:
                     for seg in [segInit, segEnd])
                 segments = lambda arr: (arr[indexInit:indexEnd])
 
-                return {
-                    'time': segments(time) - np.min(segments(time)),
-                    'height': segments(height),
-                    'force': segments(force)}
+                if breakage:
+                    return {
+                        'time to break': segments(time) - segments(time)[0],
+                        'height to break': (1 - segments(height) / segments(height).max()) * 100,
+                        'force to break': segments(force)}
+
+                else:
+                    return {
+                        'time': segments(time) - np.min(segments(time)),
+                        'height': segments(height),
+                        'force': segments(force)}
 
             def dict_Compression(labels):
                 return {label: ([], [], []) for label in labels}
@@ -1244,10 +1251,19 @@ class Compression:
 
             for sample_type, path in zip(sample_labels, self.dataPath):
                 df = pd.read_excel(path)
-                segments = getSegments(
-                    df,
-                    segInit='2|1' if '171024' in path or not 'kC-compression-4' in path else '1|1',
-                    segEnd='62|1' if '10St_CL_7' in path else '61|1')
+
+                if breakage:
+                    segments = getSegments(
+                        df,
+                        segInit='62|1',
+                        segEnd='62|98')
+
+                else:
+                    segments = getSegments(
+                        df,
+                        segInit='2|1' if '171024' in path or not 'kC-compression-4' in path else '1|1',
+                        segEnd='62|1' if '10St_CL_7' in path else '61|1')
+
                 self.names_samples[sample_type].append(segments)
 
             dict_data_dynamic = {}
@@ -1300,7 +1316,7 @@ class Compression:
         self.gsGraphs = GridSpec(2, 2, height_ratios=[1, 1.5], width_ratios=[1, 1])
         self.figGraphs.canvas.manager.set_window_title(self.fileName + ' - Compression')
 
-    def plotDynamic(
+    def plotGraphs(
             self,
             sLimits,
             show=True, save=False
@@ -1484,6 +1500,8 @@ class Compression:
                 axTitle='', yLabel=s2Title, yLim=s2Limits, xLabel=x2Title, xLim=x2Limits,
                 curveColor=color, markerFColor=color, markerEColor=color,
                 paramsList=self.tableDynamic, sampleName=f'{key}')
+
+
 
             plt.subplots_adjust(
                 wspace=0.015, hspace=0.060,
