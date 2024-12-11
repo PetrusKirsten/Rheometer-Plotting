@@ -156,14 +156,14 @@ def starch(folderPath):
     ]
     cSamples = [
         # No CL
-        'silver',
+        '#FFE138',
         # CL 7
-        'grey',
+        '#F1A836',
         # CL 14
-        'dimgrey',
+        '#EA8B35',
         # CL 28
-        'k',
-    ]  # TODO: change colors
+        '#E36E34',
+    ]
 
     starches = Flow(
         filePath, 'starches',
@@ -172,11 +172,11 @@ def starch(folderPath):
     starches.plotShearFlow(
         f'Shear stress (Pa)', (0, 500),
         f'Shear stress (Pa)', (0, 250),
-        show=False
+        show=False, save=True
     )
     starches.plotFits(
         [2000, 60], [75, 1, 120],
-        show=False
+        show=False, save=True
     )
 
 
@@ -231,11 +231,11 @@ def starch_kappa(folderPath):
     starches_kappas.plotShearFlow(
         f'Shear stress (Pa)', (0, 600),
         f'Shear stress (Pa)', (0, 200),
-        show=False
+        show=False, save=True
     )
     starches_kappas.plotFits(
         [2000, 60], [75, 1, 120],
-        show=False
+        show=False, save=True
     )
 
 
@@ -297,10 +297,11 @@ def starch_iota(folderPath):
     starches_iotas.plotShearFlow(
         f'Shear stress (Pa)', (0, 600),
         f'Shear stress (Pa)', (0, 500),
+        show=False, save=True
     )
     starches_iotas.plotFits(
-        [2000, 60], [75, 1, 120],
-        show=False
+        [2000, 60], [180, 1, 120],
+        show=False, save=True
     )
 
 
@@ -404,10 +405,10 @@ if __name__ == '__main__':
 
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
-    kappa(path)
-    iota(path)
-    starch(path)
-    starch_kappa(path)
+    # kappa(path)
+    # iota(path)
+    # starch(path)
+    # starch_kappa(path)
     starch_iota(path)
 
     # blends(path)

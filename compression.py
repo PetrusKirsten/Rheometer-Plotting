@@ -161,14 +161,15 @@ def starch(folderPath):
     ]
     cSamples = [
         # No CL
-        'gainsboro',
+        '#FFE138',
         # CL 7
-        'silver',
+        '#F1A836',
         # CL 14
-        'dimgrey',
+        '#EA8B35',
         # CL 28
-        'k',
-    ]  # TODO: change colors
+        '#E36E34',
+    ]
+
 
     # starches = DynamicCompression(
     #     filePath, 'starches',

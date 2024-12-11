@@ -58,7 +58,7 @@ def kappa(folderPath):
     kappas.plotBars(
         [.6, 10000, 850, 15],
         [0, None, None, None],
-        show=False)
+        show=False, save=True)
 
     kappas.plotHeatMap(show=False)
 
@@ -109,7 +109,7 @@ def iota(folderPath):
     iotas.plotBars(
         [3.5, 45, 8.5, 7],
         [None, None, None, None],
-        show=False)
+        show=False, save=True)
 
     iotas.plotHeatMap(show=False)
 
@@ -160,13 +160,13 @@ def starch(folderPath):
     ]
     cSamples = [
         # No CL
-        'silver',
+        '#FFE138',
         # CL 7
-        'grey',
+        '#F1A836',
         # CL 14
-        'dimgrey',
+        '#EA8B35',
         # CL 28
-        'k',
+        '#E36E34',
     ]
 
     starches = Recovery(
@@ -176,12 +176,12 @@ def starch(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False)
+        show=False, save=True)
 
     starches.plotBars(
         [0.5, 1800, 500, 30],
         [None, 4, None, None],
-        show=False)
+        show=False, save=True)
 
     starches.plotHeatMap(show=False)
 
@@ -339,12 +339,12 @@ def starch_kappa(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False)
+        show=False, save=True)
 
     starches.plotBars(
-        [0.5, 1800, 500, 30],
+        [0.5, 10000, 500, 30],
         [None, 4, None, None],
-        show=False)
+        show=False, save=True)
 
     starches.plotHeatMap(show=False)
 
@@ -391,11 +391,11 @@ def starch_iota(folderPath):
     ]
     cSamples = [
         # No CL
-        'lightskyblue',
+        '#34D4CF',
         # CL 7
-        'royalblue',
+        '#2B7ED4',
         # CL 14
-        'r',
+        '#1941B8',
         # CL 28
         # 'k', TBD
     ]
@@ -407,25 +407,25 @@ def starch_iota(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False)
+        show=False, save=True)
 
     starches.plotBars(
-        [0.5, 1800, 500, 30],
+        [0.5, 2500, 500, 30],
         [None, 4, None, None],
-        show=False)
+        show=False, save=True)
 
     starches.plotHeatMap(show=False)
 
 
 if __name__ == '__main__':
     path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
-    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"   # Personal
 
-    kappa(path)
-    iota(path)
-    blends(path)
-    starch(path)
-    starch_kappa(path)
+    # kappa(path)
+    # iota(path)
+    # blends(path)
+    # starch(path)
+    # starch_kappa(path)
     starch_iota(path)
 
     plt.show()

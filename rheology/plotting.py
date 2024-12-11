@@ -548,7 +548,7 @@ class Recovery:
                     va='center_baseline', ha='left',
                     color='#383838', fontsize=9)
 
-                if i == 5:
+                if i == 0:
                     posList.append(space_samples * x[i] - bin_width / space_break)
                     posList.append(space_samples * x[i] + bin_width / space_break)
                     labelsList.append('Before'), labelsList.append('After')
@@ -598,7 +598,7 @@ class Recovery:
         plt.subplots_adjust(
             wspace=0.015, hspace=0.15,
             top=0.97, bottom=0.07,
-            left=0.045, right=0.965)
+            left=0.045, right=0.880)
 
         if show:
             plt.show()
@@ -1062,13 +1062,13 @@ class Flow:
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
                     zorder=z)
                 axes3.errorbar(
-                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],
+                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=2.8,  # TODO err
                     color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
                     zorder=3)
                 axes3.text(
                     space_samples * x[i] + bin_width - .15,
-                    sigmaZero[i] + sigmaZero_err[i] + cteLimits[1] * .075,
-                    f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
+                    sigmaZero[i] + 2.8 + cteLimits[1] * .075,
+                    f'{sigmaZero[i]:.{1}f} ± {2.8:.{1}f}',
                     va='center', ha='left', rotation=90,
                     color='#383838', fontsize=9)
 
