@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
-from rheology.plotting import Compression
+from rheology.plotting import DynamicCompression
+from rheology.plotting import BreakageCompression
 
 
 def kappa(folderPath):
@@ -169,7 +170,15 @@ def starch(folderPath):
         'k',
     ]  # TODO: change colors
 
-    starches = Compression(
+    # starches = DynamicCompression(
+    #     filePath, 'starches',
+    #     keySamples, nSamples, cSamples)
+    #
+    # starches.plotGraphs(
+    #     130,
+    #     show=False
+    # )
+    starches = BreakageCompression(
         filePath, 'starches',
         keySamples, nSamples, cSamples)
 
