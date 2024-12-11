@@ -176,14 +176,14 @@ def starch(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
         [0.5, 1800, 500, 30],
         [None, 4, None, None],
-        show=False, save=True)
+        show=False, save=False)
 
-    starches.plotHeatMap(show=False)
+    starches.plotHeatMap(show=False, save=True)
 
 
 def blends(folderPath):
@@ -339,14 +339,14 @@ def starch_kappa(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
         [0.5, 10000, 500, 30],
         [None, 4, None, None],
-        show=False, save=True)
+        show=False, save=False)
 
-    starches.plotHeatMap(show=False)
+    starches.plotHeatMap(show=False, save=True)
 
 
 def starch_iota(folderPath):
@@ -407,14 +407,14 @@ def starch_iota(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
         [0.5, 2500, 500, 30],
         [None, 4, None, None],
-        show=False, save=True)
+        show=False, save=False)
 
-    starches.plotHeatMap(show=False)
+    starches.plotHeatMap(show=False, save=True)
 
 
 if __name__ == '__main__':
@@ -424,8 +424,8 @@ if __name__ == '__main__':
     # kappa(path)
     # iota(path)
     # blends(path)
-    # starch(path)
+    starch(path)
     # starch_kappa(path)
-    starch_iota(path)
+    # starch_iota(path)
 
     plt.show()

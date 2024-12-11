@@ -170,7 +170,6 @@ def starch(folderPath):
         '#E36E34',
     ]
 
-
     # starches = DynamicCompression(
     #     filePath, 'starches',
     #     keySamples, nSamples, cSamples)

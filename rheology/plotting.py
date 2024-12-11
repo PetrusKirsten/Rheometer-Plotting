@@ -658,7 +658,7 @@ class Recovery:
             plt.subplots_adjust(
                 wspace=0, hspace=0,
                 top=0.93, bottom=0.14,
-                left=0.07, right=1.0)
+                left=0.1, right=1.0)
 
             if show:
                 plt.show()
