@@ -1214,8 +1214,8 @@ class DynamicCompression:
             dataPath, fileName,
             names_samples, number_samples, colors_samples
     ):
-
-        def getData(cut=500):
+        # TODO update readData and fix error in plot
+        def readData(cut=500):
 
             def getSegments(dataframe, segInit, segEnd):
                 time = dataframe['t in s'].to_numpy()
@@ -1279,7 +1279,7 @@ class DynamicCompression:
         self.means_hMax = []
 
         # data reading
-        self.dynamicData, self.listDynamic = getData()
+        self.dynamicData, self.listDynamic = readData()
         appendData()
 
         # chart config
@@ -1488,6 +1488,102 @@ class DynamicCompression:
                     facecolor='w', dpi=600)
                 print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
 
+    def drawBars(
+            sampleName,
+            axes, data,
+            colors, h, z, a=.9, textSize=12,
+    ):
+
+        def legendLabel():
+            axes.bar(
+                space_samples * x.min() - 10,
+                height=0, yerr=0,
+                color='w', edgecolor='#383838',
+                width=bin_width, hatch='///', alpha=a, linewidth=.5,
+                label="Young's modulus", zorder=z)
+            axes.bar(
+                space_samples * x.min() - 10,
+                height=0, yerr=0,
+                color='w', edgecolor='#383838',
+                width=bin_width, hatch='', alpha=a, linewidth=.5,
+                label='Peak stress', zorder=z)
+
+            legend = axes.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=12)
+            legend.get_frame().set_facecolor('w')
+            legend.get_frame().set_edgecolor('lightsteelblue')
+            legend.get_frame().set_linewidth(0.)
+
+        def configPlot(ax, yTitle, yLim, xLim):
+            ax.tick_params(axis='x', labelsize=10, length=4)
+            ax.tick_params(axis='y', which='both', labelsize=9, pad=1, length=0)
+
+            ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+            ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+
+            ax.set_xlabel('Formulation')
+            ax.set_xticks([])
+            ax.set_xlim(xLim)
+
+            ax.set_yticks([])
+            ax.set_ylim(yLim)
+
+        axes2 = axes.twinx()
+
+        posList, labelsList = [], []
+        bin_width, space_samples = 1, 3
+
+        x = np.arange(space_samples * len(sampleName))
+        limYM, limPeak = (0, barsLimits[0]), (0, barsLimits[1])
+
+        configPlot(axes,
+                   "Young modulus (Pa)", (0, barsLimits[0]),
+                   (x.min() - bin_width - 1, x.max() - 1))
+        configPlot(axes2,
+                   "Stress peak (Pa)", (0, barsLimits[1]),
+                   (x.min() - bin_width - 1, x.max() - 1))
+
+        for sample in range(len(sampleName)):
+            slope, slope_err = data[sample]['Slope (Pa)'], data[sample]['Slope (Pa) err']
+            peak, peak_err = data[sample]['Tensile stress (Pa)'], data[sample]['Tensile stress (Pa) err']
+
+            axes.bar(
+                space_samples * x[sample] - bin_width,
+                height=slope, yerr=0,
+                color=colors[sample], edgecolor='#383838',
+                width=bin_width, hatch='///', alpha=a, linewidth=.5,
+                zorder=z)
+            axes.errorbar(
+                x=space_samples * x[sample] - bin_width, y=slope, yerr=slope_err,
+                color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+                zorder=3)
+            axes.text(
+                space_samples * x[sample] - bin_width - .0,
+                slope + slope_err + limYM[1] * .085,
+                f'{slope:.{0}f} ± {slope_err:.{0}f} Pa',
+                va='center', ha='center', rotation=90,
+                color='#383838', fontsize=textSize)
+
+            axes2.bar(
+                space_samples * x[sample],
+                height=peak, yerr=0,
+                color=colors[sample], edgecolor='#383838',
+                width=bin_width, hatch='', alpha=a, linewidth=.5,
+                zorder=z)
+            axes2.errorbar(
+                x=space_samples * x[sample], y=peak, yerr=peak_err,
+                color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+                zorder=3)
+            axes2.text(
+                space_samples * x[sample] - .0,
+                peak + peak_err + limPeak[1] * .085,
+                f'{peak:.{0}f} ± {peak_err:.{0}f} Pa',
+                va='center', ha='center', rotation=90,
+                color='#383838', fontsize=textSize)
+
+            posList.append(space_samples * x[sample] - bin_width / 2), labelsList.append(f'{sampleName[sample]}')
+
+        axes.set_xticks(posList), axes.set_xticklabels(labelsList, rotation=0), legendLabel()
+
 
 class BreakageCompression:
     def __init__(
@@ -1595,7 +1691,12 @@ class BreakageCompression:
                 linearFitting=False, startVal=6, endVal=16, tableData=None):
 
             def legendLabel():
-                legend = ax.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=10)
+                legend = ax.legend(
+                    loc='upper left',
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=12)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('lightsteelblue')
                 legend.get_frame().set_linewidth(0.)
@@ -1740,7 +1841,7 @@ class BreakageCompression:
         def drawBars(
                 sampleName,
                 axes, data,
-                colors, h, z, a=.9
+                colors, h, z, a=.9, textSize=12,
         ):
 
             def legendLabel():
@@ -1749,15 +1850,15 @@ class BreakageCompression:
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='///', alpha=a, linewidth=.5,
-                    label="Young's modulus (Pa)", zorder=z)
+                    label="Young's modulus", zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
-                    label='Peak stress (Pa)', zorder=z)
+                    label='Peak stress', zorder=z)
 
-                legend = axes.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=10)
+                legend = axes.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=12)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('lightsteelblue')
                 legend.get_frame().set_linewidth(0.)
@@ -1806,11 +1907,11 @@ class BreakageCompression:
                     color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
                     zorder=3)
                 axes.text(
-                    space_samples * x[sample] - bin_width - .15,
-                    slope + slope_err + limYM[1] * .075,
-                    f'{slope:.{1}f} ± {slope_err:.{1}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    space_samples * x[sample] - bin_width - .0,
+                    slope + slope_err + limYM[1] * .085,
+                    f'{slope:.{0}f} ± {slope_err:.{0}f} Pa',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=textSize)
 
                 axes2.bar(
                     space_samples * x[sample],
@@ -1823,11 +1924,11 @@ class BreakageCompression:
                     color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
                     zorder=3)
                 axes2.text(
-                    space_samples * x[sample] - .15,
-                    peak + peak_err + limPeak[1] * .075,
-                    f'{peak:.{1}f} ± {peak_err:.{1}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    space_samples * x[sample] - .0,
+                    peak + peak_err + limPeak[1] * .085,
+                    f'{peak:.{0}f} ± {peak_err:.{0}f} Pa',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=textSize)
 
                 posList.append(space_samples * x[sample] - bin_width / 2), labelsList.append(f'{sampleName[sample]}')
 
