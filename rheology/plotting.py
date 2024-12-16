@@ -1496,51 +1496,50 @@ class BreakageCompression:
             names_samples, number_samples, colors_samples
     ):
 
-        def getData(cut=200):
+        def readData():
 
-            def getSegments(dataframe, segInit, segEnd):
+            def getSegments(dataframe, init_SegIndex, last_SegIndex):
                 time = dataframe['t in s'].to_numpy()
                 height = dataframe['h in mm'].to_numpy()
                 force = dataframe['Fn in N'].to_numpy()
 
                 indexInit, indexEnd = (
                     dataframe.index[dataframe['SegIndex'] == seg].to_list()[0]
-                    for seg in [segInit, segEnd])
-                segments = lambda arr: (arr[indexInit:indexEnd])
+                    for seg in [init_SegIndex, last_SegIndex])
+                segs = lambda arr: (arr[indexInit:indexEnd + 1])
 
                 return {
-                    'time to break': segments(time) - segments(time)[0],
-                    'height to break': (1 - segments(height) / segments(height).max()) * 100,
-                    'force to break': segments(force)}
+                    'time to break': segs(time) - segs(time)[0],
+                    'height to break': (1 - segs(height) / segs(height).max()) * 100,
+                    'force to break': segs(force)}
 
             def dict_Compression(labels):
                 return {label: ([], [], []) for label in labels}
 
-            self.sample_keys = list(self.names_samples.keys())
             if len(self.sample_keys) != len(self.number_samples):
                 raise ValueError('The length of "number_samples" must match the number of sample keys.')
+
             sample_labels = [
                 key for key,
-                count in zip(self.sample_keys, self.number_samples) for _ in range(count)]
-
+                count in zip(self.sample_keys, self.number_samples)
+                for _ in range(count)]
             for sample_type, path in zip(sample_labels, self.dataPath):
-                df = pd.read_excel(path)
+
                 segments = getSegments(
-                    df,
-                    segInit='62|1' if '10St_CL_7' in path else '61|1',
-                    segEnd='62|98' if '10St_CL_7' in path else '61|98')
-                    # segInit='62|1' if '171024' in path else '61|1',
-                    # segEnd='62|98' if '10St_CL_7' in path else '61|98')
+                    pd.read_excel(path),
+                    init_SegIndex='62|1' if 'seg' in path else '61|1',
+                    last_SegIndex='62|98' if 'seg' in path else '61|98')
+
                 self.names_samples[sample_type].append(segments)
 
             dict_data_break = {}
             for sample_type in self.names_samples:
-                dict_data_break[f'{sample_type} time to break'] = \
-                    [downsampler(s['time to break'], cut) for s in self.names_samples[sample_type]]
-                dict_data_break[f'{sample_type} height to break'] = \
-                    [downsampler(s['height to break'], cut) for s in self.names_samples[sample_type]]
-                dict_data_break[f'{sample_type} force to break'] = \
-                    [downsampler(s['force to break'], cut) for s in self.names_samples[sample_type]]
+                dict_data_break[f'{sample_type} time to break'] = [
+                    s['time to break'] for s in self.names_samples[sample_type]]
+                dict_data_break[f'{sample_type} height to break'] = [
+                    s['height to break'] for s in self.names_samples[sample_type]]
+                dict_data_break[f'{sample_type} force to break'] = [
+                    s['force to break'] for s in self.names_samples[sample_type]]
 
             return dict_data_break, dict_Compression(self.sample_keys)
 
@@ -1559,9 +1558,10 @@ class BreakageCompression:
 
         # data vars
         self.tableCompression = []
+        self.sample_keys = list(self.names_samples.keys())
 
         # data reading
-        self.breakageData, self.listBreakage = getData()
+        self.breakageData, self.listBreakage = readData()
         appendData()
 
         # chart config
@@ -1574,27 +1574,34 @@ class BreakageCompression:
     def plotGraphs(
             self,
             sLimits,
+            barsLimits,
             show=True, save=False
     ):
 
         def getValues():
 
-            return (np.mean(self.listBreakage[key][1], axis=1)[0],                            # Strain
-                    np.abs(np.mean(self.listBreakage[key][2], axis=1)[0] / (35 / 1000) + 5),  # Stress
-                    np.abs(np.std(self.listBreakage[key][2], axis=1)[0] / (35 / 1000)))       # Stress err
+            height = self.breakageData[f'{formula} height to break']
+            force = self.breakageData[f'{formula} force to break']
 
-        def drawBreakageStress(
+            return (np.mean(height, axis=0),                   # Strain
+                    np.mean(force, axis=0) / (35 / 1000) + 5,  # Stress
+                    np.std(force, axis=0) / (35 / 1000))       # Stress err
+
+        def drawBreakage(
                 sampleName,
                 ax, x, y, yErr,
                 axTitle, yLabel, yLim, xLabel, xLim, axisColor,
                 curveColor, markerStyle, markerFColor, markerEColor, markerEWidth=0.5,
                 linearFitting=False, startVal=6, endVal=16, tableData=None):
 
-            if sampleName == '0St/CL':
-                startVal, endVal = 15, 25
+            def legendLabel():
+                legend = ax.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=10)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('lightsteelblue')
+                legend.get_frame().set_linewidth(0.)
 
-            def fitLinear(strain, slope, intercept):
-                return slope * strain + intercept
+            def fitLinear(variable, slope, intercept):
+                return slope * variable + intercept
 
             def exportFitYM(
                     sample,
@@ -1611,22 +1618,55 @@ class BreakageCompression:
 
                 return rows
 
-            def legendLabel():
-                legend = ax.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=10)
-                legend.get_frame().set_facecolor('w')
-                legend.get_frame().set_edgecolor('lightsteelblue')
-                legend.get_frame().set_linewidth(0.5)
+            def showFit():
+                x_toFit, y_toFit = arraySplit(x, y, startVal, endVal)
+                params, covariance = curve_fit(fitLinear, x_toFit, y_toFit)  # p0=(y_mean[0], y_mean[-1], 100))
+                errors = np.sqrt(np.diag(covariance))
 
-            def configPlot():
+                self.tableCompression = exportFitYM(
+                    f'{sampleName}',
+                    params[0] * 100, errors[0] * 100,
+                    np.max(y), yErr[np.argmax(y)],
+                    self.tableCompression)
+
+                xFit = np.linspace(startVal, endVal, 100)
+                yFit = fitLinear(xFit, *params)
+
+                ax.plot(  # plot fit curve
+                    xFit, yFit,
+                    color=markerFColor, alpha=.8, lw=.75, linestyle='-',
+                    label=f'', zorder=7)
+
+            def showError():
+                # ax.errorbar(
+                #     x[::2], y[::2], yErr[::2],
+                #     color=curveColor, alpha=.85,
+                #     fmt='none', mfc=curveColor,
+                #     capsize=2.5, capthick=1, linestyle='', lw=1,
+                #     label=f'', zorder=2)
+                x_smooth = np.linspace(x.min(), x.max(), len(x) * 5)
+                interp_yErr_up = interp1d(x, y + yErr, kind='cubic')
+                interp_yErr_low = interp1d(x, y - yErr, kind='cubic')
+                yErr_lower_smooth, yErr_upper_smooth = interp_yErr_up(x_smooth), interp_yErr_low(x_smooth)
+
+                ax.plot(x_smooth, yErr_lower_smooth, lw=.25, c=curveColor, alpha=.95)
+                ax.plot(x_smooth, yErr_upper_smooth, lw=.25, c=curveColor, alpha=.95)
+                ax.fill_between(
+                    x_smooth, yErr_lower_smooth, yErr_upper_smooth,
+                    color=curveColor, alpha=.15, lw=0,
+                    zorder=6 - self.colors_samples.index(color))
+
+            def configPlot(showGrid=False):
                 ax.set_title(axTitle, size=9, color='crimson')
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
 
-                ax.grid(True, which='major', axis='both', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5)
-                ax.grid(True, which='minor', axis='both', linestyle='--', linewidth=.5, color='lightgray', alpha=0.5)
+                if showGrid:
+                    ax.grid(True, which='major', axis='both', linestyle='-', linewidth=.75, color='lightgray', alpha=.5)
+                    ax.grid(True, which='minor', axis='both', linestyle='--', linewidth=.5, color='lightgray', alpha=.5)
 
                 ax.set_xlabel(f'{xLabel}')
                 ax.set_xlim(xLim)
-                ax.xaxis.set_minor_locator(MultipleLocator(5 if not linearFitting else 1))
+                ax.xaxis.set_minor_locator(MultipleLocator(5 if not linearFitting else 5))
                 ax.xaxis.set_major_formatter(ticker.StrMethodFormatter("{x:.0f}%"))
 
                 ax.set_ylabel(f'{yLabel}', color=axisColor)
@@ -1634,39 +1674,23 @@ class BreakageCompression:
                 ax.set_ylim(yLim)
                 ax.tick_params(axis='y', colors=axisColor, which='both')
                 ax.yaxis.set_major_locator(MultipleLocator(200 if not linearFitting else 100))
-                ax.yaxis.set_minor_locator(MultipleLocator(50 if not linearFitting else 25))
+                ax.yaxis.set_minor_locator(MultipleLocator(50 if not linearFitting else 50))
+
+            if sampleName == '0St/CL':
+                startVal, endVal = 15, 25
+
+            x, y, yErr = x[:y.argmax()], y[:y.argmax()], yErr[:y.argmax()]
 
             if linearFitting:
-                x_toFit, y_toFit = arraySplit(x, y, startVal, endVal)
-                params, covariance = curve_fit(fitLinear, x_toFit, y_toFit)  # p0=(y_mean[0], y_mean[-1], 100))
-                (slopeErr, interceptErr) = np.sqrt(np.diag(covariance))
-                self.tableCompression = exportFitYM(
-                    f'{sampleName}',
-                    params[0] * 100, slopeErr * 100,
-                    np.max(y), yErr[np.argmax(y)],
-                    self.tableCompression)
-
-                xFit = np.linspace(startVal, endVal, 100)
-                yFit = fitLinear(xFit, *params)
-                ax.plot(  # plot fit curve
-                    xFit, yFit,
-                    color=markerFColor, alpha=0.8, lw=1, linestyle='--',
-                    label=f'Linear fitting', zorder=4)
-
+                showFit(), showError()
                 ax.errorbar(
-                    x, y, yErr,
-                    color=curveColor, alpha=.85,
-                    fmt='none', mfc=curveColor,
-                    capsize=2.5, capthick=1, linestyle='', lw=1,
-                    label=f'', zorder=2)
-
-                ax.errorbar(
-                    x, y, 0,
+                    x[::2], y[::2], 0,
                     color=curveColor, alpha=.65,
                     fmt='o', markersize=5.4,
                     mfc=curveColor, mec='#383838', mew=.75,
                     linestyle='',
                     label=f'{sampleName}', zorder=3)
+                legendLabel()
                 # show text and rectangle at the linear region
 
                 # DRAW DATA
@@ -1713,42 +1737,140 @@ class BreakageCompression:
 
             return tableData if linearFitting else None
 
+        def drawBars(
+                sampleName,
+                axes, data,
+                colors, h, z, a=.9
+        ):
+
+            def legendLabel():
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='///', alpha=a, linewidth=.5,
+                    label="Young's modulus (Pa)", zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label='Peak stress (Pa)', zorder=z)
+
+                legend = axes.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=10)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('lightsteelblue')
+                legend.get_frame().set_linewidth(0.)
+
+            def configPlot(ax, yTitle, yLim, xLim):
+                ax.tick_params(axis='x', labelsize=10, length=4)
+                ax.tick_params(axis='y', which='both', labelsize=9, pad=1, length=0)
+
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+                ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+
+                ax.set_xlabel('Formulation')
+                ax.set_xticks([])
+                ax.set_xlim(xLim)
+
+                ax.set_yticks([])
+                ax.set_ylim(yLim)
+
+            axes2 = axes.twinx()
+
+            posList, labelsList = [], []
+            bin_width, space_samples = 1, 3
+
+            x = np.arange(space_samples * len(sampleName))
+            limYM, limPeak = (0, barsLimits[0]), (0, barsLimits[1])
+
+            configPlot(axes,
+                       "Young modulus (Pa)", (0, barsLimits[0]),
+                       (x.min() - bin_width - 1, x.max() - 1))
+            configPlot(axes2,
+                       "Stress peak (Pa)", (0, barsLimits[1]),
+                       (x.min() - bin_width - 1, x.max() - 1))
+
+            for sample in range(len(sampleName)):
+                slope, slope_err = data[sample]['Slope (Pa)'], data[sample]['Slope (Pa) err']
+                peak, peak_err = data[sample]['Tensile stress (Pa)'], data[sample]['Tensile stress (Pa) err']
+
+                axes.bar(
+                    space_samples * x[sample] - bin_width,
+                    height=slope, yerr=0,
+                    color=colors[sample], edgecolor='#383838',
+                    width=bin_width, hatch='///', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    x=space_samples * x[sample] - bin_width, y=slope, yerr=slope_err,
+                    color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+                    zorder=3)
+                axes.text(
+                    space_samples * x[sample] - bin_width - .15,
+                    slope + slope_err + limYM[1] * .075,
+                    f'{slope:.{1}f} ± {slope_err:.{1}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                axes2.bar(
+                    space_samples * x[sample],
+                    height=peak, yerr=0,
+                    color=colors[sample], edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes2.errorbar(
+                    x=space_samples * x[sample], y=peak, yerr=peak_err,
+                    color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+                    zorder=3)
+                axes2.text(
+                    space_samples * x[sample] - .15,
+                    peak + peak_err + limPeak[1] * .075,
+                    f'{peak:.{1}f} ± {peak_err:.{1}f}',
+                    va='center', ha='left', rotation=90,
+                    color='#383838', fontsize=9)
+
+                posList.append(space_samples * x[sample] - bin_width / 2), labelsList.append(f'{sampleName[sample]}')
+
+            axes.set_xticks(posList), axes.set_xticklabels(labelsList, rotation=0), legendLabel()
+
         axBreak = self.figGraphs.add_subplot(self.gsGraphs[0, 0])
+        axFit = self.figGraphs.add_subplot(self.gsGraphs[0, 1])
 
-        s1Title, s1Limits = f'Stress (Pa)', (0, sLimits)
-        s2Title, s2Limits = f'Stress peak (Pa)', (0, 210)
-        x1Title, x1Limits = f'Time (s)', (0, 100)
-        x2Title, x2Limits = f'Cycle', (0, 30)
-
-        for key, color in zip(self.listBreakage, self.colors_samples):
+        for formula, color in zip(self.sample_keys, self.colors_samples):
             strain, stress, stressErr = getValues()
 
-            drawBreakageStress(
-                sampleName=f'{key}',
+            drawBreakage(
+                sampleName=f'{formula}',
                 ax=axBreak, axisColor='k',
                 x=strain, y=stress, yErr=stressErr,
-                axTitle='', yLabel='Stress (Pa)', yLim=(0, 1200), xLabel='Strain', xLim=(0, 100),
+                axTitle='', yLabel='Stress (Pa)', yLim=(0, 1500), xLabel='Strain', xLim=(0, 100),
                 curveColor=color, markerStyle='o', markerFColor=color, markerEColor='k',
-                linearFitting=False)
+                linearFitting=True, tableData=self.tableCompression)
 
-            # dataFitting = drawBreakageStress(
-            #     sampleName=f'{k}',
+            # self.tableCompression = drawBreakageStress(
+            #     sampleName=f'{formula}',
             #     ax=axFit, axisColor='k',
             #     x=strain[:35], y=stress[:35], yErr=stressErr[:35],
             #     axTitle='', yLabel='Stress (Pa)', yLim=(0, 425), xLabel='Strain', xLim=(0, 30),
-            #     curveColor=c, markerStyle='o', markerFColor=c, markerEColor='k',
-            #     linearFitting=True, tableData=dataFitting)
+            #     curveColor=color, markerStyle='o', markerFColor=color, markerEColor='k',
+            #     linearFitting=True, tableData=self.tableCompression)
 
-            plt.subplots_adjust(
-                wspace=0.015, hspace=0.060,
-                top=0.970, bottom=0.070,
-                left=0.060, right=0.985)
+        drawBars(
+            sampleName=self.sample_keys,
+            axes=axFit, data=self.tableCompression,
+            colors=self.colors_samples,
+            h='', z=2)
 
-            if show:
-                plt.show()
-            if save:
-                dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
-                self.figGraphs.savefig(
-                    f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
-                    facecolor='w', dpi=600)
-                print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
+        plt.subplots_adjust(
+            wspace=.025, hspace=.000,
+            top=.970, bottom=.060,
+            left=.060, right=.985)
+
+        if show:
+            plt.show()
+        if save:
+            dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+            self.figGraphs.savefig(
+                f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
+                facecolor='w', dpi=600)
+            print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
