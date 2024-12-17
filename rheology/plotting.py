@@ -1232,9 +1232,6 @@ class DynamicCompression:
                     'height': segments(height),
                     'force': segments(force)}
 
-            def dict_Compression(labels):
-                return {label: ([], [], []) for label in labels}
-
             if len(self.sample_keys) != len(self.number_samples):
                 raise ValueError('The length of "number_samples" must match the number of sample keys.')
             sample_labels = [
@@ -1258,13 +1255,7 @@ class DynamicCompression:
                 dict_data[f'{sample_type} force'] = \
                     [s['force'] for s in self.names_samples[sample_type]]
 
-            return dict_data, dict_Compression(self.sample_keys)
-
-        def appendData():
-            for key, (x, height, f) in self.listDynamic.items():
-                x.append(self.dynamicData[f'{key} time'])
-                height.append(self.dynamicData[f'{key} height'])
-                f.append(self.dynamicData[f'{key} force'])
+            return dict_data
 
         # input vars
         self.dataPath = dataPath
@@ -1279,8 +1270,7 @@ class DynamicCompression:
         self.sample_keys = list(self.names_samples.keys())
 
         # data reading
-        self.dynamicData, self.listDynamic = readData()
-        # appendData()
+        self.dynamicData = readData()
 
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
@@ -1297,17 +1287,21 @@ class DynamicCompression:
 
         def getValues():
             # time = self.dynamicData[f'{formula} time']
-            force, height = self.dynamicData[f'{formula} force'], self.dynamicData[f'{formula} height']
+            force = self.dynamicData[f'{formula} force']
+            height = self.dynamicData[f'{formula} height']
 
             minLen = min(len(replicate) for replicate in force)
+
             cutForce = [downsampler(replicate, minLen) for replicate in force]
+            cutHeight = [downsampler(replicate, minLen) for replicate in height]
 
             # hMax_mean = np.max(force, axis=1)
             # self.means_hMax.append(hMax_mean.tolist())
 
-            return (np.mean(cutForce, axis=0) / (35 / 1000) + 7.5,
-                    np.std(cutForce, axis=0) / (35 / 1000))
-            # np.mean(time, axis=0))
+            forceMean = np.mean(cutForce, axis=0) / (35 / 1000) + 7.5
+            forceMeanErr = np.std(cutForce, axis=0) / (35 / 1000)
+
+            return forceMean, forceMeanErr
 
         def drawDynamicStress(
                 sampleName,
@@ -1654,9 +1648,6 @@ class BreakageCompression:
                     'height to break': (1 - segs(height) / segs(height).max()) * 100,
                     'force to break': segs(force)}
 
-            def dict_Compression(labels):
-                return {label: ([], [], []) for label in labels}
-
             if len(self.sample_keys) != len(self.number_samples):
                 raise ValueError('The length of "number_samples" must match the number of sample keys.')
 
@@ -1681,13 +1672,7 @@ class BreakageCompression:
                 dict_data_break[f'{sample_type} force to break'] = [
                     s['force to break'] for s in self.names_samples[sample_type]]
 
-            return dict_data_break, dict_Compression(self.sample_keys)
-
-        def appendData():
-            for key, (x, h, f) in self.listBreakage.items():
-                x.append(self.breakageData[f'{key} time to break'])
-                h.append(self.breakageData[f'{key} height to break'])
-                f.append(self.breakageData[f'{key} force to break'])
+            return dict_data_break
 
         # input vars
         self.dataPath = dataPath
@@ -1701,8 +1686,7 @@ class BreakageCompression:
         self.sample_keys = list(self.names_samples.keys())
 
         # data reading
-        self.breakageData, self.listBreakage = readData()
-        appendData()
+        self.breakageData = readData()
 
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
@@ -1723,9 +1707,16 @@ class BreakageCompression:
             height = self.breakageData[f'{formula} height to break']
             force = self.breakageData[f'{formula} force to break']
 
-            return (np.mean(height, axis=0),  # Strain
-                    np.mean(force, axis=0) / (35 / 1000) + 5,  # Stress
-                    np.std(force, axis=0) / (35 / 1000))  # Stress err
+            minLen = min(len(replicate) for replicate in force)
+
+            cutHeight = [downsampler(replicate, minLen) for replicate in height]
+            cutForce = [downsampler(replicate, minLen) for replicate in force]
+
+            heightMean = np.mean(cutHeight, axis=0)
+            forceMean = np.mean(cutForce, axis=0) / (35 / 1000) + 5
+            forceMeanErr = np.std(cutForce, axis=0) / (35 / 1000)
+
+            return heightMean, forceMean, forceMeanErr
 
         def drawBreakage(
                 sampleName,
