@@ -1214,7 +1214,7 @@ class DynamicCompression:
             dataPath, fileName,
             names_samples, number_samples, colors_samples
     ):
-        # TODO update readData and fix error in plot
+
         def readData(cut=500):
 
             def getSegments(dataframe, segInit, segEnd):
@@ -1235,7 +1235,6 @@ class DynamicCompression:
             def dict_Compression(labels):
                 return {label: ([], [], []) for label in labels}
 
-            self.sample_keys = list(self.names_samples.keys())
             if len(self.sample_keys) != len(self.number_samples):
                 raise ValueError('The length of "number_samples" must match the number of sample keys.')
             sample_labels = [
@@ -1246,8 +1245,8 @@ class DynamicCompression:
                 df = pd.read_excel(path)
                 segments = getSegments(
                     df,
-                    segInit='2|1' if '171024' in path else '1|1',
-                    segEnd='62|1' if '10St_CL_7' in path else '61|1')
+                    segInit='2|1' if 'seg' in path else '1|1',
+                    segEnd='62|1' if 'seg' in path else '61|1')
                 self.names_samples[sample_type].append(segments)
 
             dict_data = {}
@@ -1277,6 +1276,7 @@ class DynamicCompression:
         # data vars
         self.tableDynamic, self.tableCompression = [], []
         self.means_hMax = []
+        self.sample_keys = list(self.names_samples.keys())
 
         # data reading
         self.dynamicData, self.listDynamic = readData()
@@ -1291,7 +1291,7 @@ class DynamicCompression:
 
     def plotGraphs(
             self,
-            sLimits,
+            ax1Limits, ax2Limits, barsLimits,
             show=True, save=False
     ):
 
@@ -1344,8 +1344,6 @@ class DynamicCompression:
                     label=f'{sampleName}', zorder=3)
 
             else:
-                configPlot()
-
                 x_smooth = np.linspace(x.min(), x.max(), len(x) * 5)
                 interp_yErr_lower, interp_yErr_upper = interp1d(x, y - yErr, kind='cubic'), interp1d(x, y + yErr,
                                                                                                      kind='cubic')
@@ -1356,7 +1354,7 @@ class DynamicCompression:
                     color=curveColor, alpha=0.15, lw=0,
                     zorder=6 - self.colors_samples.index(color))
                 ax.errorbar(
-                    x, y, 0,
+                    x[::2], y[::2], 0,
                     color=curveColor, alpha=.35,
                     fmt=markerStyle, markersize=3.5, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
                     capsize=0, lw=.5, linestyle=lineStyle,
@@ -1414,11 +1412,13 @@ class DynamicCompression:
                 funcRelaxation, x_values, yMax_values,
                 p0=(yMax_values[0], yMax_values[-1], 5))  # method='trf')  # method='dogbox', maxfev=5000)
             errors = np.sqrt(np.diag(covariance))
+
             x_fit = np.linspace(0, 30, 120)
             y_fit = funcRelaxation(x_fit, *params)
 
             paramsList.append([params.tolist(), errors.tolist()])
 
+            # plots configs
             configPlot()
 
             ax.errorbar(
@@ -1438,7 +1438,7 @@ class DynamicCompression:
 
             ax.plot(
                 x_fit, y_fit, color=curveColor, linestyle='-.', linewidth=.75,
-                zorder=1)
+                zorder=7)
             # ax.errorbar(
             #     x_values, yMin_values, yMin_errors,
             #     color=curveColor, alpha=.65,
@@ -1448,141 +1448,175 @@ class DynamicCompression:
             #     zorder=4)
             return paramsList
 
-        axOscillation, axCycles, axBars = (self.figGraphs.add_subplot(self.gsGraphs[0, :]),
-                                           self.figGraphs.add_subplot(self.gsGraphs[1, 0]),
-                                           self.figGraphs.add_subplot(self.gsGraphs[1, 1]))
+        def drawBars(
+                sampleName,
+                axes, data,
+                colors, h, z, a=.9, textSize=12,
+        ):
 
-        s1Title, s1Limits = f'Stress (Pa)', (0, sLimits)
-        s2Title, s2Limits = f'Stress peak (Pa)', (0, 210)
-        x1Title, x1Limits = f'Time (s)', (0, 75)
-        x2Title, x2Limits = f'Cycle', (0, 30)
+            def legendLabel():
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
+                    label="Initial stress peak", zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    label='Eq. stress peak', zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label='Time decay constant', zorder=z)
+
+                legend = axes.legend(
+                    loc='upper center',
+                    ncols=3,
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=12)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('lightsteelblue')
+                legend.get_frame().set_linewidth(0.)
+
+            def configPlot(ax, yTitle, yLim, xLim):
+                ax.tick_params(axis='x', labelsize=10, length=4)
+                ax.tick_params(axis='y', which='both', labelsize=9, pad=1, length=0)
+
+                ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
+                ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
+
+                ax.set_xlabel('Formulation')
+                ax.set_xticks([])
+                ax.set_xlim(xLim)
+
+                ax.set_yticks([])
+                ax.set_ylim(yLim)
+
+            axes2 = axes.twinx()
+
+            posList, labelsList = [], []
+            bin_width, space_samples = 1, 3.5
+
+            x = np.arange(space_samples * len(sampleName))
+
+            configPlot(
+                axes,
+                "Initial stress peak / Equilibrim stress peak (Pa)",
+                (0, barsLimits[0]),
+                (x.min() - bin_width - 1.5, x.max()))
+            configPlot(
+                axes2,
+                "Time decay constant (1/cycle)",
+                (0, barsLimits[1]),
+                (x.min() - bin_width - 1.5, x.max()))
+
+            for sample in range(len(sampleName)):
+                initialStress, initialStress_err = data[sample][0][0], data[sample][1][0]
+                equilibStress, equilibStress_err = data[sample][0][1], data[sample][1][1]
+                timeCte, timeCte_err = data[sample][0][2], data[sample][1][2]
+
+                axes.bar(
+                    space_samples * x[sample] - bin_width,
+                    height=initialStress, yerr=0,
+                    color=colors[sample], edgecolor='#383838',
+                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    x=space_samples * x[sample] - bin_width, y=initialStress, yerr=initialStress_err,
+                    color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+                    zorder=3)
+                axes.text(
+                    space_samples * x[sample] - bin_width,
+                    initialStress + initialStress_err + barsLimits[0] * .18,
+                    f'{initialStress:.{1}f} ± {initialStress_err:.{1}f} Pa',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=textSize)
+
+                axes.bar(
+                    space_samples * x[sample],
+                    height=equilibStress, yerr=0,
+                    color=colors[sample], edgecolor='#383838',
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    x=space_samples * x[sample], y=equilibStress, yerr=equilibStress_err,
+                    color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+                    zorder=3)
+                axes.text(
+                    space_samples * x[sample],
+                    equilibStress + equilibStress_err + barsLimits[0] * .18,
+                    f'{equilibStress:.{1}f} ± {equilibStress_err:.{1}f} Pa',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=textSize)
+
+                axes2.bar(
+                    space_samples * x[sample] + bin_width,
+                    height=timeCte, yerr=0,
+                    color=colors[sample], edgecolor='#383838',
+                    width=bin_width, hatch=h, alpha=a, linewidth=.5,
+                    zorder=z)
+                axes2.errorbar(
+                    x=space_samples * x[sample] + bin_width, y=timeCte, yerr=timeCte_err,
+                    color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
+                    zorder=3)
+                axes2.text(
+                    space_samples * x[sample] + bin_width,
+                    timeCte + timeCte_err + barsLimits[1] * .18,
+                    f'{timeCte:.{1}f} ± {timeCte_err:.{1}f}',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=textSize)
+
+                posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')
+
+            axes.set_xticks(posList), axes.set_xticklabels(labelsList, rotation=0), legendLabel()
+
+        axOscillation, axCycles, axFit = (self.figGraphs.add_subplot(self.gsGraphs[0, :]),
+                                          self.figGraphs.add_subplot(self.gsGraphs[1, 0]),
+                                          self.figGraphs.add_subplot(self.gsGraphs[1, 1]))
 
         for key, color in zip(self.listDynamic, self.colors_samples):
             timeMean, stressMean, stressErrMean = getValues()
 
             drawDynamicStress(
                 ax=axOscillation, axisColor='#303030',
-                x=timeMean, y=stressMean, yErr=stressErrMean,
-                axTitle='', yLabel=s1Title, yLim=s1Limits, xLabel=x1Title, xLim=x1Limits,
+                x=np.linspace(0, 60, len(stressMean)), y=stressMean, yErr=stressErrMean,
+                axTitle='', yLabel='Stress (Pa)', yLim=(0, ax1Limits), xLabel='Time (s)', xLim=(0, 60),
                 curveColor=color, markerStyle='o', markerFColor=color, markerEColor='#303030',
                 sampleName=f'{key}')
 
             self.tableDynamic = drawCycles(
                 ax=axCycles, axisColor='#303030',
                 y=stressMean, yErr=stressErrMean,
-                axTitle='', yLabel=s2Title, yLim=s2Limits, xLabel=x2Title, xLim=x2Limits,
+                axTitle='', yLabel='Stress peak (Pa)', yLim=(0, ax2Limits), xLabel='Cycle', xLim=(0, 30),
                 curveColor=color, markerFColor=color, markerEColor=color,
                 paramsList=self.tableDynamic, sampleName=f'{key}')
 
-            plt.subplots_adjust(
-                wspace=0.015, hspace=0.060,
-                top=0.970, bottom=0.070,
-                left=0.060, right=0.985)
+        drawBars(
+            sampleName=self.sample_keys,
+            axes=axFit, data=self.tableDynamic,
+            colors=self.colors_samples,
+            h='', z=2)
 
-            if show:
-                plt.show()
-            if save:
-                dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
-                self.figGraphs.savefig(
-                    f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
-                    facecolor='w', dpi=600)
-                print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
+        plt.subplots_adjust(
+            wspace=0.015, hspace=0.150,
+            top=0.970, bottom=0.070,
+            left=0.060, right=0.985)
 
-    def drawBars(
-            sampleName,
-            axes, data,
-            colors, h, z, a=.9, textSize=12,
-    ):
-
-        def legendLabel():
-            axes.bar(
-                space_samples * x.min() - 10,
-                height=0, yerr=0,
-                color='w', edgecolor='#383838',
-                width=bin_width, hatch='///', alpha=a, linewidth=.5,
-                label="Young's modulus", zorder=z)
-            axes.bar(
-                space_samples * x.min() - 10,
-                height=0, yerr=0,
-                color='w', edgecolor='#383838',
-                width=bin_width, hatch='', alpha=a, linewidth=.5,
-                label='Peak stress', zorder=z)
-
-            legend = axes.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=12)
-            legend.get_frame().set_facecolor('w')
-            legend.get_frame().set_edgecolor('lightsteelblue')
-            legend.get_frame().set_linewidth(0.)
-
-        def configPlot(ax, yTitle, yLim, xLim):
-            ax.tick_params(axis='x', labelsize=10, length=4)
-            ax.tick_params(axis='y', which='both', labelsize=9, pad=1, length=0)
-
-            ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
-            ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
-
-            ax.set_xlabel('Formulation')
-            ax.set_xticks([])
-            ax.set_xlim(xLim)
-
-            ax.set_yticks([])
-            ax.set_ylim(yLim)
-
-        axes2 = axes.twinx()
-
-        posList, labelsList = [], []
-        bin_width, space_samples = 1, 3
-
-        x = np.arange(space_samples * len(sampleName))
-        limYM, limPeak = (0, barsLimits[0]), (0, barsLimits[1])
-
-        configPlot(axes,
-                   "Young modulus (Pa)", (0, barsLimits[0]),
-                   (x.min() - bin_width - 1, x.max() - 1))
-        configPlot(axes2,
-                   "Stress peak (Pa)", (0, barsLimits[1]),
-                   (x.min() - bin_width - 1, x.max() - 1))
-
-        for sample in range(len(sampleName)):
-            slope, slope_err = data[sample]['Slope (Pa)'], data[sample]['Slope (Pa) err']
-            peak, peak_err = data[sample]['Tensile stress (Pa)'], data[sample]['Tensile stress (Pa) err']
-
-            axes.bar(
-                space_samples * x[sample] - bin_width,
-                height=slope, yerr=0,
-                color=colors[sample], edgecolor='#383838',
-                width=bin_width, hatch='///', alpha=a, linewidth=.5,
-                zorder=z)
-            axes.errorbar(
-                x=space_samples * x[sample] - bin_width, y=slope, yerr=slope_err,
-                color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
-                zorder=3)
-            axes.text(
-                space_samples * x[sample] - bin_width - .0,
-                slope + slope_err + limYM[1] * .085,
-                f'{slope:.{0}f} ± {slope_err:.{0}f} Pa',
-                va='center', ha='center', rotation=90,
-                color='#383838', fontsize=textSize)
-
-            axes2.bar(
-                space_samples * x[sample],
-                height=peak, yerr=0,
-                color=colors[sample], edgecolor='#383838',
-                width=bin_width, hatch='', alpha=a, linewidth=.5,
-                zorder=z)
-            axes2.errorbar(
-                x=space_samples * x[sample], y=peak, yerr=peak_err,
-                color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
-                zorder=3)
-            axes2.text(
-                space_samples * x[sample] - .0,
-                peak + peak_err + limPeak[1] * .085,
-                f'{peak:.{0}f} ± {peak_err:.{0}f} Pa',
-                va='center', ha='center', rotation=90,
-                color='#383838', fontsize=textSize)
-
-            posList.append(space_samples * x[sample] - bin_width / 2), labelsList.append(f'{sampleName[sample]}')
-
-        axes.set_xticks(posList), axes.set_xticklabels(labelsList, rotation=0), legendLabel()
+        if show:
+            plt.show()
+        if save:
+            dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
+            self.figGraphs.savefig(
+                f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
+                facecolor='w', dpi=600)
+            print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
 
 
 class BreakageCompression:
@@ -1620,7 +1654,6 @@ class BreakageCompression:
                 count in zip(self.sample_keys, self.number_samples)
                 for _ in range(count)]
             for sample_type, path in zip(sample_labels, self.dataPath):
-
                 segments = getSegments(
                     pd.read_excel(path),
                     init_SegIndex='62|1' if 'seg' in path else '61|1',
@@ -1679,9 +1712,9 @@ class BreakageCompression:
             height = self.breakageData[f'{formula} height to break']
             force = self.breakageData[f'{formula} force to break']
 
-            return (np.mean(height, axis=0),                   # Strain
+            return (np.mean(height, axis=0),  # Strain
                     np.mean(force, axis=0) / (35 / 1000) + 5,  # Stress
-                    np.std(force, axis=0) / (35 / 1000))       # Stress err
+                    np.std(force, axis=0) / (35 / 1000))  # Stress err
 
         def drawBreakage(
                 sampleName,

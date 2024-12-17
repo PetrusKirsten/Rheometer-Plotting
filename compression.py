@@ -76,7 +76,8 @@ def starch(folderPath):
 
     starches.plotGraphs(
         130,
-        # [1000, 1300],
+        150,
+        [180, 28],
         show=False
     )
 
@@ -322,8 +323,8 @@ def blends(folderPath):
 
 
 if __name__ == '__main__':
-    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
-    path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     starch(path)
     # starch_kappa(path)
