@@ -110,7 +110,6 @@ class Recovery:
             def dict_OscFreqSweeps(labels):
                 return {label: ([], [], [], []) for label in labels}
 
-            self.sample_keys = list(self.names_samples.keys())
             if len(self.sample_keys) != len(self.number_samples):
                 raise ValueError('The length of "number_samples" must match the number of sample keys.')
             sample_labels = [
@@ -165,6 +164,8 @@ class Recovery:
         self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
         self.recoveryPCT, self.freqsRecovery, self.tan_delta = [], [], []
         self.ratioBef, self.ratioAft, self.ratioReady = None, None, False
+        self.sample_keys = list(self.names_samples.keys())
+
         # data reading
         self.data, self.listBefore, self.listAfter = getData()
         self.listBefore = appendData(self.listBefore)
@@ -457,148 +458,173 @@ class Recovery:
 
         def drawBars(
                 title, axes, lim,
+                sampleName,
                 data_before, data_after,
                 colors, dec, scale_correction=None,
-                a=.9, h='', z=1
+                textSize=12, a=.9, h='', z=1
         ):
+
+            def legendLabel():
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
+                    label='After', zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label='Before', zorder=z)
+
+                legend = axes.legend(
+                    loc='upper center',
+                    ncols=3,
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=12)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('lightsteelblue')
+                legend.get_frame().set_linewidth(0.)
 
             def configPlot(ax, yTitle, yLim, xLim):
                 ax.tick_params(axis='y', labelsize=10, length=4)
                 ax.tick_params(
-                    axis='x', which='both', labelsize=9, pad=1, length=0,
-                    labeltop=False, top=False,
-                    labelbottom=False, bottom=False)
+                    axis='x', which='both', labelsize=10, pad=1)  #, length=0)
+                    # labeltop=False, top=False,
+                    # labelbottom=False, bottom=True)
 
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
                 ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
-                ax.set_yticks([]), ax.set_ylim(xLim), ax.set_xlim(yLim)
-                ax.set_xlabel(yTitle, size=10, labelpad=5, loc='center')
 
-                ax.xaxis.tick_top(), ax.xaxis.set_label_position('top')
-                ax.xaxis.set_major_locator(MultipleLocator(yLim[1] / 5))
-                ax.xaxis.set_minor_locator(MultipleLocator(yLim[1] / 20))
+                ax.set_yticks([]), ax.set_ylim(yLim), ax.set_xlim(xLim)
+                ax.set_xlabel(yTitle, size=10, labelpad=5, loc='center')
+                ax.xaxis.set_label_position('top')
 
             samples = [d['Sample'] for d in data_before]
             key = "n'" if "n'" in title else "k'"
-            height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
             height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
+            height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
 
+            posList, labelsList = [], []
             bin_width, space_samples, space_break = 1, 2.5, 2
             x = np.arange(space_samples * len(data_before))
-            posList, labelsList = [], []
 
             configPlot(axes, title, (.0, lim), (x.min() - bin_width - .5, x.max()))
+            if title == "$n'$":
+                legendLabel()
 
             # data from before
-            for i in range(len(height_bef)):
+            for sample in range(len(height_bef)):
                 text_scale_correction = 1
                 if scale_correction is not None:
-                    height_bef[i] = height_bef[i] / 10 if i == scale_correction else height_bef[i]
-                    height_bef_err[i] = height_bef_err[i] / 10 if i == scale_correction else height_bef_err[i]
-                    text_scale_correction = 10 if i == scale_correction else 1
+                    height_bef[sample] = height_bef[sample] / 10 if sample == scale_correction else height_bef[sample]
+                    height_bef_err[sample] = height_bef_err[sample] / 10 if sample == scale_correction else height_bef_err[sample]
+                    text_scale_correction = 10 if sample == scale_correction else 1
 
-                axes.barh(
-                    space_samples * x[i] - bin_width / space_break,
-                    width=height_bef[i] if height_bef_err[i] < height_bef[i] / 2 else 0, xerr=0,
-                    color=colors[i], edgecolor='#383838', alpha=a,
-                    height=bin_width, hatch=h, linewidth=.5,
+                axes.bar(
+                    space_samples * x[sample] - bin_width / space_break,
+                    height=height_bef[sample] if height_bef_err[sample] < height_bef[sample] / 2 else 0, xerr=0,
+                    color=colors[sample], edgecolor='#383838', alpha=a,
+                    width=bin_width, hatch=h, linewidth=.5,
                     zorder=z)
                 axes.errorbar(
-                    y=space_samples * x[i] - bin_width / space_break,
-                    x=height_bef[i] if height_bef_err[i] < height_bef[i] / 2 else 0,
-                    xerr=height_bef_err[i] if height_bef_err[i] < height_bef[i] / 2 else 0,
+                    x=space_samples * x[sample] - bin_width / space_break,
+                    y=height_bef[sample] if height_bef_err[sample] < height_bef[sample] / 2 else 0,
+                    yerr=height_bef_err[sample] if height_bef_err[sample] < height_bef[sample] / 2 else 0,
                     color='#383838', alpha=.9,
                     linewidth=1, capsize=3, capthick=1.05, zorder=3)
 
-                text = (f'{ceil(height_bef[i] * text_scale_correction * 100) / 100:.{dec}f} '
-                        f'± {ceil(height_bef_err[i] * text_scale_correction * 100) / 100:.{dec}f}')
+                text = (f'{ceil(height_bef[sample] * text_scale_correction * 100) / 100:.{dec}f} '
+                        f'± {ceil(height_bef_err[sample] * text_scale_correction * 100) / 100:.{dec}f}')
                 axes.text(
-                    lim * .975,
-                    space_samples * x[i] + 0.1 - bin_width / space_break,
-                    text if height_bef_err[i] < height_bef[i] / 2 else 'Not fitted',
-                    va='center_baseline', ha='left',
-                    color='#383838', fontsize=9)
+                    space_samples * x[sample] - bin_width / space_break,
+                    height_bef[sample] + height_bef_err[sample] + lim * .1,
+                    text if height_bef_err[sample] < height_bef[sample] / 2 else 'Not fitted',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=textSize)
+
             # data from after
-            for i in range(len(height_aft)):
+            for sample in range(len(height_aft)):
                 text_scale_correction = 1
                 if scale_correction is not None:
-                    height_aft[i] = height_aft[i] / 10 if i == scale_correction else height_aft[i]
-                    height_aft_err[i] = height_aft_err[i] / 10 if i == scale_correction else height_aft_err[i]
-                    text_scale_correction = 10 if i == scale_correction else 1
+                    height_aft[sample] = height_aft[sample] / 10 if sample == scale_correction else height_aft[sample]
+                    height_aft_err[sample] = height_aft_err[sample] / 10 if sample == scale_correction else height_aft_err[sample]
+                    text_scale_correction = 10 if sample == scale_correction else 1
 
-                axes.barh(
-                    space_samples * x[i] + bin_width / space_break,
-                    width=height_aft[i] if height_aft_err[i] < height_aft[i] / 2 else 0, xerr=0,
-                    color=colors[i], edgecolor='#383838', alpha=a,
-                    height=bin_width, hatch='////', linewidth=.5,
+                axes.bar(
+                    space_samples * x[sample] + bin_width / space_break,
+                    height=height_aft[sample] if height_aft_err[sample] < height_aft[sample] / 2 else 0, xerr=0,
+                    color=colors[sample], edgecolor='#383838', alpha=a,
+                    width=bin_width, hatch='////', linewidth=.5,
                     zorder=2)
                 axes.errorbar(
-                    y=space_samples * x[i] + bin_width / space_break,
-                    x=height_aft[i] if height_aft_err[i] < height_aft[i] / 2 else 0,
-                    xerr=height_aft_err[i] if height_aft_err[i] < height_aft[i] / 2 else 0,
+                    x=space_samples * x[sample] + bin_width / space_break,
+                    y=height_aft[sample] if height_aft_err[sample] < height_aft[sample] / 2 else 0,
+                    yerr=height_aft_err[sample] if height_aft_err[sample] < height_aft[sample] / 2 else 0,
                     color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
                     zorder=3)
 
-                text = (f'{ceil(height_aft[i] * text_scale_correction * 100) / 100:.{dec}f} '
-                        f'± {ceil(height_aft_err[i] * text_scale_correction * 100) / 100:.{dec}f}')
+                text = (f'{ceil(height_aft[sample] * text_scale_correction * 100) / 100:.{dec}f} '
+                        f'± {ceil(height_aft_err[sample] * text_scale_correction * 100) / 100:.{dec}f}')
                 axes.text(
-                    lim * .975,
-                    space_samples * x[i] + 0.1 + bin_width / space_break,
-                    text if height_aft_err[i] < height_aft[i] / 2 else 'Not fitted',
-                    va='center_baseline', ha='left',
-                    color='#383838', fontsize=9)
+                    space_samples * x[sample] + bin_width / space_break,
+                    height_aft[sample] + height_aft_err[sample] + lim * .1,
+                    text if height_aft_err[sample] < height_aft[sample] / 2 else 'Not fitted',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=textSize)
 
-                if i == 0:
-                    posList.append(space_samples * x[i] - bin_width / space_break)
-                    posList.append(space_samples * x[i] + bin_width / space_break)
-                    labelsList.append('Before'), labelsList.append('After')
-                if scale_correction is not None and i == scale_correction:
-                    posList.append(space_samples * x[i]), labelsList.append('10×')
+                posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')
 
-            axes.yaxis.tick_right()
-            axes.set_yticks(posList)
-            axes.set_yticklabels(labelsList)
-            # axes.invert_yaxis()
-            axes.invert_xaxis()
+                if scale_correction is not None and sample == scale_correction:
+                    posList.append(space_samples * x[sample]), labelsList.append('10×')
+
+            axes.set_xticks(posList), axes.set_xticklabels(labelsList)
 
         # figure configs
-        fig = plt.figure(figsize=(5, 9), facecolor='snow')
+        fig = plt.figure(figsize=(13, 6), facecolor='snow')
         fig.canvas.manager.set_window_title(self.fileName + ' - Bars plots')
-        gs = GridSpec(4, 1, height_ratios=[1, 1, 1, 1], width_ratios=[1])
+        gs = GridSpec(1, 4, height_ratios=[1], width_ratios=[1, 1, 1, 1])
 
         axBar1, axBar2, axBar3, axBar4 = (
             fig.add_subplot(gs[0, 0]),
-            fig.add_subplot(gs[1, 0]),
-            fig.add_subplot(gs[2, 0]),
-            fig.add_subplot(gs[3, 0]))
+            fig.add_subplot(gs[0, 1]),
+            fig.add_subplot(gs[0, 2]),
+            fig.add_subplot(gs[0, 3]))
 
         fig.suptitle(f'')
 
         # bars data
         drawBars(  # First table
             "$n'$", axBar1, limits[0],
+            self.sample_keys,
             self.dataFittingBef_stor, self.dataFittingAft_stor, self.colors_samples, dec=2,
             scale_correction=corrections[0], z=1)
 
         drawBars(  # Second table
             "$G_0'$ (Pa)", axBar2, limits[1],
-            self.dataFittingBef_stor, self.dataFittingAft_stor, self.colors_samples, dec=1,
+            self.sample_keys,
+            self.dataFittingBef_stor, self.dataFittingAft_stor, self.colors_samples, dec=0,
             scale_correction=corrections[1], z=1)
 
         drawBars(  # Third table
             "$G_0''$ (Pa)", axBar3, limits[2],
-            self.dataFittingBef_loss, self.dataFittingAft_loss, self.colors_samples, dec=1,
+            self.sample_keys,
+            self.dataFittingBef_loss, self.dataFittingAft_loss, self.colors_samples, dec=0,
             scale_correction=corrections[2], z=1)
 
         drawBars(  # Fourth table
             "Loss factor $G_0''\,/\,G_0'$", axBar4, limits[3],
+            self.sample_keys,
             self.ratioBef, self.ratioAft, self.colors_samples, dec=1,
             scale_correction=corrections[3], z=1)
 
         plt.subplots_adjust(
-            wspace=0.015, hspace=0.15,
-            top=0.97, bottom=0.07,
-            left=0.045, right=0.880)
+            wspace=.015, hspace=.150,
+            top=.950, bottom=.050,
+            left=.015, right=.985)
 
         if show:
             plt.show()
@@ -609,7 +635,11 @@ class Recovery:
                 facecolor='w', dpi=600)
             print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
-    def plotHeatMap(self, show=True, save=False):
+    def plotHeatMap(
+            self,
+            show=True,
+            save=False
+    ):
 
         def insertKey(keys):
             keys = list(keys)
