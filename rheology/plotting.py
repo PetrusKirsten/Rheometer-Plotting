@@ -1215,7 +1215,7 @@ class DynamicCompression:
             names_samples, number_samples, colors_samples
     ):
 
-        def readData(cut=500):
+        def readData():
 
             def getSegments(dataframe, segInit, segEnd):
                 time = dataframe['t in s'].to_numpy()
@@ -1252,11 +1252,11 @@ class DynamicCompression:
             dict_data = {}
             for sample_type in self.names_samples:
                 dict_data[f'{sample_type} time'] = \
-                    [downsampler(s['time'], cut) for s in self.names_samples[sample_type]]
+                    [s['time'] for s in self.names_samples[sample_type]]
                 dict_data[f'{sample_type} height'] = \
-                    [downsampler(s['height'], cut) for s in self.names_samples[sample_type]]
+                    [s['height'] for s in self.names_samples[sample_type]]
                 dict_data[f'{sample_type} force'] = \
-                    [downsampler(s['force'], cut) for s in self.names_samples[sample_type]]
+                    [s['force'] for s in self.names_samples[sample_type]]
 
             return dict_data, dict_Compression(self.sample_keys)
 
@@ -1280,7 +1280,7 @@ class DynamicCompression:
 
         # data reading
         self.dynamicData, self.listDynamic = readData()
-        appendData()
+        # appendData()
 
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
@@ -1296,16 +1296,18 @@ class DynamicCompression:
     ):
 
         def getValues():
-            time, height, stress = (self.listDynamic[key][0][0],
-                                    self.listDynamic[key][1][0],
-                                    self.listDynamic[key][2][0])
+            # time = self.dynamicData[f'{formula} time']
+            force, height = self.dynamicData[f'{formula} force'], self.dynamicData[f'{formula} height']
 
-            hMax_mean = np.max(height, axis=1)
-            self.means_hMax.append(hMax_mean.tolist())
+            minLen = min(len(replicate) for replicate in force)
+            cutForce = [downsampler(replicate, minLen) for replicate in force]
 
-            return (np.mean(time, axis=0),
-                    np.mean(stress, axis=0) / (35 / 1000) + 7.5,
-                    np.std(stress, axis=0) / (35 / 1000))
+            # hMax_mean = np.max(force, axis=1)
+            # self.means_hMax.append(hMax_mean.tolist())
+
+            return (np.mean(cutForce, axis=0) / (35 / 1000) + 7.5,
+                    np.std(cutForce, axis=0) / (35 / 1000))
+            # np.mean(time, axis=0))
 
         def drawDynamicStress(
                 sampleName,
@@ -1342,7 +1344,6 @@ class DynamicCompression:
                 ax.tick_params(axis='y', colors=axisColor, which='both')
                 ax.yaxis.set_major_locator(MultipleLocator(50))
                 ax.yaxis.set_minor_locator(MultipleLocator(25))
-
 
             configPlot()
 
@@ -1399,9 +1400,9 @@ class DynamicCompression:
                 ax.tick_params(axis='y', colors=axisColor, which='both')
 
             # reshape to each cycle
-            target_size = 29 * (len(y) // 29)
+            target_size = 30 * (len(y) // 30)
             y, yErr = y[:target_size], yErr[:target_size]
-            y, yErr = y.reshape(29, -1), yErr.reshape(29, -1)
+            y, yErr = y.reshape(30, -1), yErr.reshape(30, -1)
 
             # find and append maxs and mins
             listYmax, listYmaxErr = [], []
@@ -1591,22 +1592,22 @@ class DynamicCompression:
                                           self.figGraphs.add_subplot(self.gsGraphs[1, 0]),
                                           self.figGraphs.add_subplot(self.gsGraphs[1, 1]))
 
-        for key, color in zip(self.listDynamic, self.colors_samples):
-            timeMean, stressMean, stressErrMean = getValues()
+        for formula, color in zip(self.sample_keys, self.colors_samples):
+            stressMean, stressErrMean = getValues()
 
             drawDynamicStress(
                 ax=axOscillation, axisColor='#303030',
                 x=np.linspace(0, 60, len(stressMean)), y=stressMean, yErr=stressErrMean,
                 axTitle='', yLabel='Stress (Pa)', yLim=(0, ax1Limits), xLabel='Time (s)', xLim=(0, 60),
                 curveColor=color, markerStyle='o', markerFColor=color, markerEColor='#303030',
-                sampleName=f'{key}')
+                sampleName=f'{formula}')
 
             self.tableDynamic = drawCycles(
                 ax=axCycles, axisColor='#303030',
                 y=stressMean, yErr=stressErrMean,
                 axTitle='', yLabel='Stress peak (Pa)', yLim=(0, ax2Limits), xLabel='Cycle', xLim=(0, 30),
                 curveColor=color, markerFColor=color, markerEColor=color,
-                paramsList=self.tableDynamic, sampleName=f'{key}')
+                paramsList=self.tableDynamic, sampleName=f'{formula}')
 
         drawBars(
             sampleName=self.sample_keys,
