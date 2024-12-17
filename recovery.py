@@ -280,7 +280,7 @@ def starch(folderPath):
         show=False, save=False)
 
     starches.plotBars(
-        [0.6, 1800, 150, 30],
+        [0.6, 1800, 150, 25],
         [None, 4, None, None],
         show=False, save=False)
 
@@ -298,6 +298,18 @@ def starch_kappa(folderPath):
         folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-1.xlsx",
         folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-3_off.xlsx",
         folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-4.xlsx",
+
+        # St + kCar/CL_14
+        folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-2.xlsx",
+        folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-3.xlsx",
+        folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-4.xlsx",
+
+        # St + kCar/CL_28
+        folderPath + "/10St_kC_CL_28/St_kC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/10St_kC_CL_28/St_kC_CL_28-viscoelasticRecovery-2.xlsx",
+        folderPath + "/10St_kC_CL_28/St_kC_CL_28-viscoelasticRecovery-3.xlsx",
+
     ]
 
     keySamples = {
@@ -306,9 +318,9 @@ def starch_kappa(folderPath):
         # CL 7
         'St + kCar/CL_7': [],
         # CL 14
-        # 'St + kCar/CL_14': [], TBD
+        'St + kCar/CL_14': [],
         # CL 28
-        # 'St + kCar/CL_28': [], TBD
+        'St + kCar/CL_28': [],
     }
     nSamples = [
         # No CL
@@ -316,9 +328,9 @@ def starch_kappa(folderPath):
         # CL 7
         3,
         # CL 14
-        # 4, TBD
+        4,
         # CL 28
-        # 4, TBD
+        3,
     ]
     cSamples = [
         # No CL
@@ -326,9 +338,9 @@ def starch_kappa(folderPath):
         # CL 7
         'mediumvioletred',
         # CL 14
-        # 'r', TBD
+        '#A251C3',
         # CL 28
-        # 'k', TBD
+        '#773AD1',
     ]
 
     starches = Recovery(
@@ -341,11 +353,11 @@ def starch_kappa(folderPath):
         show=False, save=False)
 
     starches.plotBars(
-        [0.5, 10000, 500, 30],
+        [0.18, 12500, 800, 30],
         [None, 4, None, None],
         show=False, save=False)
 
-    starches.plotHeatMap(show=False, save=True)
+    starches.plotHeatMap(show=False, save=False)
 
 
 def starch_iota(folderPath):
@@ -366,6 +378,12 @@ def starch_iota(folderPath):
         folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-2.xlsx",
         folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-3.xlsx",
         folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-4.xlsx",
+
+        # St + iCar/CL_28
+        folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-2.xlsx",
+        folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-3.xlsx",
+
     ]
 
     keySamples = {
@@ -376,7 +394,7 @@ def starch_iota(folderPath):
         # CL 14
         'St + iCar/CL_14': [],
         # CL 28
-        # 'St + iCar/CL_28': [] TBD
+        'St + iCar/CL_28': []
     }
     nSamples = [
         # No CL
@@ -386,7 +404,7 @@ def starch_iota(folderPath):
         # CL 14
         4,
         # CL 28
-        # 4, TBD
+        3,
     ]
     cSamples = [
         # No CL
@@ -396,7 +414,7 @@ def starch_iota(folderPath):
         # CL 14
         '#1941B8',
         # CL 28
-        # 'k', TBD
+        '#00934E',
     ]
 
     starches = Recovery(
@@ -409,11 +427,11 @@ def starch_iota(folderPath):
         show=False, save=False)
 
     starches.plotBars(
-        [0.5, 2500, 500, 30],
+        [0.18, 3000, 250, 18],
         [None, 4, None, None],
         show=False, save=False)
 
-    starches.plotHeatMap(show=False, save=True)
+    starches.plotHeatMap(show=False, save=False)
 
 
 if __name__ == '__main__':
@@ -423,8 +441,8 @@ if __name__ == '__main__':
     # kappa(path)
     # iota(path)
     # blends(path)
-    starch(path)
-    # starch_kappa(path)
-    # starch_iota(path)
+    # starch(path)
+    starch_kappa(path)
+    starch_iota(path)
 
     plt.show()

@@ -492,9 +492,7 @@ class Recovery:
             def configPlot(ax, yTitle, yLim, xLim):
                 ax.tick_params(axis='y', labelsize=10, length=4)
                 ax.tick_params(
-                    axis='x', which='both', labelsize=10, pad=1)  #, length=0)
-                    # labeltop=False, top=False,
-                    # labelbottom=False, bottom=True)
+                    axis='x', which='both', labelsize=10, pad=1)
 
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
                 ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
@@ -581,7 +579,7 @@ class Recovery:
                 if scale_correction is not None and sample == scale_correction:
                     posList.append(space_samples * x[sample]), labelsList.append('10×')
 
-            axes.set_xticks(posList), axes.set_xticklabels(labelsList)
+            axes.set_xticks(posList), axes.set_xticklabels(labelsList, rotation=45)
 
         # figure configs
         fig = plt.figure(figsize=(13, 6), facecolor='snow')
@@ -622,8 +620,8 @@ class Recovery:
             scale_correction=corrections[3], z=1)
 
         plt.subplots_adjust(
-            wspace=.015, hspace=.150,
-            top=.950, bottom=.050,
+            wspace=.050, hspace=.150,
+            top=.950, bottom=.150,
             left=.015, right=.985)
 
         if show:
