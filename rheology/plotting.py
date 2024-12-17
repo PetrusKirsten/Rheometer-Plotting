@@ -1721,7 +1721,8 @@ class BreakageCompression:
                 ax, x, y, yErr,
                 axTitle, yLabel, yLim, xLabel, xLim, axisColor,
                 curveColor, markerStyle, markerFColor, markerEColor, markerEWidth=0.5,
-                linearFitting=False, startVal=6, endVal=16, tableData=None):
+                linearFitting=False, startVal=6, endVal=16, tableData=None
+        ):
 
             def legendLabel():
                 legend = ax.legend(
@@ -1807,8 +1808,8 @@ class BreakageCompression:
                 ax.set_yscale('linear')
                 ax.set_ylim(yLim)
                 ax.tick_params(axis='y', colors=axisColor, which='both')
-                ax.yaxis.set_major_locator(MultipleLocator(200 if not linearFitting else 100))
-                ax.yaxis.set_minor_locator(MultipleLocator(50 if not linearFitting else 50))
+                ax.yaxis.set_major_locator(MultipleLocator(200))
+                ax.yaxis.set_minor_locator(MultipleLocator(50))
 
             if sampleName == '0St/CL':
                 startVal, endVal = 15, 25
@@ -1891,7 +1892,13 @@ class BreakageCompression:
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
                     label='Peak stress', zorder=z)
 
-                legend = axes.legend(loc='upper left', fancybox=False, frameon=True, framealpha=0.9, fontsize=12)
+                legend = axes.legend(
+                    loc='upper center',
+                    ncols=3,
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=12)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('lightsteelblue')
                 legend.get_frame().set_linewidth(0.)
@@ -1940,7 +1947,7 @@ class BreakageCompression:
                     color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
                     zorder=3)
                 axes.text(
-                    space_samples * x[sample] - bin_width - .0,
+                    space_samples * x[sample] - bin_width,
                     slope + slope_err + limYM[1] * .085,
                     f'{slope:.{0}f} ± {slope_err:.{0}f} Pa',
                     va='center', ha='center', rotation=90,
@@ -1957,7 +1964,7 @@ class BreakageCompression:
                     color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
                     zorder=3)
                 axes2.text(
-                    space_samples * x[sample] - .0,
+                    space_samples * x[sample],
                     peak + peak_err + limPeak[1] * .085,
                     f'{peak:.{0}f} ± {peak_err:.{0}f} Pa',
                     va='center', ha='center', rotation=90,
@@ -1977,7 +1984,7 @@ class BreakageCompression:
                 sampleName=f'{formula}',
                 ax=axBreak, axisColor='k',
                 x=strain, y=stress, yErr=stressErr,
-                axTitle='', yLabel='Stress (Pa)', yLim=(0, 1500), xLabel='Strain', xLim=(0, 100),
+                axTitle='', yLabel='Stress (Pa)', yLim=(0, sLimits), xLabel='Strain', xLim=(0, 100),
                 curveColor=color, markerStyle='o', markerFColor=color, markerEColor='k',
                 linearFitting=True, tableData=self.tableCompression)
 
