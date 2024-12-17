@@ -62,20 +62,12 @@ def starch(folderPath):
         '#E36E34',
     ]
 
-    # starches = DynamicCompression(
-    #     filePath, 'starches',
-    #     keySamples, nSamples, cSamples)
-    #
-    # starches.plotGraphs(
-    #     130,
-    #     show=False
-    # )
     starches = DynamicCompression(
         filePath, 'starches',
         keySamples, nSamples, cSamples)
 
     starches.plotGraphs(
-        130,
+        150,
         150,
         [180, 28],
         show=False
@@ -137,21 +129,14 @@ def starch_kappa(folderPath):
         '#773AD1',
     ]
 
-    # starches = DynamicCompression(
-    #     filePath, 'starches',
-    #     keySamples, nSamples, cSamples)
-    #
-    # starches.plotGraphs(
-    #     130,
-    #     show=False
-    # )
-    starches_kappa = BreakageCompression(
+    starches_kappa = DynamicCompression(
         filePath, 'starches_kappa',
         keySamples, nSamples, cSamples)
 
     starches_kappa.plotGraphs(
-        130,
-        [2500, 1650],
+        200,
+        200,
+        [300, 25],
         show=False
     )
 
@@ -216,109 +201,15 @@ def starch_iota(folderPath):
         '#00934E',
     ]
 
-    starches_iota = BreakageCompression(
-        filePath, 'iota',
+    starches_iota = DynamicCompression(
+        filePath, 'starches_iota',
         keySamples, nSamples, cSamples)
 
     starches_iota.plotGraphs(
-        130,
-        [750, 700],
+        100,
+        100,
+        [150, 20],
         show=False
-    )
-
-
-def blends(folderPath):
-    filePath = [
-        # St
-        folderPath + "/10St/10_0WSt-viscRec_1.xlsx",
-        folderPath + "/10St/10_0WSt-viscRec_2.xlsx",
-
-        # St + kCar
-        folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_2a.xlsx",
-        folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_3a.xlsx",
-        # folderPath + "/10St_kC/10_0WSt_kCar-viscoelasticRecovery-Flow_4a.xlsx",
-
-        # St + iCar
-        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_2.xlsx",
-        # folderPath + "10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_1.xlsx",
-        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_3.xlsx",
-        folderPath + "/10St_iC/10_0WSt_iCar-viscoRecoveryandFlow_4.xlsx",
-
-        # St/CL_7
-        folderPath + "/10St_CL_7/10_0St_CL-recovery-1.xlsx",
-        # folderPath + "/10St_CL_7/10_0St_CL-recovery-2.xlsx",
-        folderPath + "/10St_CL_7/10_0St_CL-recovery-3.xlsx",
-
-        # St + kCar/CL_7
-        folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-1.xlsx",
-        folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-3_off.xlsx",
-        folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-4.xlsx",
-
-        # St + iCar/CL_7
-        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-1.xlsx",
-        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-2.xlsx",
-        folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-3.xlsx",
-
-        # St/CL_14
-        folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-2.xlsx",
-        folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-3.xlsx",
-        folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-4.xlsx",
-
-        # St + iCar/CL_14
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-1.xlsx",
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-2.xlsx",
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-3.xlsx",
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-4.xlsx",
-
-        # St/CL_28
-        folderPath + "/10St_CL_28/St_CL_28-viscoelasticRecovery-1.xlsx",
-        folderPath + "/10St_CL_28/St_CL_28-viscoelasticRecovery-2.xlsx",
-        folderPath + "/10St_CL_28/St_CL_28-viscoelasticRecovery-3.xlsx",
-        folderPath + "/10St_CL_28/St_CL_28-viscoelasticRecovery-4.xlsx",
-    ]
-
-    keySamples = {
-        # No CL
-        'St': [], 'St + kCar': [], 'St + iCar': [],
-        # CL 7
-        'St/CL_7': [], 'St + kCar/CL_7': [], 'St + iCar/CL_7': [],
-        # CL 14
-        'St/CL_14': [],  # 'St + kCar/CL_14': [], TBD
-        'St + iCar/CL_14': [],
-        # CL 28
-        'St/CL_28': [],
-        # 'St + kCar/CL_28': [], TBD
-        # 'St + iCar/CL_28': [] TBD
-    }
-    nSamples = [
-        # No CL
-        2, 2, 3,
-        # CL 7
-        2, 3, 3,
-        # CL 14
-        4, 4,
-        # CL 28
-        4,
-    ]
-    cSamples = [
-        # No CL
-        'silver', 'hotpink', 'lightskyblue',
-        # CL 7
-        'grey', 'mediumvioletred', 'royalblue',
-        # CL 14
-        'dimgrey', 'r',
-        # CL 28
-        'k',
-    ]
-
-    blends = Flow(
-        filePath, 'blends',
-        keySamples, nSamples, cSamples)
-
-    blends.plotShearFlow(
-        f'Shear stress (Pa)', (0, 500),
-        f'Shear stress (Pa)', (0, 250),
     )
 
 
@@ -327,8 +218,8 @@ if __name__ == '__main__':
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     starch(path)
-    # starch_kappa(path)
-    # starch_iota(path)
+    starch_kappa(path)
+    starch_iota(path)
 
     # blends(path)
 

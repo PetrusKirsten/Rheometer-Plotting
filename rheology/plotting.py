@@ -1286,7 +1286,7 @@ class DynamicCompression:
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
         plt.style.use('seaborn-v0_8-ticks')
         self.figGraphs = plt.figure(figsize=(16, 9), facecolor='snow')
-        self.gsGraphs = GridSpec(2, 2, height_ratios=[1, 1.5], width_ratios=[1, 1])
+        self.gsGraphs = GridSpec(2, 2, height_ratios=[1, 1.8], width_ratios=[1, 1])
         self.figGraphs.canvas.manager.set_window_title(self.fileName + ' - Compression')
 
     def plotGraphs(
@@ -1315,7 +1315,14 @@ class DynamicCompression:
                 strain=False, lineStyle='', logScale=False
         ):
             def legendLabel():
-                legend = ax.legend(fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+                legend = ax.legend(
+                    loc='upper right',
+                    ncols=6,
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=10,
+                    markerscale=1.75)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('whitesmoke')
 
@@ -1333,6 +1340,9 @@ class DynamicCompression:
                 ax.set_yscale('log' if logScale else 'linear')
                 ax.set_ylim(yLim)
                 ax.tick_params(axis='y', colors=axisColor, which='both')
+                ax.yaxis.set_major_locator(MultipleLocator(50))
+                ax.yaxis.set_minor_locator(MultipleLocator(25))
+
 
             configPlot()
 
