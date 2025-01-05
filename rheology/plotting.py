@@ -446,7 +446,7 @@ class Recovery:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
             fig.savefig(
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Elastic and viscous moduli' + '.png',
-                facecolor='w', dpi=600)
+                facecolor='w', dpi=150)
             print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
     def plotBars(
@@ -469,14 +469,14 @@ class Recovery:
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
-                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
-                    label='After', zorder=z)
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label='Before', zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
-                    width=bin_width, hatch='', alpha=a, linewidth=.5,
-                    label='Before', zorder=z)
+                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
+                    label='After', zorder=z)
 
                 legend = axes.legend(
                     loc='upper center',
@@ -574,15 +574,17 @@ class Recovery:
                     va='center', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
-                posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')
+                # posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')
 
                 if scale_correction is not None and sample == scale_correction:
-                    posList.append(space_samples * x[sample]), labelsList.append('10×')
+                    posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]} (10×)')
+                else:
+                    posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')
 
             axes.set_xticks(posList), axes.set_xticklabels(labelsList, rotation=45)
 
         # figure configs
-        fig = plt.figure(figsize=(13, 6), facecolor='snow')
+        fig = plt.figure(figsize=(18, 6), facecolor='snow')
         fig.canvas.manager.set_window_title(self.fileName + ' - Bars plots')
         gs = GridSpec(1, 4, height_ratios=[1], width_ratios=[1, 1, 1, 1])
 
@@ -610,7 +612,7 @@ class Recovery:
         drawBars(  # Third table
             "$G_0''$ (Pa)", axBar3, limits[2],
             self.sample_keys,
-            self.dataFittingBef_loss, self.dataFittingAft_loss, self.colors_samples, dec=0,
+            self.dataFittingBef_loss, self.dataFittingAft_loss, self.colors_samples, dec=1,
             scale_correction=corrections[2], z=1)
 
         drawBars(  # Fourth table
@@ -630,7 +632,7 @@ class Recovery:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
             fig.savefig(
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Bars plots' + '.png',
-                facecolor='w', dpi=600)
+                facecolor='w', dpi=150)
             print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
     def plotHeatMap(
@@ -692,7 +694,7 @@ class Recovery:
                 plt.show()
             if save:
                 dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
-                fig.savefig(f'{dirSave}' + f'\\{title[:3]}' + '.png', facecolor='w', dpi=600)
+                fig.savefig(f'{dirSave}' + f'\\{title[:3]}' + '.png', facecolor='w', dpi=150)
                 print(f'\n\n· Heatmap {title} chart saved at:\n{dirSave}.')
 
         drawMap(
@@ -965,7 +967,7 @@ class Flow:
                 linestyle='',
                 label=f'{sampleName}', zorder=3)
 
-            legendLabel()
+            # legendLabel()
 
             return listRows
 
@@ -1009,7 +1011,7 @@ class Flow:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
             fig.savefig(
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Flow shearing' + '.png',
-                facecolor='w', dpi=600)
+                facecolor='w', dpi=150)
             print(f'\n\n· Flow shearing charts saved at:\n{dirSave}.')
 
     def plotFits(
@@ -1023,6 +1025,37 @@ class Flow:
                 axes, data,
                 colors, a, z
         ):
+            def legendLabel():
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='////', alpha=a, linewidth=.5,
+                    label='$\\tau_0$', zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    label='$\\tau_e$', zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label='$\lambda$', zorder=z)
+
+                legend = axes.legend(
+                    loc='upper center',
+                    ncols=3,
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=12)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('lightsteelblue')
+                legend.get_frame().set_linewidth(0.)
+
             def configPlot(ax, yTitle, yLim):
                 ax.set_title(title, size=10, color='k')
 
@@ -1063,8 +1096,8 @@ class Flow:
                     space_samples * x[i] - bin_width - .15,
                     kPrime[i] + kPrime_err[i] + cteLimits[0] * .075,
                     f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=12)
 
                 axes.bar(
                     space_samples * x[i],
@@ -1080,8 +1113,8 @@ class Flow:
                     space_samples * x[i] - .15,
                     nPrime[i] + nPrime_err[i] + cteLimits[0] * .075,
                     f'{nPrime[i]:.{1}f} ± {nPrime_err[i]:.{1}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=12)
 
                 axes3.bar(
                     space_samples * x[i] + bin_width,
@@ -1090,22 +1123,22 @@ class Flow:
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
                     zorder=z)
                 axes3.errorbar(
-                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=2.8,  # TODO err
+                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],  # TODO err
                     color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
                     zorder=3)
                 axes3.text(
                     space_samples * x[i] + bin_width - .15,
-                    sigmaZero[i] + 2.8 + cteLimits[1] * .075,
-                    f'{sigmaZero[i]:.{1}f} ± {2.8:.{1}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    sigmaZero[i] + sigmaZero_err[i] + cteLimits[1] * .075,
+                    f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=12)
 
-                posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(
-                    space_samples * x[i] + bin_width)
-                labelsList.append("$\\tau_0$"), labelsList.append("$\\tau_e$"), labelsList.append("$\lambda$")
+                posList.append(space_samples * x[i])
+                labelsList.append(samples[i])
 
             axes.set_xticks(posList)
             axes.set_xticklabels(labelsList)
+            legendLabel()
 
             return nPrime
 
@@ -1113,6 +1146,37 @@ class Flow:
                 title, axes,
                 data, colors, a, z
         ):
+            def legendLabel():
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='////', alpha=a, linewidth=.5,
+                    label="$k'$", zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    label="$n'$", zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label="$\sigma_0$", zorder=z)
+
+                legend = axes.legend(
+                    loc='upper center',
+                    ncols=3,
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=12)
+                legend.get_frame().set_facecolor('w')
+                legend.get_frame().set_edgecolor('lightsteelblue')
+                legend.get_frame().set_linewidth(0.)
+
             def configPlot(ax, yTitle, yLim):
                 ax.set_title(title, size=10, color='k')
                 if yTitle == "$k'$":
@@ -1163,8 +1227,8 @@ class Flow:
                     space_samples * x[i] - bin_width - .15,
                     kPrime[i] + kPrime_err[i] + stepLimits[0] * .075,
                     f'{kPrime[i]:.{2}f} ± {kPrime_err[i]:.{2}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=12)
 
                 axes2.bar(
                     space_samples * x[i],
@@ -1180,8 +1244,8 @@ class Flow:
                     space_samples * x[i] - .15,
                     nPrime[i] + nPrime_err[i] + stepLimits[1] * .075,
                     f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=12)
 
                 axes3.bar(
                     space_samples * x[i] + bin_width,
@@ -1197,15 +1261,15 @@ class Flow:
                     space_samples * x[i] + bin_width - .15,
                     sigmaZero[i] + sigmaZero_err[i] + stepLimits[2] * .075,
                     f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
-                    va='center', ha='left', rotation=90,
-                    color='#383838', fontsize=9)
+                    va='center', ha='center', rotation=90,
+                    color='#383838', fontsize=12)
 
-                posList.append(space_samples * x[i] - bin_width), posList.append(space_samples * x[i]), posList.append(
-                    space_samples * x[i] + bin_width)
-                labelsList.append("$k'$"), labelsList.append("$n'$"), labelsList.append("$\sigma_0$")
+                posList.append(space_samples * x[i])
+                labelsList.append(samples[i])
 
             axes.set_xticks(posList)
             axes.set_xticklabels(labelsList)
+            legendLabel()
 
             return nPrime
 
@@ -1216,12 +1280,12 @@ class Flow:
         axCteSS, axStepSS = axs[0], axs[1]
 
         _ = drawThixoData(
-            '',
+            'Constant shear rate',
             axCteSS, self.tableCteSS,
             self.colors_samples, a=.85, z=2)
 
         _ = drawHBdata(
-            '',
+            'Steps shear rate',
             axStepSS, self.tableStepSS,
             self.colors_samples, a=.85, z=2)
 
@@ -1232,7 +1296,7 @@ class Flow:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
             fig.savefig(
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Flow shearing fit parameters' + '.png',
-                facecolor='w', dpi=600)
+                facecolor='w', dpi=150)
             print(f'\n\n· Flow fit parameters charts saved at:\n{dirSave}.')
 
 
@@ -1648,7 +1712,7 @@ class DynamicCompression:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
             self.figGraphs.savefig(
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
-                facecolor='w', dpi=600)
+                facecolor='w', dpi=150)
             print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
 
 
@@ -2043,5 +2107,5 @@ class BreakageCompression:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
             self.figGraphs.savefig(
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
-                facecolor='w', dpi=600)
+                facecolor='w', dpi=150)
             print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')

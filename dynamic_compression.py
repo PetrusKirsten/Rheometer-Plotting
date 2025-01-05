@@ -13,7 +13,7 @@ def starch(folderPath):
 
         # St/CL_7
         # folderPath + "/10St_CL_7/10_0St_CaCl2.xlsx",
-        folderPath + "/10St_CL_7/10_0St_CL-compression-1_seg.xlsx",
+        # folderPath + "/10St_CL_7/10_0St_CL-compression-1_seg.xlsx",
         folderPath + "/10St_CL_7/10_0St_CL-compression-2_seg.xlsx",
         folderPath + "/10St_CL_7/10_0St_CL-compression-3_seg.xlsx",
 
@@ -45,7 +45,7 @@ def starch(folderPath):
         # No CL
         4,
         # CL 7
-        3,
+        2,
         # CL 14
         6,
         # CL 28
@@ -70,7 +70,7 @@ def starch(folderPath):
         150,
         150,
         [180, 28],
-        show=False
+        show=False, save=True
     )
 
 
@@ -137,7 +137,7 @@ def starch_kappa(folderPath):
         200,
         200,
         [300, 25],
-        show=False
+        show=False, save=True
     )
 
 
@@ -209,18 +209,18 @@ def starch_iota(folderPath):
         100,
         100,
         [150, 20],
-        show=False
+        show=False, save=True
     )
 
 
 if __name__ == '__main__':
-    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
-    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     starch(path)
-    starch_kappa(path)
-    starch_iota(path)
+    # starch_kappa(path)
+    # starch_iota(path)
 
     # blends(path)
 
-    plt.show()
+    # plt.show()

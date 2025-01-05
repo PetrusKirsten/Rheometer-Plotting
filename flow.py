@@ -142,7 +142,7 @@ def starch(folderPath):
         # CL 14
         'St/CL_14': [],
         # CL 28
-        'St/CL_28': [],
+        'St/CL_21': [],
     }
     nSamples = [
         # No CL
@@ -191,6 +191,18 @@ def starch_kappa(folderPath):
         folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-1.xlsx",
         # folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-3_off.xlsx",
         # folderPath + "/10St_kC_CL_7/10_0St_kC_CL-recovery-4.xlsx",
+
+        # St + kCar/CL_14
+        folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-2.xlsx",
+        folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-4.xlsx",
+
+        # St + kCar/CL_28
+        folderPath + "/10St_kC_CL_28/St_kC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/10St_kC_CL_28/St_kC_CL_28-viscoelasticRecovery-2.xlsx",
+        folderPath + "/10St_kC_CL_28/St_kC_CL_28-viscoelasticRecovery-3.xlsx",
+
     ]
 
     keySamples = {
@@ -199,9 +211,9 @@ def starch_kappa(folderPath):
         # CL 7
         'St + kCar/CL_7': [],
         # CL 14
-        # 'St + kCar/CL_14': [], TBD
+        'St + kCar/CL_14': [],
         # CL 28
-        # 'St + kCar/CL_28': [], TBD
+        'St + kCar/CL_21': [],
     }
     nSamples = [
         # No CL
@@ -209,9 +221,9 @@ def starch_kappa(folderPath):
         # CL 7
         1,
         # CL 14
-        # 4, TBD
+        2,
         # CL 28
-        # 4, TBD
+        3,
     ]
     cSamples = [
         # No CL
@@ -219,9 +231,9 @@ def starch_kappa(folderPath):
         # CL 7
         'mediumvioletred',
         # CL 14
-        # 'r', TBD
+        '#A251C3',
         # CL 28
-        # 'k', TBD
+        '#773AD1',
     ]
 
     starches_kappas = Flow(
@@ -229,12 +241,12 @@ def starch_kappa(folderPath):
         keySamples, nSamples, cSamples)
 
     starches_kappas.plotShearFlow(
-        f'Shear stress (Pa)', (0, 600),
-        f'Shear stress (Pa)', (0, 200),
+        f'Shear stress (Pa)', (0, 1000),
+        f'Shear stress (Pa)', (0, 350),
         show=False, save=True
     )
     starches_kappas.plotFits(
-        [2000, 60], [75, 1, 120],
+        [2000, 40], [75, 1, 175],
         show=False, save=True
     )
 
@@ -252,11 +264,17 @@ def starch_iota(folderPath):
         folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-2.xlsx",
         folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-3.xlsx",
 
-        # St + iCar/CL_14 TODO: see what happened to the cte shear rate
+        # St + iCar/CL_14
         folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-1.xlsx",
         # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-2.xlsx",
         folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-3.xlsx",
         # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-4.xlsx",
+
+        # St + iCar/CL_28
+        folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-1.xlsx",
+        folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-2.xlsx",
+        folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-3.xlsx",
+
     ]
 
     keySamples = {
@@ -267,7 +285,7 @@ def starch_iota(folderPath):
         # CL 14
         'St + iCar/CL_14': [],
         # CL 28
-        # 'St + iCar/CL_28': [] TBD
+        'St + iCar/CL_21': []
     }
     nSamples = [
         # No CL
@@ -277,17 +295,17 @@ def starch_iota(folderPath):
         # CL 14
         2,
         # CL 28
-        # 4, TBD
+        3,
     ]
     cSamples = [
         # No CL
-        'lightskyblue',
+        '#34D4CF',
         # CL 7
-        'royalblue',
+        '#2B7ED4',
         # CL 14
-        'mediumblue',
+        '#1941B8',
         # CL 28
-        # 'k', TBD
+        '#00934E',
     ]
 
     starches_iotas = Flow(
@@ -300,7 +318,7 @@ def starch_iota(folderPath):
         show=False, save=True
     )
     starches_iotas.plotFits(
-        [2000, 60], [180, 1, 120],
+        [750, 50], [225, 1, 150],
         show=False, save=True
     )
 
@@ -401,15 +419,14 @@ def blends(folderPath):
 
 
 if __name__ == '__main__':
-    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
-
-    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     # kappa(path)
     # iota(path)
     # starch(path)
-    # starch_kappa(path)
-    starch_iota(path)
+    starch_kappa(path)
+    # starch_iota(path)
 
     # blends(path)
 
