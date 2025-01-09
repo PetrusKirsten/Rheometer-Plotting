@@ -1031,13 +1031,13 @@ class Flow:
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='////', alpha=a, linewidth=.5,
-                    label='$\\tau_0$', zorder=z)
+                    label='$\\sigma_0$', zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='....', alpha=a, linewidth=.5,
-                    label='$\\tau_e$', zorder=z)
+                    label='$\\sigma_\\text{eq}$', zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
@@ -1051,7 +1051,8 @@ class Flow:
                     fancybox=False,
                     frameon=True,
                     framealpha=0.9,
-                    fontsize=12)
+                    fontsize=12,
+                    markerscale=3)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('lightsteelblue')
                 legend.get_frame().set_linewidth(0.)
@@ -1069,7 +1070,7 @@ class Flow:
 
             axes3 = axes.twinx()
 
-            bin_width, space_samples = 0.8, 3
+            bin_width, space_samples, bin_gap = 0.8, 3, .075
             x = np.arange(space_samples * len(data))
 
             configPlot(axes, "$\\tau_0$ (Pa) and $\\tau_e$ (Pa)", (0, cteLimits[0]))
@@ -1083,21 +1084,22 @@ class Flow:
             posList, labelsList = [], []
             for i in range(len(kPrime)):
                 axes.bar(
-                    space_samples * x[i] - bin_width,
+                    space_samples * x[i] - bin_width - bin_gap,
                     height=kPrime[i], yerr=0,
                     color=colors[i], edgecolor='#383838',
                     width=bin_width, hatch='////', alpha=a, linewidth=.5,
                     zorder=z)
                 axes.errorbar(
-                    x=space_samples * x[i] - bin_width, y=kPrime[i], yerr=kPrime_err[i],
+                    x=space_samples * x[i] - bin_width - bin_gap,
+                    y=kPrime[i], yerr=kPrime_err[i],
                     color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
                     zorder=3)
                 axes.text(
-                    space_samples * x[i] - bin_width - .15,
-                    kPrime[i] + kPrime_err[i] + cteLimits[0] * .075,
-                    f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f}',
-                    va='center', ha='center', rotation=90,
-                    color='#383838', fontsize=12)
+                    space_samples * x[i] - bin_width - bin_gap,
+                    kPrime[i] + kPrime_err[i] + cteLimits[0] * .025,
+                    f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f} Pa',
+                    va='bottom', ha='center', rotation=90,
+                    color='#383838', fontsize=13)
 
                 axes.bar(
                     space_samples * x[i],
@@ -1106,32 +1108,34 @@ class Flow:
                     width=bin_width, hatch='....', alpha=a, linewidth=.5,
                     zorder=z)
                 axes.errorbar(
-                    x=space_samples * x[i], y=nPrime[i], yerr=nPrime_err[i],
+                    x=space_samples * x[i],
+                    y=nPrime[i], yerr=nPrime_err[i],
                     color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
                     zorder=3)
                 axes.text(
-                    space_samples * x[i] - .15,
-                    nPrime[i] + nPrime_err[i] + cteLimits[0] * .075,
-                    f'{nPrime[i]:.{1}f} ± {nPrime_err[i]:.{1}f}',
-                    va='center', ha='center', rotation=90,
-                    color='#383838', fontsize=12)
+                    space_samples * x[i],
+                    nPrime[i] + nPrime_err[i] + cteLimits[0] * .025,
+                    f'{nPrime[i]:.{1}f} ± {nPrime_err[i]:.{1}f} Pa',
+                    va='bottom', ha='center', rotation=90,
+                    color='#383838', fontsize=13)
 
                 axes3.bar(
-                    space_samples * x[i] + bin_width,
+                    space_samples * x[i] + bin_width + bin_gap,
                     height=sigmaZero[i], yerr=0,
                     color=colors[i], edgecolor='#383838',
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
                     zorder=z)
                 axes3.errorbar(
-                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],  # TODO err
+                    x=space_samples * x[i] + bin_width + bin_gap,
+                    y=sigmaZero[i], yerr=sigmaZero_err[i],
                     color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
                     zorder=3)
                 axes3.text(
-                    space_samples * x[i] + bin_width - .15,
-                    sigmaZero[i] + sigmaZero_err[i] + cteLimits[1] * .075,
+                    space_samples * x[i] + bin_width + bin_gap,
+                    sigmaZero[i] + sigmaZero_err[i] + cteLimits[1] * .025,
                     f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
-                    va='center', ha='center', rotation=90,
-                    color='#383838', fontsize=12)
+                    va='bottom', ha='center', rotation=90,
+                    color='#383838', fontsize=13)
 
                 posList.append(space_samples * x[i])
                 labelsList.append(samples[i])
@@ -1151,20 +1155,20 @@ class Flow:
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label="$\sigma_0$", zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
                     width=bin_width, hatch='////', alpha=a, linewidth=.5,
-                    label="$k'$", zorder=z)
+                    label="$K$", zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='....', alpha=a, linewidth=.5,
-                    label="$n'$", zorder=z)
-                axes.bar(
-                    space_samples * x.min() - 10,
-                    height=0, yerr=0,
-                    color='w', edgecolor='#383838',
-                    width=bin_width, hatch='', alpha=a, linewidth=.5,
-                    label="$\sigma_0$", zorder=z)
+                    label="$n$", zorder=z)
 
                 legend = axes.legend(
                     loc='upper center',
@@ -1172,7 +1176,8 @@ class Flow:
                     fancybox=False,
                     frameon=True,
                     framealpha=0.9,
-                    fontsize=12)
+                    fontsize=12,
+                    markerscale=2)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('lightsteelblue')
                 legend.get_frame().set_linewidth(0.)
@@ -1198,7 +1203,7 @@ class Flow:
 
             axes2, axes3 = axes.twinx(), axes.twinx()
 
-            bin_width, space_samples = 0.8, 3
+            bin_width, space_samples, bin_gap = .8, 3, .075
             x = np.arange(space_samples * len(data))
 
             configPlot(axes, "$k'$", (0, stepLimits[0]))
@@ -1213,56 +1218,56 @@ class Flow:
             posList, labelsList = [], []
 
             for i in range(len(kPrime)):
-                axes.bar(
-                    space_samples * x[i] - bin_width,
-                    height=kPrime[i], yerr=0,
-                    color=colors[i], edgecolor='#383838',
-                    width=bin_width, hatch='////', alpha=a, linewidth=.5,
-                    zorder=z)
-                axes.errorbar(
-                    x=space_samples * x[i] - bin_width, y=kPrime[i], yerr=kPrime_err[i],
-                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
-                    zorder=3)
-                axes.text(
-                    space_samples * x[i] - bin_width - .15,
-                    kPrime[i] + kPrime_err[i] + stepLimits[0] * .075,
-                    f'{kPrime[i]:.{2}f} ± {kPrime_err[i]:.{2}f}',
-                    va='center', ha='center', rotation=90,
-                    color='#383838', fontsize=12)
-
-                axes2.bar(
-                    space_samples * x[i],
-                    height=nPrime[i], yerr=0,
-                    color=colors[i], edgecolor='#383838',
-                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
-                    zorder=z)
-                axes2.errorbar(
-                    x=space_samples * x[i], y=nPrime[i], yerr=nPrime_err[i],
-                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
-                    zorder=3)
-                axes2.text(
-                    space_samples * x[i] - .15,
-                    nPrime[i] + nPrime_err[i] + stepLimits[1] * .075,
-                    f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}',
-                    va='center', ha='center', rotation=90,
-                    color='#383838', fontsize=12)
-
                 axes3.bar(
-                    space_samples * x[i] + bin_width,
+                    space_samples * x[i] - bin_width - bin_gap,
                     height=sigmaZero[i], yerr=0,
                     color=colors[i], edgecolor='#383838',
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
                     zorder=z)
                 axes3.errorbar(
-                    x=space_samples * x[i] + bin_width, y=sigmaZero[i], yerr=sigmaZero_err[i],
+                    x=space_samples * x[i] - bin_width - bin_gap, y=sigmaZero[i], yerr=sigmaZero_err[i],
                     color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
                     zorder=3)
                 axes3.text(
-                    space_samples * x[i] + bin_width - .15,
-                    sigmaZero[i] + sigmaZero_err[i] + stepLimits[2] * .075,
-                    f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f}',
-                    va='center', ha='center', rotation=90,
-                    color='#383838', fontsize=12)
+                    space_samples * x[i] - bin_width - bin_gap,
+                    sigmaZero[i] + sigmaZero_err[i] + stepLimits[2] * .025,
+                    f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f} Pa',
+                    va='bottom', ha='center', rotation=90,
+                    color='#383838', fontsize=13)
+
+                axes.bar(
+                    space_samples * x[i],
+                    height=kPrime[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='////', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes.errorbar(
+                    x=space_samples * x[i], y=kPrime[i], yerr=kPrime_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes.text(
+                    space_samples * x[i],
+                    kPrime[i] + kPrime_err[i] + stepLimits[0] * .025,
+                    f'{kPrime[i]:.{2}f} ± {kPrime_err[i]:.{2}f} Pa·s$^n$',
+                    va='bottom', ha='center', rotation=90,
+                    color='#383838', fontsize=13)
+
+                axes2.bar(
+                    space_samples * x[i] + bin_width + bin_gap,
+                    height=nPrime[i], yerr=0,
+                    color=colors[i], edgecolor='#383838',
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    zorder=z)
+                axes2.errorbar(
+                    x=space_samples * x[i] + bin_width + bin_gap, y=nPrime[i], yerr=nPrime_err[i],
+                    color='#383838', alpha=.99, linewidth=1, capsize=4, capthick=1.05,
+                    zorder=3)
+                axes2.text(
+                    space_samples * x[i] + bin_width + bin_gap,
+                    nPrime[i] + nPrime_err[i] + stepLimits[1] * .025,
+                    f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}',
+                    va='bottom', ha='center', rotation=90,
+                    color='#383838', fontsize=13)
 
                 posList.append(space_samples * x[i])
                 labelsList.append(samples[i])

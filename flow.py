@@ -419,13 +419,13 @@ def blends(folderPath):
 
 
 if __name__ == '__main__':
-    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
-    path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     # kappa(path)
     # iota(path)
-    # starch(path)
-    starch_kappa(path)
+    starch(path)
+    # starch_kappa(path)
     # starch_iota(path)
 
     # blends(path)
