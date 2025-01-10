@@ -439,8 +439,8 @@ if __name__ == '__main__':
     # kappa(path)
     # iota(path)
     # blends(path)
-    # starch(path)
-    starch_kappa(path)
+    starch(path)
+    # starch_kappa(path)
     # starch_iota(path)
 
     plt.show()

@@ -3,7 +3,7 @@ import pandas as pd
 import seaborn as sns
 
 from pathlib import Path
-from math import ceil, sqrt
+from math import ceil, sqrt, degrees
 
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
@@ -167,6 +167,7 @@ class Recovery:
         self.dataFittingBef_stor, self.dataFittingAft_stor = [], []
         self.dataFittingBef_loss, self.dataFittingAft_loss = [], []
 
+        self.lossFactorBef, self.lossFactorAft = [], []
         self.recoveryPCT, self.freqsRecovery = [], []
         self.sample_keys = list(self.names_samples.keys())
 
@@ -267,29 +268,35 @@ class Recovery:
         def powerLaw(omega, kPrime, nPrime):
             return kPrime * (omega ** nPrime)
 
-        def viscPerElas(data1, data2):
+        def ratio(data1, data2):
             result = []
 
             for entry1 in data1:
+
                 for entry2 in data2:
+
                     if entry1['Sample'] == entry2['Sample']:
+
                         if entry2["k'"] == 0:
                             new_entry = {
                                 'Sample': entry1['Sample'],
                                 "k'": None,
                                 "± k'": None}
+
                         else:
                             ratio_G = entry1["k'"] / entry2["k'"]
                             ratio_G_err = ratio_G * sqrt(
                                 (entry1["± k'"] / entry1["k'"]) ** 2 + (entry2["± k'"] / entry2["k'"]) ** 2)
 
-                            rounded_ratio_k_prime = ceil(ratio_G * 10) / 10
-                            rounded_uncertainty_k_prime = ceil(ratio_G_err * 10) / 10
+                            # ratio_G = ceil(ratio_G * 10) / 10
+                            # ratio_G_err = ceil(ratio_G_err * 10) / 10
 
                             new_entry = {
                                 'Sample': entry1['Sample'],
-                                "k'": rounded_ratio_k_prime,
-                                "± k'": rounded_uncertainty_k_prime}
+                                "k'": ratio_G,
+                                "± k'": ratio_G_err
+                            }
+
                         result.append(new_entry)
 
             return result
@@ -399,7 +406,7 @@ class Recovery:
             meanStorage, meanStorageErr = round(meanStorage, -1), round(meanStorageErr, -1)
             self.meanBefore.append(meanStorage), self.meanBeforeErr.append(meanStorageErr)
 
-            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.05)
+            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.025)
             self.meanDeltaBefore.append(meanDelta), self.meanDeltaBeforeErr.append(meanDeltaErr)
 
             self.dataFittingBef_stor, self.dataFittingBef_loss = drawPlot(  # Before axes
@@ -420,7 +427,7 @@ class Recovery:
             meanStorage, meanStorageErr = round(meanStorage, -1), round(meanStorageErr, -1)
             self.meanAfter.append(meanStorage), self.meanAfterErr.append(meanStorageErr)
 
-            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.05)
+            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.025)
             self.meanDeltaAfter.append(meanDelta), self.meanDeltaAfterErr.append(meanDeltaErr)
 
             self.dataFittingAft_stor, self.dataFittingAft_loss = drawPlot(  # After axes
@@ -439,10 +446,14 @@ class Recovery:
 
             self.recoveryPCT.append(((np.array(recoveryAft) / np.array(recoveryBef)) * 100).tolist())
 
+        self.lossFactorBef = ratio(self.dataFittingBef_loss, self.dataFittingBef_stor)
+        self.lossFactorAft = ratio(self.dataFittingAft_loss, self.dataFittingAft_stor)
+
         plt.subplots_adjust(
             wspace=0.015, hspace=0.060,
             top=0.970, bottom=0.070,
             left=0.060, right=0.985)
+
         if show:
             plt.show()
         if save:
@@ -525,25 +536,28 @@ class Recovery:
                         height_bef_err[sample]
                     text_scale_correction = 10 if sample == scale_correction else 1
 
+                height = ceil(height_bef[sample] * text_scale_correction * 10**dec) / 10**dec
+                stddev = ceil(height_bef_err[sample] * text_scale_correction * 10**dec) / 10**dec
+                notFit = stddev < height / 2
+
                 axes.bar(
                     space_samples * x[sample] - bin_width / space_samples - bin_gap,
-                    height=height_bef[sample] if height_bef_err[sample] < height_bef[sample] / 2 else 0, xerr=0,
+                    height=height if notFit else 0, xerr=0,
                     color=colors[sample], edgecolor='#383838', alpha=a,
                     width=bin_width, hatch=h, linewidth=.5,
                     zorder=z)
                 axes.errorbar(
                     x=space_samples * x[sample] - bin_width / space_samples - bin_gap,
-                    y=height_bef[sample] if height_bef_err[sample] < height_bef[sample] / 2 else 0,
-                    yerr=height_bef_err[sample] if height_bef_err[sample] < height_bef[sample] / 2 else 0,
+                    y=height if notFit else 0,
+                    yerr=stddev if notFit else 0,
                     color='#383838', alpha=.9,
                     linewidth=1, capsize=3, capthick=1.05, zorder=3)
 
-                text = (f'{ceil(height_bef[sample] * text_scale_correction * 100) / 100:.{dec}f} '
-                        f'± {ceil(height_bef_err[sample] * text_scale_correction * 100) / 100:.{dec}f} {unit}')
+                text = f'{height:.{dec}f} ± {stddev:.{dec}f} {unit}'
                 axes.text(
                     space_samples * x[sample] - bin_width / space_samples - bin_gap,
-                    height_bef[sample] + height_bef_err[sample] + lim * .025,
-                    text if height_bef_err[sample] < height_bef[sample] / 2 else 'Not fitted',
+                    height + stddev + lim * .025 if notFit else lim * .025,
+                    text if notFit else 'Not fitted',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
@@ -556,25 +570,28 @@ class Recovery:
                         height_aft_err[sample]
                     text_scale_correction = 10 if sample == scale_correction else 1
 
+                height = ceil(height_aft[sample] * text_scale_correction * 10**dec) / 10**dec
+                stddev = ceil(height_aft_err[sample] * text_scale_correction * 10**dec) / 10**dec
+                notFit = stddev < height / 2
+
                 axes.bar(
                     space_samples * x[sample] + bin_width / space_samples + bin_gap,
-                    height=height_aft[sample] if height_aft_err[sample] < height_aft[sample] / 2 else 0, xerr=0,
+                    height=height if notFit else 0, xerr=0,
                     color=colors[sample], edgecolor='#383838', alpha=a,
                     width=bin_width, hatch='////', linewidth=.5,
                     zorder=2)
                 axes.errorbar(
                     x=space_samples * x[sample] + bin_width / space_samples + bin_gap,
-                    y=height_aft[sample] if height_aft_err[sample] < height_aft[sample] / 2 else 0,
-                    yerr=height_aft_err[sample] if height_aft_err[sample] < height_aft[sample] / 2 else 0,
+                    y=height if notFit else 0,
+                    yerr=stddev if notFit else 0,
                     color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
                     zorder=3)
 
-                text = (f'{ceil(height_aft[sample] * text_scale_correction * 100) / 100:.{dec}f} '
-                        f'± {ceil(height_aft_err[sample] * text_scale_correction * 100) / 100:.{dec}f} {unit}')
+                text = f'{height:.{dec}f} ± {stddev:.{dec}f} {unit}'
                 axes.text(
                     space_samples * x[sample] + bin_width / space_samples + bin_gap,
-                    height_aft[sample] + height_aft_err[sample] + lim * .025,
-                    text if height_aft_err[sample] < height_aft[sample] / 2 else 'Not fitted',
+                    height + stddev + lim * .025 if notFit else lim * .025,
+                    text if notFit else 'Not fitted',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
@@ -605,7 +622,7 @@ class Recovery:
             "Power law expoent \t $n'$", axBar1,
             self.sample_keys,
             self.dataFittingBef_stor, self.dataFittingAft_stor,
-            self.colors_samples, dec=2,
+            self.colors_samples, dec=3,
             scale_correction=corrections[0], z=1)
 
         drawBars(  # Second table
@@ -621,21 +638,19 @@ class Recovery:
             self.dataFittingBef_loss, self.dataFittingAft_loss,
             self.colors_samples, dec=1,
             scale_correction=corrections[2], z=1)
-
-        deltaBefore = [
-            {"k'": k, "± k'": err}
-            for k, err in zip(self.meanDeltaBefore, self.meanDeltaBeforeErr)
-        ]
-        deltaAfter = [
-            {"k'": k, "± k'": err}
-            for k, err in zip(self.meanDeltaAfter, self.meanDeltaAfterErr)
-        ]
-
+        # deltaBefore = [
+        #     {"k'": k, "± k'": err}
+        #     for k, err in zip(self.meanDeltaBefore, self.meanDeltaBeforeErr)
+        # ]
+        # deltaAfter = [
+        #     {"k'": k, "± k'": err}
+        #     for k, err in zip(self.meanDeltaAfter, self.meanDeltaAfterErr)
+        # ]
         drawBars(  # Fourth table
             "Loss factor \t $ tan\,\delta = G_0''\,/\,G_0'$", axBar4,
             self.sample_keys,
-            deltaBefore, deltaAfter,
-            self.colors_samples, dec=2,
+            self.lossFactorBef, self.lossFactorAft,
+            self.colors_samples, dec=3,
             scale_correction=corrections[3], z=1)
 
         plt.subplots_adjust(
@@ -1040,7 +1055,10 @@ class Flow:
                 facecolor='w', dpi=150)
             print(f'\n\n· Flow shearing charts saved at:\n{dirSave}.')
 
-    def plotFits(self, show=True, save=False):
+    def plotFits(
+            self,
+            show=True, save=False
+    ):
 
         def drawThixoData(
                 title,
@@ -1125,7 +1143,7 @@ class Flow:
                 axes.text(
                     space_samples * x[i] - bin_width - bin_gap,
                     tau0[i] + tau0_err[i] + cteLimits[0] * .025,
-                    f'{tau0[i]:.{1}f} ± {tau0_err[i]:.{1}f} Pa',
+                    f'{tau0[i]:.{0}f} ± {tau0_err[i]:.{0}f} Pa',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1143,7 +1161,7 @@ class Flow:
                 axes.text(
                     space_samples * x[i],
                     tauE[i] + tauE_err[i] + cteLimits[0] * .025,
-                    f'{tauE[i]:.{1}f} ± {tauE_err[i]:.{1}f} Pa',
+                    f'{tauE[i]:.{0}f} ± {tauE_err[i]:.{0}f} Pa',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1269,7 +1287,7 @@ class Flow:
                 axes.text(
                     space_samples * x[i] - bin_width - bin_gap,
                     sigmaZero[i] + sigmaZero_err[i] + stepLimits[0] * .025,
-                    f'{sigmaZero[i]:.{1}f} ± {sigmaZero_err[i]:.{1}f} Pa',
+                    f'{sigmaZero[i]:.{0}f} ± {sigmaZero_err[i]:.{0}f} Pa',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1286,7 +1304,7 @@ class Flow:
                 axes2.text(
                     space_samples * x[i],
                     kPrime[i] + kPrime_err[i] + stepLimits[1] * .025,
-                    f'{kPrime[i]:.{2}f} ± {kPrime_err[i]:.{2}f} Pa·s$^n$',
+                    f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f} Pa·s$^n$',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
