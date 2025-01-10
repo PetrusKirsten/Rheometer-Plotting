@@ -311,7 +311,13 @@ class Recovery:
                 tableDataStor=None, tableDataLoss=None
         ):
             def legendLabel(ax):
-                legend = ax.legend(loc='lower right', fancybox=False, frameon=True, framealpha=0.9, fontsize=9)
+                legend = ax.legend(
+                    loc='lower right',
+                    fancybox=False,
+                    frameon=True,
+                    framealpha=0.9,
+                    fontsize=11,
+                    markerscale=1.3)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('whitesmoke')
 
@@ -381,7 +387,7 @@ class Recovery:
                 linestyle='',
                 label=f'{sampleName}', zorder=3)
 
-            if axTitle == 'After breakage':
+            if axTitle == 'Before breakage':
                 legendLabel(axTop)
 
             return tableDataStor, tableDataLoss
