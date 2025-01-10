@@ -277,14 +277,13 @@ def starch(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
-        [0.6, 1800, 150, 25],
         [None, 4, None, None],
-        show=False, save=True)
+        show=False, save=False)
 
-    starches.plotHeatMap(show=False, save=True)
+    # starches.plotHeatMap(show=False, save=False)
 
 
 def starch_kappa(folderPath):
@@ -350,14 +349,13 @@ def starch_kappa(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
-        [0.18, 12500, 850, 30],
         [None, None, None, None],
-        show=False, save=True)
+        show=False, save=False)
 
-    starches.plotHeatMap(show=False, save=True)
+    # starches.plotHeatMap(show=False, save=False)
 
 
 def starch_iota(folderPath):
@@ -435,14 +433,14 @@ def starch_iota(folderPath):
 
 
 if __name__ == '__main__':
-    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
-    path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"   # Personal
+    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"   # Personal
 
     # kappa(path)
     # iota(path)
     # blends(path)
     # starch(path)
-    # starch_kappa(path)
-    starch_iota(path)
+    starch_kappa(path)
+    # starch_iota(path)
 
-    # plt.show()
+    plt.show()

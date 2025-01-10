@@ -122,7 +122,7 @@ def starch(folderPath):
         folderPath + "/10St_CL_7/10_0St_CL-recovery-3.xlsx",
 
         # St/CL_14
-        folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-1.xlsx",
+        # folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-1.xlsx",
         folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-2.xlsx",
         folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-3.xlsx",
         folderPath + "/10St_CL_14/St_CL_14-viscoelasticRecovery-4.xlsx",
@@ -150,7 +150,7 @@ def starch(folderPath):
         # CL 7
         2,
         # CL 14
-        4,
+        3,
         # CL 28
         4,
     ]
@@ -175,7 +175,6 @@ def starch(folderPath):
         show=False, save=True
     )
     starches.plotFits(
-        [2000, 60], [75, 1, 120],
         show=False, save=True
     )
 
