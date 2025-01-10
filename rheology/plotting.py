@@ -1440,7 +1440,7 @@ class DynamicCompression:
 
     def plotGraphs(
             self,
-            ax1Limits, ax2Limits, barsLimits,
+            ax1Limits, ax2Limits,
             show=True, save=False
     ):
 
@@ -1476,8 +1476,8 @@ class DynamicCompression:
                     fancybox=False,
                     frameon=True,
                     framealpha=0.9,
-                    fontsize=10,
-                    markerscale=1.75)
+                    fontsize=11,
+                    markerscale=2)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('whitesmoke')
 
@@ -1623,20 +1623,20 @@ class DynamicCompression:
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
+                    label='$\sigma_\\text{0}^\\text{peak}$', zorder=z)
+                axes.bar(
+                    space_samples * x.min() - 10,
+                    height=0, yerr=0,
+                    color='w', edgecolor='#383838',
                     width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
-                    label="Initial stress peak", zorder=z)
+                    label='$\sigma_\\text{eq}^\\text{peak}$', zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='....', alpha=a, linewidth=.5,
-                    label='Eq. stress peak', zorder=z)
-                axes.bar(
-                    space_samples * x.min() - 10,
-                    height=0, yerr=0,
-                    color='w', edgecolor='#383838',
-                    width=bin_width, hatch='', alpha=a, linewidth=.5,
-                    label='Time decay constant', zorder=z)
+                    label='$\lambda$', zorder=z)
 
                 legend = axes.legend(
                     loc='upper center',
@@ -1666,7 +1666,11 @@ class DynamicCompression:
             axes2 = axes.twinx()
 
             posList, labelsList = [], []
-            bin_width, space_samples = 1, 3.5
+            bin_width, space_samples, bin_gap = .8, 3, .075
+            barsLimits = [
+                1.5 * max([sublist[0][0] for sublist in data]),
+                1.5 * max([sublist[0][2] for sublist in data])
+            ]
 
             x = np.arange(space_samples * len(sampleName))
 
@@ -1674,12 +1678,12 @@ class DynamicCompression:
                 axes,
                 "Initial stress peak / Equilibrim stress peak (Pa)",
                 (0, barsLimits[0]),
-                (x.min() - bin_width - 1.5, x.max()))
+                (x.min() - bin_width - 1, x.max()))
             configPlot(
                 axes2,
                 "Time decay constant (1/cycle)",
                 (0, barsLimits[1]),
-                (x.min() - bin_width - 1.5, x.max()))
+                (x.min() - bin_width - 1, x.max()))
 
             for sample in range(len(sampleName)):
                 initialStress, initialStress_err = data[sample][0][0], data[sample][1][0]
@@ -1687,54 +1691,60 @@ class DynamicCompression:
                 timeCte, timeCte_err = data[sample][0][2], data[sample][1][2]
 
                 axes.bar(
-                    space_samples * x[sample] - bin_width,
+                    space_samples * x[sample] - bin_width - bin_gap,
                     height=initialStress, yerr=0,
                     color=colors[sample], edgecolor='#383838',
-                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
+                    width=bin_width, hatch='', alpha=a, linewidth=.5,
                     zorder=z)
                 axes.errorbar(
-                    x=space_samples * x[sample] - bin_width, y=initialStress, yerr=initialStress_err,
+                    x=space_samples * x[sample] - bin_width - bin_gap,
+                    y=initialStress,
+                    yerr=initialStress_err,
                     color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
                     zorder=3)
                 axes.text(
-                    space_samples * x[sample] - bin_width,
-                    initialStress + initialStress_err + barsLimits[0] * .18,
+                    space_samples * x[sample] - bin_width - bin_gap,
+                    initialStress + initialStress_err + barsLimits[0] * .025,
                     f'{initialStress:.{1}f} ± {initialStress_err:.{1}f} Pa',
-                    va='center', ha='center', rotation=90,
+                    va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
                 axes.bar(
                     space_samples * x[sample],
                     height=equilibStress, yerr=0,
                     color=colors[sample], edgecolor='#383838',
-                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
+                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
                     zorder=z)
                 axes.errorbar(
-                    x=space_samples * x[sample], y=equilibStress, yerr=equilibStress_err,
+                    x=space_samples * x[sample],
+                    y=equilibStress,
+                    yerr=equilibStress_err,
                     color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
                     zorder=3)
                 axes.text(
                     space_samples * x[sample],
-                    equilibStress + equilibStress_err + barsLimits[0] * .18,
+                    equilibStress + equilibStress_err + barsLimits[0] * .025,
                     f'{equilibStress:.{1}f} ± {equilibStress_err:.{1}f} Pa',
-                    va='center', ha='center', rotation=90,
+                    va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
                 axes2.bar(
-                    space_samples * x[sample] + bin_width,
+                    space_samples * x[sample] + bin_width + bin_gap,
                     height=timeCte, yerr=0,
                     color=colors[sample], edgecolor='#383838',
-                    width=bin_width, hatch=h, alpha=a, linewidth=.5,
+                    width=bin_width, hatch='....', alpha=a, linewidth=.5,
                     zorder=z)
                 axes2.errorbar(
-                    x=space_samples * x[sample] + bin_width, y=timeCte, yerr=timeCte_err,
+                    x=space_samples * x[sample] + bin_width + bin_gap,
+                    y=timeCte,
+                    yerr=timeCte_err,
                     color='#383838', alpha=.99, linewidth=1, capsize=5, capthick=1.05,
                     zorder=3)
                 axes2.text(
-                    space_samples * x[sample] + bin_width,
-                    timeCte + timeCte_err + barsLimits[1] * .18,
+                    space_samples * x[sample] + bin_width + bin_gap,
+                    timeCte + timeCte_err + barsLimits[1] * .025,
                     f'{timeCte:.{1}f} ± {timeCte_err:.{1}f}',
-                    va='center', ha='center', rotation=90,
+                    va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
                 posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')

@@ -67,9 +67,8 @@ def starch(folderPath):
         keySamples, nSamples, cSamples)
 
     starches.plotGraphs(
-        150,
-        150,
-        [180, 28],
+        100,
+        100,
         show=False, save=False
     )
 
