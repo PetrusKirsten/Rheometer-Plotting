@@ -261,11 +261,11 @@ def starch(folderPath):
     ]
     cSamples = [
         # No CL
-        '#FFE138',
+        '#E1C96B',
         # CL 7
-        '#F1A836',
+        '#FFE138',
         # CL 14
-        '#EA8B35',
+        '#F1A836',
         # CL 28
         '#E36E34',
     ]
@@ -277,13 +277,13 @@ def starch(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=False)
+        show=False, save=True)
 
     starches.plotBars(
         [None, 4, None, None],
-        show=False, save=False)
+        show=False, save=True)
 
-    # starches.plotHeatMap(show=False, save=False)
+    starches.plotHeatMap(show=False, save=True)
 
 
 def starch_kappa(folderPath):
@@ -333,9 +333,9 @@ def starch_kappa(folderPath):
     ]
     cSamples = [
         # No CL
-        'hotpink',
+        '#F780A7',
         # CL 7
-        'mediumvioletred',
+        '#CC69B5',
         # CL 14
         '#A251C3',
         # CL 28
@@ -349,13 +349,13 @@ def starch_kappa(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=False)
+        show=False, save=True)
 
     starches.plotBars(
         [None, None, None, None],
-        show=False, save=False)
+        show=False, save=True)
 
-    # starches.plotHeatMap(show=False, save=False)
+    starches.plotHeatMap(show=False, save=True)
 
 
 def starch_iota(folderPath):
@@ -406,13 +406,13 @@ def starch_iota(folderPath):
     ]
     cSamples = [
         # No CL
-        '#34D4CF',
+        'lightskyblue',
         # CL 7
-        '#2B7ED4',
+        '#62BDC1',
         # CL 14
-        '#1941B8',
+        '#31A887',
         # CL 28
-        '#00934E',
+        '#08653A',
     ]
 
     starches = Recovery(
@@ -426,7 +426,6 @@ def starch_iota(folderPath):
 
     starches.plotBars(
         [0.18, 3000, 250, 18],
-        [None, 4, None, None],
         show=False, save=True)
 
     starches.plotHeatMap(show=False, save=True)
@@ -439,8 +438,8 @@ if __name__ == '__main__':
     # kappa(path)
     # iota(path)
     # blends(path)
-    starch(path)
+    # starch(path)
     # starch_kappa(path)
-    # starch_iota(path)
+    starch_iota(path)
 
     plt.show()

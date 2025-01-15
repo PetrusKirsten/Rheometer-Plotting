@@ -106,7 +106,7 @@ def starch(folderPath):
 
         # St/CL_7
         # folderPath + "/10St_CL_7/10_0St_CaCl2.xlsx",
-        folderPath + "/10St_CL_7/10_0St_CL-compression-1_seg.xlsx",
+        # folderPath + "/10St_CL_7/10_0St_CL-compression-1_seg.xlsx",
         folderPath + "/10St_CL_7/10_0St_CL-compression-2_seg.xlsx",
         folderPath + "/10St_CL_7/10_0St_CL-compression-3_seg.xlsx",
 
@@ -138,7 +138,7 @@ def starch(folderPath):
         # No CL
         4,
         # CL 7
-        3,
+        2,
         # CL 14
         6,
         # CL 28
@@ -146,11 +146,11 @@ def starch(folderPath):
     ]
     cSamples = [
         # No CL
-        '#FFE138',
+        '#E1C96B',
         # CL 7
-        '#F1A836',
+        '#FFE138',
         # CL 14
-        '#EA8B35',
+        '#F1A836',
         # CL 28
         '#E36E34',
     ]
@@ -168,8 +168,8 @@ def starch(folderPath):
         keySamples, nSamples, cSamples)
 
     starches.plotGraphs(
-        1200,
-        [1000, 1400],
+        1000,
+        [800, 1200],
         show=False, save=True
     )
 
@@ -220,13 +220,13 @@ def starch_kappa(folderPath):
     ]
     cSamples = [
         # No CL
-        '#F780A7',
+        'lightskyblue',
         # CL 7
-        '#CC69B5',
+        '#62BDC1',
         # CL 14
-        '#A251C3',
+        '#31A887',
         # CL 28
-        '#773AD1',
+        '#08653A',
     ]
 
     # starches = DynamicCompression(
@@ -321,12 +321,12 @@ def starch_iota(folderPath):
 
 if __name__ == '__main__':
 
-    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
-    path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
     # blends(path)
-    starch(path)
-    starch_kappa(path)
+    # starch(path)
+    # starch_kappa(path)
     starch_iota(path)
 
-    # plt.show()
+    plt.show()

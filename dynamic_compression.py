@@ -53,11 +53,11 @@ def starch(folderPath):
     ]
     cSamples = [
         # No CL
-        '#FFE138',
+        '#E1C96B',
         # CL 7
-        '#F1A836',
+        '#FFE138',
         # CL 14
-        '#EA8B35',
+        '#F1A836',
         # CL 28
         '#E36E34',
     ]
@@ -69,7 +69,7 @@ def starch(folderPath):
     starches.plotGraphs(
         60,
         60,
-        show=False, save=False
+        show=False, save=True
     )
 
 
@@ -135,7 +135,6 @@ def starch_kappa(folderPath):
     starches_kappa.plotGraphs(
         200,
         200,
-        [300, 25],
         show=False, save=True
     )
 
@@ -197,7 +196,7 @@ def starch_iota(folderPath):
         # CL 14
         '#31A887',
         # CL 28
-        '#00934E',
+        '#08653A',
     ]
 
     starches_iota = DynamicCompression(
@@ -207,7 +206,6 @@ def starch_iota(folderPath):
     starches_iota.plotGraphs(
         100,
         100,
-        [150, 20],
         show=False, save=True
     )
 

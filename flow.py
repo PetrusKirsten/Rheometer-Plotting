@@ -156,11 +156,11 @@ def starch(folderPath):
     ]
     cSamples = [
         # No CL
-        '#FFE138',
+        '#E1C96B',
         # CL 7
-        '#F1A836',
+        '#FFE138',
         # CL 14
-        '#EA8B35',
+        '#F1A836',
         # CL 28
         '#E36E34',
     ]
@@ -245,7 +245,6 @@ def starch_kappa(folderPath):
         show=False, save=True
     )
     starches_kappas.plotFits(
-        [2000, 40], [75, 1, 175],
         show=False, save=True
     )
 
@@ -298,13 +297,13 @@ def starch_iota(folderPath):
     ]
     cSamples = [
         # No CL
-        '#34D4CF',
+        'lightskyblue',
         # CL 7
-        '#2B7ED4',
+        '#62BDC1',
         # CL 14
-        '#1941B8',
+        '#31A887',
         # CL 28
-        '#00934E',
+        '#08653A',
     ]
 
     starches_iotas = Flow(
@@ -317,7 +316,6 @@ def starch_iota(folderPath):
         show=False, save=True
     )
     starches_iotas.plotFits(
-        [750, 50], [225, 1, 150],
         show=False, save=True
     )
 
@@ -424,8 +422,8 @@ if __name__ == '__main__':
     # kappa(path)
     # iota(path)
     starch(path)
-    # starch_kappa(path)
-    # starch_iota(path)
+    starch_kappa(path)
+    starch_iota(path)
 
     # blends(path)
 

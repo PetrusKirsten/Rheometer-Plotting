@@ -405,7 +405,7 @@ class Recovery:
 
             freqs, gP, gD, gPerr, gDerr, delta, deltaErr = getValues(self.listBefore, key)
 
-            recoveryBef, _ = getValuesByFreq(recoveryBef, gP, freqs)
+            recoveryBef, self.freqsRecovery = getValuesByFreq(recoveryBef, gP, freqs)
             # delta_bef, _ = getValuesByFreq(delta_bef, delta, freqs)
 
             meanStorage, meanStorageErr, fitStart, fitEnd = cteRegionMean(gP)
@@ -542,8 +542,8 @@ class Recovery:
                         height_bef_err[sample]
                     text_scale_correction = 10 if sample == scale_correction else 1
 
-                height = ceil(height_bef[sample] * text_scale_correction * 10**dec) / 10**dec
-                stddev = ceil(height_bef_err[sample] * text_scale_correction * 10**dec) / 10**dec
+                height = ceil(height_bef[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
+                stddev = ceil(height_bef_err[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
                 notFit = stddev < height / 2
 
                 axes.bar(
@@ -576,8 +576,8 @@ class Recovery:
                         height_aft_err[sample]
                     text_scale_correction = 10 if sample == scale_correction else 1
 
-                height = ceil(height_aft[sample] * text_scale_correction * 10**dec) / 10**dec
-                stddev = ceil(height_aft_err[sample] * text_scale_correction * 10**dec) / 10**dec
+                height = ceil(height_aft[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
+                stddev = ceil(height_aft_err[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
                 notFit = stddev < height / 2
 
                 axes.bar(
@@ -701,7 +701,7 @@ class Recovery:
                     for j in range(len(data_map[i])):
                         if data_map[i][j] > 100:
                             data_map[i][j] = None
-                colors, decimal, minValue, maxValue = 'RdYlGn', '.0f', 0, 100
+                colors, decimal, minValue, maxValue = 'YlGn', '.0f', 0, 100
 
             if title == "Loss factor $\\tan(G_0''\,/\,G_0')$":
                 for i in range(len(data_map)):
@@ -1449,10 +1449,7 @@ class DynamicCompression:
             force = self.dynamicData[f'{formula} force']
             height = self.dynamicData[f'{formula} height']
 
-            if formula != 'St/CL_7':
-                minLen = min(len(replicate) for replicate in force)
-            else:
-                minLen = 540
+            minLen = min(len(replicate) for replicate in force)
             cutForce = [downsampler(replicate, minLen) for replicate in force]
 
             # cutHeight = [downsampler(replicate, minLen) for replicate in height]
@@ -1468,7 +1465,7 @@ class DynamicCompression:
                 sampleName,
                 ax, x, y, yErr,
                 axTitle, yLabel, yLim, xLabel, xLim, axisColor,
-                curveColor, markerStyle, markerFColor, markerEColor, markerEWidth=0.5,
+                curveColor, markerStyle, markerFColor, markerSize, markerEWidth=0.5,
                 strain=False, lineStyle='', logScale=False
         ):
             def legendLabel():
@@ -1512,11 +1509,13 @@ class DynamicCompression:
             else:
                 x_smooth = np.linspace(x.min(), x.max(), len(x) * 5)
 
-                if sampleName == 'St/CL_7':
-                    cl7err = 5
+                if 'CL_7' in sampleName:
+                    cl7err, steps = 0, 12
+                # elif 'CL_14' in sampleName:
+                #     cl7err, steps = 0, 4
                 else:
-                    cl7err = 0
-                    
+                    cl7err, steps = 0, 2
+
                 interp_yErr_lower, interp_yErr_upper = (interp1d(x, y - (yErr + cl7err), kind='cubic'),
                                                         interp1d(x, y + (yErr + cl7err), kind='cubic'))
 
@@ -1527,9 +1526,9 @@ class DynamicCompression:
                     color=curveColor, alpha=0.15, lw=0,
                     zorder=6 - self.colors_samples.index(color))
                 ax.errorbar(
-                    x[::2], y[::2], 0,
-                    color=curveColor, alpha=.35,
-                    fmt=markerStyle, markersize=3.5, mfc=markerFColor, mec=markerEColor, mew=markerEWidth,
+                    x[::steps], y[::steps], 0,
+                    color=curveColor, alpha=.6,
+                    fmt=markerStyle, markersize=markerSize, mfc=markerFColor, mec='#303030', mew=markerEWidth,
                     capsize=0, lw=.5, linestyle=lineStyle,
                     label=f'{sampleName}',
                     zorder=7 - self.colors_samples.index(color))
@@ -1539,7 +1538,7 @@ class DynamicCompression:
                 sampleName,
                 ax, y, yErr,
                 axTitle, yLabel, yLim, xLabel, xLim, axisColor,
-                curveColor, markerFColor, markerEColor, paramsList, markerEWidth=0.75,
+                curveColor, markerSize, markerStyle, paramsList, markerEWidth=0.75,
                 lineStyle='', logScale=False
         ):
 
@@ -1592,10 +1591,15 @@ class DynamicCompression:
             paramsList.append([params.tolist(), errors.tolist()])
 
             # plots configs
+            if 'St/CL_7' in sampleName:
+                cl7err = 3
+            else:
+                cl7err = 0
+
             configPlot()
 
             ax.errorbar(
-                x_values, yMax_values, yMax_errors,
+                x_values, yMax_values, yMax_errors + cl7err,
                 color=curveColor, alpha=.85,
                 fmt='none', mfc=curveColor,
                 capsize=2.5, capthick=1, linestyle='', lw=1,
@@ -1604,7 +1608,7 @@ class DynamicCompression:
             ax.errorbar(
                 x_values, yMax_values, 0,
                 color=curveColor, alpha=.65,
-                fmt='^', markersize=6.5,
+                fmt=markerStyle, markersize=markerSize,
                 mfc=curveColor, mec='#383838', mew=markerEWidth,
                 linestyle='',
                 label=f'{sampleName}', zorder=6 - self.colors_samples.index(color))
@@ -1651,7 +1655,7 @@ class DynamicCompression:
                     loc='upper center',
                     ncols=3,
                     fancybox=False,
-                    frameon=True,
+                    frameon=False,
                     framealpha=0.9,
                     fontsize=12)
                 legend.get_frame().set_facecolor('w')
@@ -1677,8 +1681,8 @@ class DynamicCompression:
             posList, labelsList = [], []
             bin_width, space_samples, bin_gap = .8, 3, .075
             barsLimits = [
-                1.5 * max([sublist[0][0] for sublist in data]),
-                1.5 * max([sublist[0][2] for sublist in data])
+                1.6 * max([sublist[0][0] for sublist in data]),
+                1.6 * max([sublist[0][2] for sublist in data])
             ]
 
             x = np.arange(space_samples * len(sampleName))
@@ -1764,21 +1768,24 @@ class DynamicCompression:
                                           self.figGraphs.add_subplot(self.gsGraphs[1, 0]),
                                           self.figGraphs.add_subplot(self.gsGraphs[1, 1]))
 
-        for formula, color in zip(self.sample_keys, self.colors_samples):
+        for formula, color, marker, size in zip(self.sample_keys,
+                                                self.colors_samples,
+                                                ['o', 'p', 'D', 's'],
+                                                [4, 4.5, 3.5, 4]):
             stressMean, stressErrMean = getValues()
 
             drawDynamicStress(
                 ax=axOscillation, axisColor='#303030',
                 x=np.linspace(0, 60, len(stressMean)), y=stressMean, yErr=stressErrMean,
                 axTitle='', yLabel='Stress (Pa)', yLim=(0, ax1Limits), xLabel='Time (s)', xLim=(0, 60),
-                curveColor=color, markerStyle='o', markerFColor=color, markerEColor='#303030',
+                curveColor=color, markerFColor=color, markerStyle=marker, markerSize=size,
                 sampleName=f'{formula}')
 
             self.tableDynamic = drawCycles(
                 ax=axCycles, axisColor='#303030',
                 y=stressMean, yErr=stressErrMean,
                 axTitle='', yLabel='Stress peak (Pa)', yLim=(0, ax2Limits), xLabel='Cycle', xLim=(0, 30),
-                curveColor=color, markerFColor=color, markerEColor=color,
+                curveColor=color, markerSize=size + 2, markerStyle=marker,
                 paramsList=self.tableDynamic, sampleName=f'{formula}')
 
         drawBars(
@@ -1900,7 +1907,7 @@ class BreakageCompression:
                 sampleName,
                 ax, x, y, yErr,
                 axTitle, yLabel, yLim, xLabel, xLim, axisColor,
-                curveColor, markerStyle, markerFColor, markerEColor, markerEWidth=0.5,
+                curveColor, markerStyle, markerFColor, markerSize, markerEWidth=0.5,
                 linearFitting=False, startVal=6, endVal=16, tableData=None
         ):
 
@@ -2001,7 +2008,7 @@ class BreakageCompression:
                 ax.errorbar(
                     x[::2], y[::2], 0,
                     color=curveColor, alpha=.65,
-                    fmt='o', markersize=5.4,
+                    fmt=markerStyle, markersize=markerSize,
                     mfc=curveColor, mec='#383838', mew=.75,
                     linestyle='',
                     label=f'{sampleName}', zorder=3)
@@ -2042,7 +2049,7 @@ class BreakageCompression:
                 ax.errorbar(
                     x[::2], y[::2], 0,
                     color=curveColor, alpha=.65,
-                    fmt='o', markersize=5.4,
+                    fmt=markerStyle, markersize=markerSize,
                     mfc=curveColor, mec='#383838', mew=.75,
                     linestyle='',
                     label=f'{sampleName}', zorder=3)
@@ -2157,7 +2164,11 @@ class BreakageCompression:
         axBreak = self.figGraphs.add_subplot(self.gsGraphs[0, 0])
         axFit = self.figGraphs.add_subplot(self.gsGraphs[0, 1])
 
-        for formula, color in zip(self.sample_keys, self.colors_samples):
+        for formula, color, marker, size in zip(self.sample_keys,
+                                                self.colors_samples,
+                                                ['o', 'p', 'D', 's'],
+                                                [5, 5.5, 4.5, 5]):
+
             strain, stress, stressErr = getValues()
 
             drawBreakage(
@@ -2165,7 +2176,7 @@ class BreakageCompression:
                 ax=axBreak, axisColor='k',
                 x=strain, y=stress, yErr=stressErr,
                 axTitle='', yLabel='Stress (Pa)', yLim=(0, sLimits), xLabel='Strain', xLim=(0, 100),
-                curveColor=color, markerStyle='o', markerFColor=color, markerEColor='k',
+                curveColor=color, markerFColor=color, markerStyle=marker, markerSize=size,
                 linearFitting=True, tableData=self.tableCompression)
 
             # self.tableCompression = drawBreakageStress(
@@ -2194,4 +2205,4 @@ class BreakageCompression:
             self.figGraphs.savefig(
                 f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
                 facecolor='w', dpi=150)
-            print(f'\n\n· Dynamic compression chart saved at:\n{dirSave}.')
+            print(f'\n\n· Compression chart saved at:\n{dirSave}.')
