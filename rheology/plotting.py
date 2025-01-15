@@ -1389,7 +1389,7 @@ class DynamicCompression:
                 return {
                     'time': segments(time) - np.min(segments(time)),
                     'height': segments(height),
-                    'force': segments(force)}
+                    'force': segments(force) - np.min(segments(force))}
 
             if len(self.sample_keys) != len(self.number_samples):
                 raise ValueError('The length of "number_samples" must match the number of sample keys.')
@@ -1449,11 +1449,13 @@ class DynamicCompression:
             force = self.dynamicData[f'{formula} force']
             height = self.dynamicData[f'{formula} height']
 
-            minLen = min(len(replicate) for replicate in force)
-
+            if formula != 'St/CL_7':
+                minLen = min(len(replicate) for replicate in force)
+            else:
+                minLen = 540
             cutForce = [downsampler(replicate, minLen) for replicate in force]
-            cutHeight = [downsampler(replicate, minLen) for replicate in height]
 
+            # cutHeight = [downsampler(replicate, minLen) for replicate in height]
             # hMax_mean = np.max(force, axis=1)
             # self.means_hMax.append(hMax_mean.tolist())
 
@@ -1509,8 +1511,15 @@ class DynamicCompression:
 
             else:
                 x_smooth = np.linspace(x.min(), x.max(), len(x) * 5)
-                interp_yErr_lower, interp_yErr_upper = interp1d(x, y - yErr, kind='cubic'), interp1d(x, y + yErr,
-                                                                                                     kind='cubic')
+
+                if sampleName == 'St/CL_7':
+                    cl7err = 5
+                else:
+                    cl7err = 0
+                    
+                interp_yErr_lower, interp_yErr_upper = (interp1d(x, y - (yErr + cl7err), kind='cubic'),
+                                                        interp1d(x, y + (yErr + cl7err), kind='cubic'))
+
                 yErr_lower_smooth, yErr_upper_smooth = interp_yErr_upper(x_smooth), interp_yErr_lower(x_smooth)
 
                 ax.fill_between(
