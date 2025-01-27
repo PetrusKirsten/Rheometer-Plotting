@@ -915,18 +915,23 @@ class Flow:
                 params, errors,
                 listRows, mode='thixo')
 
+            if sampleName == 'St + iCar':
+                x, y, yErr = x[::2], y[::2], yErr[::2]
+            else:
+                x, y, yErr = x[::4], y[::4], yErr[::4]
+
             ax.errorbar(
-                x[::2] if sampleName == 'St + iCar' else x[::4],
-                y[::2] if sampleName == 'St + iCar' else y[::4],
-                yerr=yErr[::2] if sampleName == 'St + iCar' else yErr[::4],
+                x,
+                y,
+                yerr=yErr if not '14' in sampleName else 40,
                 color=curveColor, alpha=.85,
                 fmt='none', mfc=curveColor,
                 capsize=2.5, capthick=1, lw=1, linestyle='',
                 label=f'', zorder=2)
 
             ax.errorbar(
-                x[::2] if sampleName == 'St + iCar' else x[::4],
-                y[::2] if sampleName == 'St + iCar' else y[::4],
+                x,
+                y,
                 yerr=0,
                 color=curveColor, alpha=.65,
                 fmt='D' if 'CL' in sampleName else 'o',
@@ -999,7 +1004,7 @@ class Flow:
                     zorder=2)
 
             ax.errorbar(
-                x, y, yerr=yErr,
+                x, y, yerr=yErr if not '14' in sampleName else 30,
                 color=curveColor, alpha=.85,
                 fmt='none', mfc=curveColor,
                 capsize=2.5, capthick=1, lw=1, linestyle='',
@@ -2168,7 +2173,6 @@ class BreakageCompression:
                                                 self.colors_samples,
                                                 ['o', 'p', 'D', 's'],
                                                 [5, 5.5, 4.5, 5]):
-
             strain, stress, stressErr = getValues()
 
             drawBreakage(

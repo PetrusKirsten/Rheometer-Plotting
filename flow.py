@@ -194,7 +194,7 @@ def starch_kappa(folderPath):
         # St + kCar/CL_14
         folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-1.xlsx",
         # folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-2.xlsx",
-        folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-3.xlsx",
         # folderPath + "/10St_kC_CL_14/St_kC_CL_14-viscoelasticRecovery-4.xlsx",
 
         # St + kCar/CL_28
@@ -220,7 +220,7 @@ def starch_kappa(folderPath):
         # CL 7
         1,
         # CL 14
-        2,
+        1,
         # CL 28
         3,
     ]
@@ -263,15 +263,15 @@ def starch_iota(folderPath):
         folderPath + "/10St_iC_CL_7/10_0St_iC_CL-recovery-3.xlsx",
 
         # St + iCar/CL_14
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-1.xlsx",
-        # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-2.xlsx",
-        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-1.xlsx",
+        folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-2.xlsx",
+        # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-3.xlsx",
         # folderPath + "/10St_iC_CL_14/0St_iC_CL_14-viscoelasticRecovery-4.xlsx",
 
         # St + iCar/CL_28
         folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-1.xlsx",
         folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-2.xlsx",
-        folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-3.xlsx",
+        # folderPath + "/10St_iC_CL_28/St_iC_CL_28-viscoelasticRecovery-3.xlsx",
 
     ]
 
@@ -291,9 +291,9 @@ def starch_iota(folderPath):
         # CL 7
         3,
         # CL 14
-        2,
+        1,
         # CL 28
-        3,
+        2,
     ]
     cSamples = [
         # No CL
@@ -419,12 +419,11 @@ if __name__ == '__main__':
     path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
 
+    # blends(path)
     # kappa(path)
     # iota(path)
-    starch(path)
-    starch_kappa(path)
+    # starch(path)
+    # starch_kappa(path)
     starch_iota(path)
-
-    # blends(path)
 
     plt.show()
