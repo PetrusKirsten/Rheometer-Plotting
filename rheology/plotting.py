@@ -128,7 +128,9 @@ class Statistics:  # self.data
 
             for replicate in range(n_replicates):
                 x_toFit_stor, y_toFit_stor = arraySplit(x[replicate], y[replicate])
-                params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor, y_toFit_stor)  # k' & n'
+                params_stor, covariance_stor = curve_fit(  # k' & n'
+                    powerLaw, x_toFit_stor, y_toFit_stor,
+                    maxfev=10000)
                 errors_stor = np.sqrt(np.diag(covariance_stor))
 
                 self.fitData = exportFit(
