@@ -4,7 +4,7 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle
 
 
-def fonts(folder_path, small=10, medium=12):  # To config different fonts but it isn't working with these
+def fonts(folder_path, small=13, medium=14):  # To config different fonts but it isn't working with these
     font_path = folder_path + 'HelveticaNeueThin.otf'
     helvetica_thin = FontProperties(fname=font_path)
 
@@ -117,7 +117,7 @@ def downsample_array(arr, x):
 fonts(folder_path='C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
 # Plots configs
 plt.style.use('seaborn-v0_8-ticks')
-fig, axes = plt.subplots(figsize=(14, 7), facecolor='w', ncols=1)
+fig, axes = plt.subplots(figsize=(12, 6), facecolor='w', ncols=1)
 fig.suptitle('Mechanical assay protocol to evaluate loading behaviours.')
 markerSize = 30
 
@@ -140,10 +140,10 @@ ax1 = axes
 ax1.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
 ax1.set_xlabel('Time')
 ax1.set_xticks([xHeight[-1]])
-ax1.set_xticklabels(['60 s'], size=9.5)
+ax1.set_xticklabels(['60 s'], size=12)
 ax1.set_xlim([0, 9])
 ax1.set_yticks([-1/2, 1/2, yF.max()])
-ax1.set_yticklabels(['0%', '7%', 'Break'], size=9.5)
+ax1.set_yticklabels(['0%', '7%', 'Break'], size=12)
 ax1.set_ylim([-1.1, 3.5])
 ax1.grid(ls='--')
 
@@ -151,14 +151,14 @@ ax1.text(xHeight[xHeight.shape[0]//2], yHeightBreak.max()+0.14,
          s='Oscillatory compression to determine dynamic modulus'
            '\nwith 7% amplitude at 0.5 Hz for 60 s (n = 30).',
          horizontalalignment='center', verticalalignment='bottom',
-         color='k', size=10)
+         color='k', size=12)
 ax1.vlines(xHeight[-1], -10, 10,
            lw=.75, color='silver')
 ax1.text(xHeightBreak[xHeightBreak.shape[0]//2]-0.13, yHeightBreak.max()+0.14,
          s='Compression until breakage to determine'
          '\ncompressive modulus at 0.5 mm/s.',
          horizontalalignment='center', verticalalignment='bottom',
-         color='k', size=10)
+         color='k', size=12)
 
 ax1.scatter(xF, yF,
             color='tomato', edgecolor='k', lw=.5, s=markerSize, alpha=.75,
@@ -167,7 +167,7 @@ ax1.plot(xH, yH,
          color='lightskyblue', lw=1.2, alpha=.95,
          label='Deformation amplitude', zorder=1)
 
-ax1.legend(loc=2, frameon=False)
+ax1.legend(loc=4, frameon=False)
 plt.subplots_adjust(wspace=0.0, top=0.93, bottom=0.08, left=0.05, right=0.95)
 plt.show()
 fig.savefig('compression_protocol.png', dpi=600)

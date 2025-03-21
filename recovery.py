@@ -1,5 +1,89 @@
+import re
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
 from matplotlib import pyplot as plt
+from scipy.optimize import curve_fit
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+
 from rheology.plotting import Recovery
+from rheology.plotting import powerLaw
+from rheology.plotting import arraySplit
+from rheology.plotting import exportFit
+
+def extract_cacl2(sample_name):
+    match = re.search(r'CL[-_](\d+)', sample_name)
+    return int(match.group(1)) if match else 0
+
+def extract_polymer(sample_name):
+    if 'kCar' in sample_name:
+        return 'kappa'
+    elif 'iCar' in sample_name:
+        return 'iota'
+    else:
+        return 'unknown'
+
+def build_dataframe(data_list):
+    records = []
+    for entry in data_list:
+        cacl2 = extract_cacl2(entry['Sample'])
+        polymer = extract_polymer(entry['Sample'])
+        formulation = f"{polymer} - CaCl2 {cacl2} mM"
+        if np.isfinite(entry["k'"]):
+            record = {
+                'Polymer': polymer,
+                'CaCl2_mM': cacl2,
+                'Formulation': formulation,
+                "G0_prime": entry["k'"]
+            }
+            records.append(record)
+    df = pd.DataFrame(records)
+    df = df.dropna()
+    return df
+
+def run_two_way_anova(df):
+    if df.shape[0] < 2:
+        raise ValueError("Not enough data to perform ANOVA. Please ensure the DataFrame has sufficient rows.")
+    if df['Polymer'].nunique() > 1:
+        formula = 'G0_prime ~ C(Polymer) + C(CaCl2_mM) + C(Polymer):C(CaCl2_mM)'
+    else:
+        formula = 'G0_prime ~ C(CaCl2_mM)'
+    model = smf.ols(formula, data=df).fit()
+    anova_table = sm.stats.anova_lm(model, typ=2)
+    return anova_table
+
+def run_posthoc_tukey(df):
+    df['Polymer_CaCl2'] = df['Polymer'] + ' - ' + df['CaCl2_mM'].astype(str) + ' mM'
+    result = pairwise_tukeyhsd(endog=df['G0_prime'], groups=df['Polymer_CaCl2'], alpha=0.05)
+    print(' \n', result.summary())
+    return result
+
+def plot_posthoc_tukey(result):
+    plt.figure(figsize=(10, 6))
+    result.plot_simultaneous(comparison_name=None)
+    plt.title("Tukey HSD Post Hoc Test (Full Formulation Names)")
+    plt.xlabel("Mean Difference in G'₀ with 95% CI")
+    plt.ylabel("Formulation Comparisons")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+def plot_interaction(df):
+    if df.empty:
+        print("Empty DataFrame! Nothing to plot.")
+        return
+    dodge = df['Polymer'].nunique() > 1
+    plt.figure(figsize=(10, 6))
+    sns.pointplot(data=df, x='CaCl2_mM', y='G0_prime', hue='Polymer',
+                  dodge=dodge, markers=['o', 's'], capsize=0.1, err_kws={'linewidth': 1}, palette='tab10')
+    plt.title("Interaction between CaCl2 concentration and Polymer for G'₀")
+    plt.ylabel("G'₀")
+    plt.xlabel("CaCl₂ concentration (mM)")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.show()
 
 
 # def blends(folderPath):
@@ -157,11 +241,8 @@ def kappa(folderPath):
         show=False, save=False)
 
     kappas.plotBars(
-        [.6, 10000, 850, 16],
         [0, None, None, None],
-        show=False, save=True)
-
-    # kappas.plotHeatMap(show=False, save=False)
+        show=False, save=False)
 
 
 def iota(folderPath):
@@ -208,11 +289,10 @@ def iota(folderPath):
         show=False)
 
     iotas.plotBars(
-        [3.75, 50, 9, 8],
         [None, None, None, None],
-        show=False, save=True)
+        show=False, save=False)
 
-    iotas.plotHeatMap(show=False)
+    # iotas.plotHeatMap(show=False)
 
 
 def starch(folderPath):
@@ -432,14 +512,28 @@ def starch_iota(folderPath):
 
 
 if __name__ == '__main__':
-    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"   # Personal
+    path = "D:/Documents/GitHub/Rheometer-Plotting/data/by sample"   # New Personal
 
     # kappa(path)
-    # iota(path)
+    iota(path)
     # blends(path)
     # starch(path)
     # starch_kappa(path)
-    starch_iota(path)
+    # starch_iota(path)
+
+    # df = build_dataframe(statisticalData)
+    # anova_table = run_two_way_anova(df)
+    # print('\n', '\n', anova_table, '\n')
+    #
+    # if anova_table['PR(>F)'][0] < 0.05:
+    #     print("Significative differences found in ANOVA.")
+    # else:
+    #     print("No significant differences found in ANOVA.")
+    #
+    # tukey_result = run_posthoc_tukey(df)
+    # plot_posthoc_tukey(tukey_result)
+    # # plot_interaction(df)
 
     plt.show()

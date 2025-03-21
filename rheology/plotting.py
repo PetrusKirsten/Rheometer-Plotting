@@ -1,16 +1,21 @@
+import re
+import string
+import itertools
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
 
 from pathlib import Path
 from math import ceil, sqrt, degrees
-
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from matplotlib import pyplot as plt, ticker
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
 from matplotlib.font_manager import FontProperties
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 
 def fonts(folder_path, s=12, m=14):
@@ -36,10 +41,14 @@ def fonts(folder_path, s=12, m=14):
     plt.rc('figure', titlesize=m)  # fontsize of the figure title
 
 
-def arraySplit(xArr, yArr, startValue, endValue):
+def arraySplit(xArr, yArr, startValue=0, endValue=16):
     startIndex, endIndex = np.where(xArr >= startValue)[0][0], np.where(xArr <= endValue)[0][-1]
 
     return xArr[startIndex:endIndex], yArr[startIndex:endIndex]
+
+
+def powerLaw(omega, kPrime, nPrime):
+    return kPrime * (omega ** nPrime)
 
 
 def exportFit(
@@ -48,7 +57,7 @@ def exportFit(
         table, mode=''
 ):
     if mode == 'thixo':
-        keys = ('$\\tau_0$', '$\\tau_e$', '$\lambda$')
+        keys = ('$\\tau_0$', '$\\tau_e$', '$\\lambda$')
     elif mode == 'HB':
         keys = ("k'", "n'", 'sigma_zero')
     else:
@@ -73,6 +82,190 @@ def downsampler(array, n=200):
         step = len(array) // n  # Calculate step size
         return array[::step][:n]
     return array
+
+
+def extract_cacl2(sample_name):
+    match = re.search(r'CL[-_](\d+)', sample_name)
+    return int(match.group(1)) if match else 0
+
+
+def extract_polymer(sample_name):
+    if 'kCar' in sample_name:
+        return 'kappa'
+    elif 'iCar' in sample_name:
+        return 'iota'
+    else:
+        return 'unknown'
+
+
+def plot_posthoc_tukey(result):
+    plt.figure(figsize=(10, 6))
+    result.plot_simultaneous(comparison_name=None)
+    plt.title("Tukey HSD Post Hoc Test (Full Formulation Names)")
+    plt.xlabel("Mean Difference in G'₀ with 95% CI")
+    plt.ylabel("Formulation Comparisons")
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+
+class Statistics:  # self.data
+    def __init__(
+            self,
+            formulations,
+            rawData,
+            namesData='storage'
+    ):
+
+        self.fitData = []
+
+        for name in formulations:
+
+            labelX, labelY = f'{name}_freq', f'{name}_{namesData}'
+
+            x, y = rawData[labelX], rawData[labelY]
+            n_replicates = np.shape(y)[0]
+
+            for replicate in range(n_replicates):
+                x_toFit_stor, y_toFit_stor = arraySplit(x[replicate], y[replicate])
+                params_stor, covariance_stor = curve_fit(powerLaw, x_toFit_stor, y_toFit_stor)  # k' & n'
+                errors_stor = np.sqrt(np.diag(covariance_stor))
+
+                self.fitData = exportFit(
+                    f'{name}_{replicate + 1}',
+                    params_stor, errors_stor,
+                    self.fitData
+                )
+
+        self.df = self.build_dataframe()
+
+    def build_dataframe(self):
+        records = []
+
+        for entry in self.fitData:
+            cacl2 = extract_cacl2(entry['Sample'])
+            polymer = extract_polymer(entry['Sample'])
+            formulation = f"{polymer} - CaCl2 {cacl2} mM"
+
+            if np.isfinite(entry["k'"]):
+                record = {
+                    'Polymer': polymer,
+                    'CaCl2_mM': cacl2,
+                    'Formulation': formulation,
+                    "Parameter": entry["k'"]
+                }
+                records.append(record)
+
+        df = pd.DataFrame(records)
+        df = df.dropna()
+
+        return df
+
+    def plot_interaction(self):
+        if self.df.empty:
+            print("Empty DataFrame! Nothing to plot.")
+            return
+        dodge = self.df['Polymer'].nunique() > 1
+        plt.figure(figsize=(10, 6))
+        sns.pointplot(data=self.df, x='CaCl2_mM', y='Parameter', hue='Polymer',
+                      dodge=dodge, markers=['o', 's'], capsize=0.1, err_kws={'linewidth': 1}, palette='tab10')
+        plt.title("Interaction between CaCl2 concentration and Polymer for G'₀")
+        plt.ylabel("G'₀")
+        plt.xlabel("CaCl₂ concentration (mM)")
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.show()
+
+    def run(self):
+
+        def twoWayANOVA():
+
+            if self.df.shape[0] < 2:
+                raise ValueError("Not enough data to perform ANOVA. Please ensure the DataFrame has sufficient rows.")
+
+            if self.df['Polymer'].nunique() > 1:
+                formula = 'Parameter ~ C(Polymer) + C(CaCl2_mM) + C(Polymer):C(CaCl2_mM)'
+
+            else:
+                formula = 'Parameter ~ C(CaCl2_mM)'
+
+            model = smf.ols(formula, data=self.df).fit()
+            result = sm.stats.anova_lm(model, typ=2)
+
+            return result
+
+        def tukeyTest():
+
+            self.df['Polymer_CaCl2'] = (
+                    self.df['Polymer'] + ' - ' +
+                    np.where(self.df['CaCl2_mM'] == 7, '07', self.df['CaCl2_mM'].astype(str)) +
+                    ' mM')
+
+            result = pairwise_tukeyhsd(
+                endog=self.df['Parameter'],
+                groups=self.df['Polymer_CaCl2'],
+                alpha=0.05)
+
+            return result
+
+        def tukeyToLetters(table):
+
+            def getLetters(groups, reject_pairs_array):
+                """
+                groups_names: list of group names
+                reject_pairs: list of (i, j, reject_bool)
+                """
+                n = len(groups)
+                not_diff = np.ones((n, n), dtype=bool)
+                np.fill_diagonal(not_diff, True)
+
+                for i, j, reject in reject_pairs_array:
+                    not_diff[i, j] = not_diff[j, i] = not reject
+
+                letters = ['' for _ in range(n)]
+                letter_pool = list(string.ascii_uppercase)
+
+                for l in letter_pool:
+                    remaining = np.array([len(code) == 0 for code in letters])
+
+                    if not remaining.any():
+                        break
+
+                    candidates = np.where(remaining)[0]
+
+                    for c in candidates:
+                        conflict = any(
+                            l in code and not not_diff[c, idx] for idx,
+                            code in enumerate(letters))
+
+                        if not conflict:
+                            letters[c] += l
+
+                return letters
+
+            groups_names = table.groupsunique
+            indices = range(len(groups_names))
+
+            pairs = list(itertools.combinations(indices, 2))
+            reject_pairs = [
+                (i, j, reject_val)
+                for (i, j), reject_val in zip(pairs, table.reject)
+            ]
+
+            letters = getLetters(groups_names, reject_pairs)
+
+            return groups_names, letters
+
+        anova_table = twoWayANOVA()
+        tukey_table = tukeyTest()
+
+        print(
+            '\n',
+            '\n', anova_table, '\n',
+            '\n', tukey_table, '\n',
+            '\n'
+            )
+
+        return tukeyToLetters(tukey_table)
 
 
 class Recovery:
@@ -229,7 +422,7 @@ class Recovery:
 
             return storageList, freqList
 
-        def cteRegionMean(values, tolerance=100):
+        def cteRegionMean(values, tolerance=100.):
             """
             :param values: to be analysed
             :param tolerance: the difference betweem two points data
@@ -264,9 +457,6 @@ class Recovery:
             stddev = np.std(values[iStart:iEnd + 1])  # Calcular a média da região constante encontrada
 
             return mean, stddev, iStart, iEnd
-
-        def powerLaw(omega, kPrime, nPrime):
-            return kPrime * (omega ** nPrime)
 
         def ratio(data1, data2):
             result = []
@@ -412,7 +602,7 @@ class Recovery:
             meanStorage, meanStorageErr = round(meanStorage, -1), round(meanStorageErr, -1)
             self.meanBefore.append(meanStorage), self.meanBeforeErr.append(meanStorageErr)
 
-            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.025)
+            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.1)
             self.meanDeltaBefore.append(meanDelta), self.meanDeltaBeforeErr.append(meanDeltaErr)
 
             self.dataFittingBef_stor, self.dataFittingBef_loss = drawPlot(  # Before axes
@@ -433,7 +623,7 @@ class Recovery:
             meanStorage, meanStorageErr = round(meanStorage, -1), round(meanStorageErr, -1)
             self.meanAfter.append(meanStorage), self.meanAfterErr.append(meanStorageErr)
 
-            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.025)
+            meanDelta, meanDeltaErr, _, _ = cteRegionMean(delta, tolerance=.1)
             self.meanDeltaAfter.append(meanDelta), self.meanDeltaAfterErr.append(meanDeltaErr)
 
             self.dataFittingAft_stor, self.dataFittingAft_loss = drawPlot(  # After axes
@@ -472,50 +662,61 @@ class Recovery:
     def plotBars(
             self,
             corrections,
-            show=True, save=False
-    ):
+            show=True, save=False):
 
         def drawBars(
                 title, axes,
                 sampleName,
-                data_before, data_after,
-                colors, dec, scale_correction=None,
-                textSize=12, a=.9, h='', z=1
+                data_before,
+                data_after,
+                colors,
+                dec, paramName,
+                scale_correction=None, limMult=1.8, textSize=12, a=.9, h='', z=1,
+
         ):
+            """
+            Internal function that draws bars for 'before' and 'after' data.
+
+            Parameters:
+                title (str): Title of the chart.
+                axes (matplotlib.Axes): Axes where the chart will be drawn.
+                sampleName (list): Sample names for the x-axis.
+                data_before (list): Data before adjustment.
+                data_after (list): Data after adjustment.
+                colors (list): Colors for the bars.
+                dec (int): Number of decimal places to display values.
+                scale_correction (int or None): Indicates if a scale correction is needed (optional).
+                textSize (int): Font size of the text on the chart.
+                a (float): Opacity of the bars.
+                h (str): Hatch pattern for 'before' bars (optional).
+                z (float): Controls the overlap of bars.
+                :param scale_correction:
+                :param paramName:
+            """
 
             def legendLabel():
-                axes.bar(
-                    space_samples * x.min() - 10,
-                    height=0, yerr=0,
-                    color='w', edgecolor='#383838',
-                    width=bin_width, hatch='', alpha=a, linewidth=.5,
-                    label='Before', zorder=z)
-                axes.bar(
-                    space_samples * x.min() - 10,
-                    height=0, yerr=0,
-                    color='w', edgecolor='#383838',
-                    width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
-                    label='After', zorder=z)
+                """
+                Configures and draws the legend for the chart.
+                """
+                axes.bar(space_samples * x.min() - 10, height=0, yerr=0, color='w', edgecolor='#383838',
+                         width=bin_width, hatch='', alpha=a, linewidth=.5, label='Before', zorder=z)
+                axes.bar(space_samples * x.min() - 10, height=0, yerr=0, color='w', edgecolor='#383838',
+                         width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5, label='After')
 
-                legend = axes.legend(
-                    loc='upper center',
-                    ncols=3,
-                    fancybox=False,
-                    frameon=True,
-                    framealpha=0.9,
-                    fontsize=12)
+                legend = axes.legend(loc='upper center', ncols=3, fancybox=False, frameon=True, framealpha=0.9,
+                                     fontsize=12)
                 legend.get_frame().set_facecolor('w')
                 legend.get_frame().set_edgecolor('lightsteelblue')
                 legend.get_frame().set_linewidth(0.)
 
             def configPlot(ax, yTitle, yLim, xLim):
+                """
+                Configures the layout of the chart: axes, ticks, and limits.
+                """
                 ax.tick_params(axis='y', labelsize=10, length=4)
-                ax.tick_params(
-                    axis='x', which='both', labelsize=10, pad=1)
-
+                ax.tick_params(axis='x', which='both', labelsize=10, pad=1)
                 ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(.75)
                 ax.spines[['top', 'bottom', 'left', 'right']].set_color('#303030')
-
                 ax.set_yticks([]), ax.set_ylim(yLim), ax.set_xlim(xLim)
                 ax.set_xlabel(yTitle, size=10, labelpad=5, loc='center')
                 ax.xaxis.set_label_position('top')
@@ -524,93 +725,136 @@ class Recovery:
             bin_width, space_samples, bin_gap = .8, 2, .05
             unit = 'Pa' if 'Scale' in title else ''
 
+            # Extract data from variables
             x = np.arange(space_samples * len(data_before))
             key = "n'" if "n'" in title else "k'"
             height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
             height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
 
-            lim = 1.6 * max(height_bef + height_aft)
-            configPlot(axes, title, (.0, lim), (x.min() - bin_width - .25, x.max()))
-            legendLabel()
+            significance = ''
+            if paramName is not None:
+                print(
+                    35*f'*', '\n'
+                    f'Statistical test for: {paramName} modulus.', '\n',
+                    35*f'*', '\n')
 
-            # data from before
+                tukeyTest = Statistics(self.names_samples.keys(), self.data, paramName)
+                _, significance = tukeyTest.run()
+
+            # Draw 'before' bars
             for sample in range(len(height_bef)):
-                text_scale_correction = 1
+
                 if scale_correction is not None:
                     height_bef[sample] = height_bef[sample] / 10 if sample == scale_correction else height_bef[sample]
-                    height_bef_err[sample] = height_bef_err[sample] / 10 if sample == scale_correction else \
-                        height_bef_err[sample]
-                    text_scale_correction = 10 if sample == scale_correction else 1
 
-                height = ceil(height_bef[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
-                stddev = ceil(height_bef_err[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
-                notFit = stddev < height / 2
+                    height_bef_err[sample] = height_bef_err[sample] / 10 \
+                        if sample == scale_correction \
+                        else height_bef_err[sample]
+
+                lim = limMult * max(height_bef)
+                text_scale_correction = 10 if sample == scale_correction else 1
+
+                height_rounded = ceil(height_bef[sample] * 10 ** dec) / 10 ** dec
+                stddev_rounded = ceil(height_bef_err[sample] * 10 ** dec) / 10 ** dec
+
+                notFit = stddev_rounded < height_rounded / 2
 
                 axes.bar(
-                    space_samples * x[sample] - bin_width / space_samples - bin_gap,
-                    height=height if notFit else 0, xerr=0,
+                    space_samples * x[sample] - bin_width / 2,
+                    height_rounded if notFit else 0,
+                    xerr=0,
                     color=colors[sample], edgecolor='#383838', alpha=a,
                     width=bin_width, hatch=h, linewidth=.5,
                     zorder=z)
+
                 axes.errorbar(
-                    x=space_samples * x[sample] - bin_width / space_samples - bin_gap,
-                    y=height if notFit else 0,
-                    yerr=stddev if notFit else 0,
-                    color='#383838', alpha=.9,
-                    linewidth=1, capsize=3, capthick=1.05, zorder=3)
-
-                text = f'{height:.{dec}f} ± {stddev:.{dec}f} {unit}'
-                axes.text(
-                    space_samples * x[sample] - bin_width / space_samples - bin_gap,
-                    height + stddev + lim * .025 if notFit else lim * .025,
-                    text if notFit else 'Not fitted',
-                    va='bottom', ha='center', rotation=90,
-                    color='#383838', fontsize=textSize)
-
-            # data from after
-            for sample in range(len(height_aft)):
-                text_scale_correction = 1
-                if scale_correction is not None:
-                    height_aft[sample] = height_aft[sample] / 10 if sample == scale_correction else height_aft[sample]
-                    height_aft_err[sample] = height_aft_err[sample] / 10 if sample == scale_correction else \
-                        height_aft_err[sample]
-                    text_scale_correction = 10 if sample == scale_correction else 1
-
-                height = ceil(height_aft[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
-                stddev = ceil(height_aft_err[sample] * text_scale_correction * 10 ** dec) / 10 ** dec
-                notFit = stddev < height / 2
-
-                axes.bar(
-                    space_samples * x[sample] + bin_width / space_samples + bin_gap,
-                    height=height if notFit else 0, xerr=0,
-                    color=colors[sample], edgecolor='#383838', alpha=a,
-                    width=bin_width, hatch='////', linewidth=.5,
-                    zorder=2)
-                axes.errorbar(
-                    x=space_samples * x[sample] + bin_width / space_samples + bin_gap,
-                    y=height if notFit else 0,
-                    yerr=stddev if notFit else 0,
-                    color='#383838', alpha=.99, linewidth=1, capsize=3, capthick=1.05,
+                    x=space_samples * x[sample] - bin_width / 2,
+                    y=height_rounded if notFit else 0,
+                    yerr=stddev_rounded if notFit else 0, color='#383838', alpha=.9,
+                    linewidth=1, capsize=3, capthick=1.05,
                     zorder=3)
 
-                text = f'{height:.{dec}f} ± {stddev:.{dec}f} {unit}'
+                text = (f'{height_rounded * text_scale_correction:.{dec}f} '
+                        f'± {stddev_rounded * text_scale_correction:.{dec}f} {unit}')
+
+                if paramName is not None:
+                    text = text + '   ' + significance[sample]
+
                 axes.text(
-                    space_samples * x[sample] + bin_width / space_samples + bin_gap,
-                    height + stddev + lim * .025 if notFit else lim * .025,
+                    space_samples * x[sample] - bin_width / 2,
+                    height_rounded + stddev_rounded + lim * .04 if notFit else lim * .04,
                     text if notFit else 'Not fitted',
-                    va='bottom', ha='center', rotation=90,
-                    color='#383838', fontsize=textSize)
+                    va='bottom', ha='center', rotation=90, color='#383838',
+                    fontsize=textSize)
 
-                # posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')
+            # Draw 'after' bars
+            for sample in range(len(height_aft)):
 
+                h = '\\\\\\'
+                if scale_correction is not None:
+                    height_aft[sample] = height_aft[sample] / 10 if sample == scale_correction else height_aft[sample]
+
+                    height_aft_err[sample] = height_aft_err[sample] / 10 \
+                        if sample == scale_correction \
+                        else height_aft_err[sample]
+
+                lim = limMult * max(height_bef)
+                text_scale_correction = 10 if sample == scale_correction else 1
+
+                height_rounded = ceil(height_aft[sample] * 10 ** dec) / 10 ** dec
+                stddev_rounded = ceil(height_aft_err[sample] * 10 ** dec) / 10 ** dec
+
+                notFit = stddev_rounded < height_rounded / 2
+
+                axes.bar(
+                    space_samples * x[sample] + bin_width / 2,
+                    height_rounded if notFit else 0,
+                    xerr=0,
+                    color=colors[sample], edgecolor='#383838', alpha=a,
+                    width=bin_width, hatch=h, linewidth=.5,
+                    zorder=z)
+
+                axes.errorbar(
+                    x=space_samples * x[sample] + bin_width / 2,
+                    y=height_rounded if notFit else 0,
+                    yerr=stddev_rounded if notFit else 0, color='#383838', alpha=.9,
+                    linewidth=1, capsize=3, capthick=1.05,
+                    zorder=3)
+
+                text = (f'{height_rounded * text_scale_correction:.{dec}f} '
+                        f'± {stddev_rounded * text_scale_correction:.{dec}f} {unit}')
+
+                if paramName is not None:
+                    text = text + '   ' + significance[sample]
+
+                axes.text(
+                    space_samples * x[sample] + bin_width / 2,
+                    height_rounded + stddev_rounded + lim * .025 if notFit else lim * .025,
+                    text if notFit else 'Not fitted',
+                    va='bottom', ha='center', rotation=90, color='#383838',
+                    fontsize=textSize)
+
+                # Append to position and label lists
                 if scale_correction is not None and sample == scale_correction:
-                    posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]} (10×)')
+                    posList.append(space_samples * x[sample])
+                    labelsList.append(f'{sampleName[sample]} (10×)')
+
                 else:
-                    posList.append(space_samples * x[sample]), labelsList.append(f'{sampleName[sample]}')
+                    posList.append(space_samples * x[sample])
+                    labelsList.append(f'{sampleName[sample]}')
 
-            axes.set_xticks(posList), axes.set_xticklabels(labelsList, rotation=45)
+            axes.set_xticks(posList)
+            axes.set_xticklabels(labelsList, rotation=45)
 
-        # figure configs
+            if 10 * np.mean(height_bef + height_aft) < max(height_bef + height_aft):
+                lim = np.mean(height_bef + height_aft) / 9
+            else:
+                lim = limMult * max(height_bef + height_aft)
+
+            configPlot(axes, title, (.0, lim), (x.min() - bin_width - .25, x.max()))
+            legendLabel()
+
+        # Figure and layout configuration
         fig = plt.figure(figsize=(18, 6), facecolor='snow')
         fig.canvas.manager.set_window_title(self.fileName + ' - Bars plots')
         gs = GridSpec(1, 4, height_ratios=[1], width_ratios=[1, 1, 1, 1])
@@ -619,58 +863,57 @@ class Recovery:
             fig.add_subplot(gs[0, 0]),
             fig.add_subplot(gs[0, 1]),
             fig.add_subplot(gs[0, 2]),
-            fig.add_subplot(gs[0, 3]))
+            fig.add_subplot(gs[0, 3])
+        )
 
-        fig.suptitle(f'')
-
-        # bars data
-        drawBars(  # First table
-            "Power law expoent \t $n'$", axBar1,
+        # Call to generate the charts
+        drawBars(
+            "Power law exponent \t $n'$", axBar1,
             self.sample_keys,
-            self.dataFittingBef_stor, self.dataFittingAft_stor,
-            self.colors_samples, dec=3,
-            scale_correction=corrections[0], z=1)
-
-        drawBars(  # Second table
+            self.dataFittingBef_stor,
+            self.dataFittingAft_stor,
+            self.colors_samples,
+            dec=3, paramName=None,
+            scale_correction=corrections[0], z=1
+        )
+        drawBars(
             "Scale factor for elastic modulus \t $G_0'$", axBar2,
             self.sample_keys,
-            self.dataFittingBef_stor, self.dataFittingAft_stor,
-            self.colors_samples, dec=0,
-            scale_correction=corrections[1], z=1)
-
-        drawBars(  # Third table
+            self.dataFittingBef_stor,
+            self.dataFittingAft_stor,
+            self.colors_samples, paramName='storage',
+            dec=0, scale_correction=corrections[1], z=1
+        )
+        drawBars(
             "Scale factor for viscous modulus \t $G_0''$", axBar3,
             self.sample_keys,
-            self.dataFittingBef_loss, self.dataFittingAft_loss,
-            self.colors_samples, dec=1,
-            scale_correction=corrections[2], z=1)
-        # deltaBefore = [
-        #     {"k'": k, "± k'": err}
-        #     for k, err in zip(self.meanDeltaBefore, self.meanDeltaBeforeErr)
-        # ]
-        # deltaAfter = [
-        #     {"k'": k, "± k'": err}
-        #     for k, err in zip(self.meanDeltaAfter, self.meanDeltaAfterErr)
-        # ]
-        drawBars(  # Fourth table
-            "Loss factor \t $ tan\,\delta = G_0''\,/\,G_0'$", axBar4,
+            self.dataFittingBef_loss,
+            self.dataFittingAft_loss,
+            self.colors_samples, paramName='loss',
+            dec=1, scale_correction=corrections[2], z=1
+        )
+
+        drawBars(
+            "Loss factor \t $ tan\\,\\delta = G_0''\\,/\\,G_0'$", axBar4,
             self.sample_keys,
-            self.lossFactorBef, self.lossFactorAft,
-            self.colors_samples, dec=3,
-            scale_correction=corrections[3], z=1)
+            self.lossFactorBef,
+            self.lossFactorAft,
+            self.colors_samples,
+            dec=3, paramName=None,
+            scale_correction=corrections[3], z=1
+        )
 
         plt.subplots_adjust(
             wspace=.050, hspace=.150,
             top=.950, bottom=.150,
-            left=.015, right=.985)
+            left=.015, right=.985
+        )
 
         if show:
             plt.show()
         if save:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
-            fig.savefig(
-                f'{dirSave}' + f'\\{self.fileName}' + ' - Bars plots' + '.png',
-                facecolor='w', dpi=150)
+            fig.savefig(f'{dirSave}\\{self.fileName} - Bars plots.png', facecolor='w', dpi=150)
             print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
     def plotHeatMap(
@@ -703,7 +946,7 @@ class Recovery:
                             data_map[i][j] = None
                 colors, decimal, minValue, maxValue = 'YlGn', '.0f', 0, 100
 
-            if title == "Loss factor $\\tan(G_0''\,/\,G_0')$":
+            if title == "Loss factor $\\tan(G_0''\\,/\\,G_0')$":
                 for i in range(len(data_map)):
                     for j in range(len(data_map[i])):
                         for k in range(len(data_map[i][j])):
@@ -1094,7 +1337,7 @@ class Flow:
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='....', alpha=a, linewidth=.5,
-                    label='$\lambda$', zorder=z)
+                    label='$\\lambda$', zorder=z)
 
                 legend = axes.legend(
                     loc='upper center',
@@ -1127,7 +1370,7 @@ class Flow:
             samples = [d['Sample'] for d in data]
             tau0, tau0_err = [d["$\\tau_0$"] for d in data], [d["± $\\tau_0$"] for d in data]
             tauE, tauE_err = [d["$\\tau_e$"] for d in data], [d["± $\\tau_e$"] for d in data]
-            charTime, charTime_err = [d["$\lambda$"] for d in data], [d["± $\lambda$"] for d in data]
+            charTime, charTime_err = [d["$\\lambda$"] for d in data], [d["± $\\lambda$"] for d in data]
 
             cteLimits = [
                 1.5 * max(tau0),
@@ -1135,7 +1378,7 @@ class Flow:
             ]
 
             configPlot(axes, "$\\tau_0$ (Pa) and $\\tau_e$ (Pa)", (0, cteLimits[0]))
-            configPlot(axes3, "$\lambda$ (s)", (0, cteLimits[1]))
+            configPlot(axes3, "$\\lambda$ (s)", (0, cteLimits[1]))
 
             posList, labelsList = [], []
 
@@ -1213,7 +1456,7 @@ class Flow:
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
-                    label="$\sigma_0$", zorder=z)
+                    label="$\\sigma_0$", zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
@@ -1278,7 +1521,7 @@ class Flow:
                 1.5 * max(nPrime)
             ]
 
-            configPlot(axes, "$\sigma_0$ (Pa)", (0, stepLimits[0]))
+            configPlot(axes, "$\\sigma_0$ (Pa)", (0, stepLimits[0]))
             configPlot(axes2, "$k'$", (0, stepLimits[1]))
             configPlot(axes3, "$n'$", (0, stepLimits[2]))
 
@@ -1642,19 +1885,19 @@ class DynamicCompression:
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='', alpha=a, linewidth=.5,
-                    label='$\sigma_\\text{0}^\\text{peak}$', zorder=z)
+                    label='$\\sigma_\\text{0}^\\text{peak}$', zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='\\\\\\', alpha=a, linewidth=.5,
-                    label='$\sigma_\\text{eq}^\\text{peak}$', zorder=z)
+                    label='$\\sigma_\\text{eq}^\\text{peak}$', zorder=z)
                 axes.bar(
                     space_samples * x.min() - 10,
                     height=0, yerr=0,
                     color='w', edgecolor='#383838',
                     width=bin_width, hatch='....', alpha=a, linewidth=.5,
-                    label='$\lambda$', zorder=z)
+                    label='$\\lambda$', zorder=z)
 
                 legend = axes.legend(
                     loc='upper center',

@@ -4,7 +4,7 @@ from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Rectangle
 
 
-def fonts(folder_path, small=10, medium=12):
+def fonts(folder_path, small=13, medium=14):
     """Configures font properties for plots."""
     plt.rc('font', size=small)
     plt.rc('axes', titlesize=medium)
@@ -36,14 +36,14 @@ def plotFreqSweep(
         title, textConfig, textLabel, textCoord, rectConfig,
         tickRight=False):
     """Plots the Oscillatory Frequency Sweep Assay."""
-    ax.set_title(title, size=10)
+    ax.set_title(title, size=12)
     ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
     ax.set_xticks([])
     ax.set_xlim([-3, 10.5])
 
     ax.set_yticks([1, 10])
     ax.tick_params(axis='y', colors='mediumaquamarine')
-    ax.set_yticklabels(['$0.1\,Hz$', '$100\,Hz$'], size=9.5, color='mediumseagreen')
+    ax.set_yticklabels(['$0.1\,Hz$', '$100\,Hz$'], size=12, color='mediumseagreen')
     ax.set_ylim([0, 10.5])
     if tickRight:
         ax.yaxis.tick_right()
@@ -88,7 +88,7 @@ def genLosMod(base, n=10):
 
 def plotShearAssay(ax, x, y, textSize):
     """Plots the Flow Shearing Assay."""
-    ax.set_title('Flow shearing assay.', size=10)
+    ax.set_title('Flow shearing assay.', size=12)
     ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
     ax.set_xticks([])
     ax.set_xlim([-10, 10])
@@ -124,7 +124,7 @@ def legendLabel(ax):
 def mainPlot(filename):
     fonts(folder_path='C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
     plt.style.use('seaborn-v0_8-ticks')
-    fig, axes = plt.subplots(figsize=(16, 16 // 3), facecolor='w', ncols=3)
+    fig, axes = plt.subplots(figsize=(16, 6), facecolor='w', ncols=3)
     fig.suptitle('Rheometry assay protocol to evaluate viscoelastic recovery.\n\n\n')
     marker_size = 50
 
@@ -133,7 +133,7 @@ def mainPlot(filename):
     yFreq = np.ceil(xFreq)
     text_coord = (-1.5, 10.1)
     text_label = 'Rest and\nSet $T=37\,^oC$\nfor $180\,\,s$'
-    text_properties = {'horizontalalignment': 'center', 'verticalalignment': 'top', 'color': 'k', 'size': 9.2}
+    text_properties = {'horizontalalignment': 'center', 'verticalalignment': 'top', 'color': 'k', 'size': 12}
     rect_properties = [(-3, 0), 3, 10.5]
 
     # Plot 1: Oscillatory Frequency Sweep Assay
@@ -147,7 +147,7 @@ def mainPlot(filename):
     yShearRate = np.ceil(xShearRate) / 3.5
     plotShearAssay(
         axes[1], xShearRate, yShearRate,
-        textSize=9.2)
+        textSize=12)
 
     # Plot 3: Oscillatory Frequency Sweep Assay Again
     plotFreqSweep(
@@ -157,8 +157,8 @@ def mainPlot(filename):
         tickRight=True)
 
     plt.subplots_adjust(wspace=0.0, top=0.875, bottom=0.05, left=0.05, right=0.95)
-    fig.savefig(f'{filename}.png', facecolor='w', dpi=600)
     plt.show()
+    fig.savefig(f'{filename}.png', facecolor='w', dpi=600)
 
 
 # Run the main plotting function
