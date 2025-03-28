@@ -242,7 +242,20 @@ def kappa(folderPath):
 
     kappas.plotBars(
         [0, None, None, None],
-        show=False, save=False)
+        significance_list=[
+            ['A', 'B', 'B', 'B', 'B', 'B',
+             'A*', 'B*', 'C', 'C', 'B*', 'B*',],
+
+            ['X', 'A', 'B', 'C', 'D', 'E',
+             'X', 'A*', 'B*', 'C*', 'D*', 'D*',],
+
+            ['X', 'A', 'B', 'C', 'D', 'E',
+             'X', 'A*', 'B*', 'C*', 'D*', 'D*', ],
+
+            ['X', 'A', 'B', 'B', 'B', 'B',
+             'X', 'A*', 'A*', 'B*', 'C*', 'C*',],
+        ],
+        show=False, save=True)
 
 
 def iota(folderPath):
@@ -290,7 +303,20 @@ def iota(folderPath):
 
     iotas.plotBars(
         [None, None, None, None],
-        show=False, save=False)
+        significance_list=[
+            ['A', 'B', 'B', 'B', 'B',
+             'A', 'A', 'B*', 'B', 'A',],
+
+            [' ', 'A', 'B', 'A', 'A',
+             ' ', 'A*', 'B*', 'B*', 'A*',],
+
+            ['A', 'B', 'C', 'B', 'B',
+             'A*', 'B*', 'C*', 'C*', 'C*',],
+
+            [' ', 'A', 'A', 'A', 'A',
+             'A*', 'B*', 'C*', 'C*', 'B*',],
+        ],
+        show=False, save=True)
 
     # iotas.plotHeatMap(show=False)
 
@@ -357,13 +383,26 @@ def starch(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
         [None, 4, None, None],
+        significance_list=[
+            ['A', 'B', 'A', 'A',
+             'A', 'B*', 'A', 'A',],
+
+            ['A', 'B', 'C', 'C',
+             'A*', 'B*', 'C*', 'D*',],
+
+            ['A', 'B', 'C', 'C',
+             'A*', 'B*', 'C*', 'D*',],
+
+            ['A', 'B', 'A', 'A',
+             'A', ' ', 'A', 'A',],
+        ],
         show=False, save=True)
 
-    starches.plotHeatMap(show=False, save=True)
+    # starches.plotHeatMap(show=False, save=True)
 
 
 def starch_kappa(folderPath):
@@ -429,13 +468,26 @@ def starch_kappa(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
         [None, None, None, None],
+        significance_list=[
+            ['A', 'B', 'C', 'C',
+             'A*', 'B*', 'C*', 'C*',],
+
+            ['A', 'B', 'C', 'D',
+             'A*', 'B*', 'C*', 'D*',],
+
+            ['A', 'B', 'C', 'B',
+             'A*', 'B*', 'C*', 'D*', ],
+
+            ['A', 'B', 'C', 'C',
+             'A*', 'B*', 'B*', 'A*',],
+        ],
         show=False, save=True)
 
-    starches.plotHeatMap(show=False, save=True)
+    # starches.plotHeatMap(show=False, save=True)
 
 
 def starch_iota(folderPath):
@@ -502,13 +554,26 @@ def starch_iota(folderPath):
     starches.plotGmodulus(
         f"Elastic modulus $G'$ (Pa)", (1 * 10 ** 0, 1 * 10 ** 5),
         f'Frequency (Hz)', (.075, 100),
-        show=False, save=True)
+        show=False, save=False)
 
     starches.plotBars(
         [0.18, 3000, 250, 18],
+        significance_list=[
+            ['A', 'B', 'C', 'D',
+             'A*', 'B*', 'B*', 'C*',],
+
+            ['A', 'B', 'C', 'D',
+             'A*', 'B*', 'A*', 'C*',],
+
+            ['A', 'B', 'C', 'B',
+             'A*', 'A*', 'B*', 'C*', ],
+
+            ['A', 'A', 'B', 'C',
+             'A*', 'B*', 'B*', 'C*',],
+        ],
         show=False, save=True)
 
-    starches.plotHeatMap(show=False, save=True)
+    # starches.plotHeatMap(show=False, save=True)
 
 
 if __name__ == '__main__':
@@ -517,11 +582,11 @@ if __name__ == '__main__':
     path = "D:/Documents/GitHub/Rheometer-Plotting/data/by sample"   # New Personal
 
     # kappa(path)
-    iota(path)
+    # iota(path)
     # blends(path)
     # starch(path)
     # starch_kappa(path)
-    # starch_iota(path)
+    starch_iota(path)
 
     # df = build_dataframe(statisticalData)
     # anova_table = run_two_way_anova(df)

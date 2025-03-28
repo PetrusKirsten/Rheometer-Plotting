@@ -56,8 +56,20 @@ def kappa(folderPath):
         show=False
     )
     kappas.plotFits(
-        [350, 50], [50, 2, 25],
-        show=False
+        significance_list=[
+            ['A', 'B', 'C', 'D',
+             'A*', 'B*', 'B*', 'C*',],
+
+            ['A', 'B', 'C', 'D',
+             'A*', 'B*', 'A*', 'C*',],
+
+            ['A', 'B', 'C', 'B',
+             'A*', 'A*', 'B*', 'C*', ],
+
+            ['A', 'A', 'B', 'C',
+             'A*', 'B*', 'B*', 'C*',],
+        ],
+        show=False, save=True
     )
 
 
@@ -172,9 +184,17 @@ def starch(folderPath):
     starches.plotShearFlow(
         f'Shear stress (Pa)', (0, 500),
         f'Shear stress (Pa)', (0, 250),
-        show=False, save=True
+        show=False, save=False
     )
     starches.plotFits(
+        [
+            [
+                ['A', 'AA', 'Aa'], ['B', 'BB', 'Bb'], ['C', 'CC', 'Cc'], ['D', 'DD', 'Dd'],
+            ],
+            [
+                ['a', 'aa', 'aA'], ['b', 'bb', 'bB'], ['c', 'cc', 'cC'], ['d', 'dd', 'dD'],
+            ],
+        ],
         show=False, save=True
     )
 
@@ -416,14 +436,16 @@ def blends(folderPath):
 
 
 if __name__ == '__main__':
-    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    path = "D:/Documents/GitHub/Rheometer-Plotting/data/by sample"   # New Personal
+
 
     # blends(path)
     # kappa(path)
     # iota(path)
-    # starch(path)
+    starch(path)
     # starch_kappa(path)
-    starch_iota(path)
+    # starch_iota(path)
 
     plt.show()

@@ -664,6 +664,7 @@ class Recovery:
     def plotBars(
             self,
             corrections,
+            significance_list,
             show=True, save=False):
 
         def drawBars(
@@ -672,29 +673,10 @@ class Recovery:
                 data_before,
                 data_after,
                 colors,
-                dec, paramName,
-                scale_correction=None, limMult=1.8, textSize=12, a=.9, h='', z=1,
+                dec, paramName, significance=None,
+                scale_correction=None, limMult=2, textSize=12, a=.9, h='', z=1,
 
         ):
-            """
-            Internal function that draws bars for 'before' and 'after' data.
-
-            Parameters:
-                title (str): Title of the chart.
-                axes (matplotlib.Axes): Axes where the chart will be drawn.
-                sampleName (list): Sample names for the x-axis.
-                data_before (list): Data before adjustment.
-                data_after (list): Data after adjustment.
-                colors (list): Colors for the bars.
-                dec (int): Number of decimal places to display values.
-                scale_correction (int or None): Indicates if a scale correction is needed (optional).
-                textSize (int): Font size of the text on the chart.
-                a (float): Opacity of the bars.
-                h (str): Hatch pattern for 'before' bars (optional).
-                z (float): Controls the overlap of bars.
-                :param scale_correction:
-                :param paramName:
-            """
 
             def legendLabel():
                 """
@@ -733,7 +715,7 @@ class Recovery:
             height_bef, height_bef_err = [d[f"{key}"] for d in data_before], [d[f"± {key}"] for d in data_before]
             height_aft, height_aft_err = [d[f"{key}"] for d in data_after], [d[f"± {key}"] for d in data_after]
 
-            significance = ''
+            # significance = ''
             if paramName is not None:
                 print(
                     35*f'*', '\n'
@@ -779,8 +761,8 @@ class Recovery:
                 text = (f'{height_rounded * text_scale_correction:.{dec}f} '
                         f'± {stddev_rounded * text_scale_correction:.{dec}f} {unit}')
 
-                if paramName is not None:
-                    text = text + '   ' + significance[sample]
+                # if paramName is not None:
+                text = text + '   ' + significance[sample]
 
                 axes.text(
                     space_samples * x[sample] - bin_width / 2,
@@ -826,8 +808,8 @@ class Recovery:
                 text = (f'{height_rounded * text_scale_correction:.{dec}f} '
                         f'± {stddev_rounded * text_scale_correction:.{dec}f} {unit}')
 
-                if paramName is not None:
-                    text = text + '   ' + significance[sample]
+                # if paramName is not None:
+                text = text + '   ' + significance[sample + len(height_bef)]
 
                 axes.text(
                     space_samples * x[sample] + bin_width / 2,
@@ -857,7 +839,9 @@ class Recovery:
             legendLabel()
 
         # Figure and layout configuration
-        fig = plt.figure(figsize=(18, 6), facecolor='snow')
+        dpi = 300
+        width, height = 2000 * 2 / dpi, 1000 * 2 / dpi
+        fig = plt.figure(figsize=(width, height), facecolor='snow')
         fig.canvas.manager.set_window_title(self.fileName + ' - Bars plots')
         gs = GridSpec(1, 4, height_ratios=[1], width_ratios=[1, 1, 1, 1])
 
@@ -875,7 +859,7 @@ class Recovery:
             self.dataFittingBef_stor,
             self.dataFittingAft_stor,
             self.colors_samples,
-            dec=3, paramName=None,
+            dec=3, paramName=None, significance=significance_list[0],
             scale_correction=corrections[0], z=1
         )
         drawBars(
@@ -883,7 +867,7 @@ class Recovery:
             self.sample_keys,
             self.dataFittingBef_stor,
             self.dataFittingAft_stor,
-            self.colors_samples, paramName='storage',
+            self.colors_samples, paramName=None, significance=significance_list[1],
             dec=0, scale_correction=corrections[1], z=1
         )
         drawBars(
@@ -891,7 +875,7 @@ class Recovery:
             self.sample_keys,
             self.dataFittingBef_loss,
             self.dataFittingAft_loss,
-            self.colors_samples, paramName='loss',
+            self.colors_samples, paramName=None, significance=significance_list[2],
             dec=1, scale_correction=corrections[2], z=1
         )
 
@@ -901,7 +885,7 @@ class Recovery:
             self.lossFactorBef,
             self.lossFactorAft,
             self.colors_samples,
-            dec=3, paramName=None,
+            dec=3, paramName=None, significance=significance_list[3],
             scale_correction=corrections[3], z=1
         )
 
@@ -1313,12 +1297,13 @@ class Flow:
 
     def plotFits(
             self,
+            significance_list,
             show=True, save=False
     ):
 
         def drawThixoData(
                 title,
-                axes, data,
+                axes, data, significance,
                 colors, a, z
         ):
             def legendLabel():
@@ -1385,6 +1370,7 @@ class Flow:
             posList, labelsList = [], []
 
             for i in range(len(tau0)):
+
                 axes.bar(
                     space_samples * x[i] - bin_width - bin_gap,
                     height=tau0[i], yerr=0,
@@ -1399,7 +1385,7 @@ class Flow:
                 axes.text(
                     space_samples * x[i] - bin_width - bin_gap,
                     tau0[i] + tau0_err[i] + cteLimits[0] * .025,
-                    f'{tau0[i]:.{0}f} ± {tau0_err[i]:.{0}f} Pa',
+                    f'{tau0[i]:.{0}f} ± {tau0_err[i]:.{0}f} Pa    {significance[i][0]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1417,7 +1403,7 @@ class Flow:
                 axes.text(
                     space_samples * x[i],
                     tauE[i] + tauE_err[i] + cteLimits[0] * .025,
-                    f'{tauE[i]:.{0}f} ± {tauE_err[i]:.{0}f} Pa',
+                    f'{tauE[i]:.{0}f} ± {tauE_err[i]:.{0}f} Pa    {significance[i][1]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1435,7 +1421,7 @@ class Flow:
                 axes3.text(
                     space_samples * x[i] + bin_width + bin_gap,
                     charTime[i] + charTime_err[i] + cteLimits[1] * .025,
-                    f'{charTime[i]:.{1}f} ± {charTime_err[i]:.{1}f}',
+                    f'{charTime[i]:.{1}f} ± {charTime_err[i]:.{1}f}    {significance[i][2]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1449,8 +1435,9 @@ class Flow:
             return tauE
 
         def drawHBdata(
-                title, axes,
-                data, colors, a, z
+                title,
+                axes, data, significance,
+                colors, a, z
         ):
             def legendLabel():
                 axes.bar(
@@ -1543,7 +1530,7 @@ class Flow:
                 axes.text(
                     space_samples * x[i] - bin_width - bin_gap,
                     sigmaZero[i] + sigmaZero_err[i] + stepLimits[0] * .025,
-                    f'{sigmaZero[i]:.{0}f} ± {sigmaZero_err[i]:.{0}f} Pa',
+                    f'{sigmaZero[i]:.{0}f} ± {sigmaZero_err[i]:.{0}f} Pa    {significance[i][2]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1560,7 +1547,7 @@ class Flow:
                 axes2.text(
                     space_samples * x[i],
                     kPrime[i] + kPrime_err[i] + stepLimits[1] * .025,
-                    f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f} Pa·s$^n$',
+                    f'{kPrime[i]:.{1}f} ± {kPrime_err[i]:.{1}f} Pa·s$^n$    {significance[i][1]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1577,7 +1564,7 @@ class Flow:
                 axes3.text(
                     space_samples * x[i] + bin_width + bin_gap,
                     nPrime[i] + nPrime_err[i] + stepLimits[2] * .025,
-                    f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}',
+                    f'{nPrime[i]:.{2}f} ± {nPrime_err[i]:.{2}f}    {significance[i][2]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=13)
 
@@ -1590,20 +1577,22 @@ class Flow:
 
             return nPrime
 
+        dpi = 300
+        width, height = 2000 * 2 / dpi, 1000 * 2 / dpi
         fig, axs = plt.subplots(
-            figsize=(16, 7), ncols=2, nrows=1,
+            figsize=(width, height), ncols=2, nrows=1,
             gridspec_kw={'width_ratios': [1, 1]}, facecolor='snow')
         fig.canvas.manager.set_window_title(self.fileName + ' - Flow shearing fit parameters')
         axCteSS, axStepSS = axs[0], axs[1]
 
         _ = drawThixoData(
             'Constant shear rate',
-            axCteSS, self.tableCteSS,
+            axCteSS, self.tableCteSS, significance_list[0],
             self.colors_samples, a=.85, z=2)
 
         _ = drawHBdata(
             'Steps shear rate',
-            axStepSS, self.tableStepSS,
+            axStepSS, self.tableStepSS, significance_list[1],
             self.colors_samples, a=.85, z=2)
 
         plt.tight_layout()
