@@ -168,8 +168,9 @@ def starch(folderPath):
         keySamples, nSamples, cSamples)
 
     starches.plotGraphs(
+        [['A', 'A'], ['B', 'B'], ['C', 'A'], ['C', 'A']],
         1000,
-        [800, 1200],
+        [1200, 1600],
         show=False, save=True
     )
 
@@ -220,13 +221,13 @@ def starch_kappa(folderPath):
     ]
     cSamples = [
         # No CL
-        'lightskyblue',
+        '#F780A7',
         # CL 7
-        '#62BDC1',
+        '#CC69B5',
         # CL 14
-        '#31A887',
+        '#A251C3',
         # CL 28
-        '#08653A',
+        '#773AD1',
     ]
 
     # starches = DynamicCompression(
@@ -242,8 +243,9 @@ def starch_kappa(folderPath):
         keySamples, nSamples, cSamples)
 
     starches_kappa.plotGraphs(
+        [['A', 'A'], ['B', 'B'], ['C', 'C'], ['A', 'AB']],
         1500,
-        [2600, 1750],
+        [3200, 2200],
         show=False, save=True
     )
 
@@ -313,20 +315,23 @@ def starch_iota(folderPath):
         keySamples, nSamples, cSamples)
 
     starches_iota.plotGraphs(
+        [['A', 'A'], ['B', 'B'], ['C', 'B'], ['A', 'C']],
         600,
-        [800, 700],
+        [1200, 1000],
         show=False, save=True
     )
 
 
 if __name__ == '__main__':
 
-    path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
+    # path = "C:/Users/petrus.kirsten/PycharmProjects/Rheometer-Plotting/data/by sample"  # CEBB
     # path = "C:/Users/Petrus Kirsten/Documents/GitHub/RheometerPlots/data/by sample"  # Personal
+    path = "D:/Documents/GitHub/Rheometer-Plotting/data/by sample"   # New Personal
+
 
     # blends(path)
     # starch(path)
-    # starch_kappa(path)
-    starch_iota(path)
+    starch_kappa(path)
+    # starch_iota(path)
 
     plt.show()

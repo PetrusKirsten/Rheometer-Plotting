@@ -1360,8 +1360,8 @@ class Flow:
             charTime, charTime_err = [d["$\\lambda$"] for d in data], [d["± $\\lambda$"] for d in data]
 
             cteLimits = [
-                1.5 * max(tau0),
-                1.5 * max(charTime)
+                1.75 * max(tau0),
+                1.75 * max(charTime)
             ]
 
             configPlot(axes, "$\\tau_0$ (Pa) and $\\tau_e$ (Pa)", (0, cteLimits[0]))
@@ -1505,9 +1505,9 @@ class Flow:
             nPrime, nPrime_err = [abs(d["n'"]) for d in data], [d["± n'"] for d in data]
 
             stepLimits = [
-                1.5 * max(sigmaZero),
-                1.5 * max(kPrime),
-                1.5 * max(nPrime)
+                1.75 * max(sigmaZero),
+                1.75 * max(kPrime),
+                1.75 * max(nPrime)
             ]
 
             configPlot(axes, "$\\sigma_0$ (Pa)", (0, stepLimits[0]))
@@ -1673,12 +1673,15 @@ class DynamicCompression:
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
         plt.style.use('seaborn-v0_8-ticks')
-        self.figGraphs = plt.figure(figsize=(16, 9), facecolor='snow')
+        dpi = 300
+        height, width = 1980 * 2 / dpi, 1080 * 2 / dpi
+        self.figGraphs = plt.figure(figsize=(height, width), facecolor='snow')
         self.gsGraphs = GridSpec(2, 2, height_ratios=[1, 1.8], width_ratios=[1, 1])
         self.figGraphs.canvas.manager.set_window_title(self.fileName + ' - Compression')
 
     def plotGraphs(
             self,
+            significance_list,
             ax1Limits, ax2Limits,
             show=True, save=False
     ):
@@ -1920,8 +1923,8 @@ class DynamicCompression:
             posList, labelsList = [], []
             bin_width, space_samples, bin_gap = .8, 3, .075
             barsLimits = [
-                1.6 * max([sublist[0][0] for sublist in data]),
-                1.6 * max([sublist[0][2] for sublist in data])
+                1.9 * max([sublist[0][0] for sublist in data]),
+                1.9 * max([sublist[0][2] for sublist in data])
             ]
 
             x = np.arange(space_samples * len(sampleName))
@@ -1957,7 +1960,7 @@ class DynamicCompression:
                 axes.text(
                     space_samples * x[sample] - bin_width - bin_gap,
                     initialStress + initialStress_err + barsLimits[0] * .025,
-                    f'{initialStress:.{1}f} ± {initialStress_err:.{1}f} Pa',
+                    f'{initialStress:.{1}f} ± {initialStress_err:.{1}f} Pa    {significance_list[sample][0]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
@@ -1976,7 +1979,7 @@ class DynamicCompression:
                 axes.text(
                     space_samples * x[sample],
                     equilibStress + equilibStress_err + barsLimits[0] * .025,
-                    f'{equilibStress:.{1}f} ± {equilibStress_err:.{1}f} Pa',
+                    f'{equilibStress:.{1}f} ± {equilibStress_err:.{1}f} Pa    {significance_list[sample][1]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
@@ -1995,7 +1998,7 @@ class DynamicCompression:
                 axes2.text(
                     space_samples * x[sample] + bin_width + bin_gap,
                     timeCte + timeCte_err + barsLimits[1] * .025,
-                    f'{timeCte:.{1}f} ± {timeCte_err:.{1}f}',
+                    f'{timeCte:.{1}f} ± {timeCte_err:.{1}f}    {significance_list[sample][2]}',
                     va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
@@ -2034,7 +2037,7 @@ class DynamicCompression:
             h='', z=2)
 
         plt.subplots_adjust(
-            wspace=0.015, hspace=0.150,
+            wspace=0.015, hspace=0.200,
             top=0.970, bottom=0.070,
             left=0.060, right=0.985)
 
@@ -2115,12 +2118,15 @@ class BreakageCompression:
         # chart config
         fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
         plt.style.use('seaborn-v0_8-ticks')
-        self.figGraphs = plt.figure(figsize=(16, 9), facecolor='snow')
+        dpi = 300
+        height, width = 1920 * 2 / dpi, 1080 * 2 / dpi
+        self.figGraphs = plt.figure(figsize=(height, width), facecolor='snow')
         self.gsGraphs = GridSpec(1, 2, height_ratios=[1], width_ratios=[1, 1])
         self.figGraphs.canvas.manager.set_window_title(self.fileName + ' - Compression')
 
     def plotGraphs(
             self,
+            significance_list,
             sLimits,
             barsLimits,
             show=True, save=False
@@ -2375,8 +2381,8 @@ class BreakageCompression:
                 axes.text(
                     space_samples * x[sample] - bin_width,
                     slope + slope_err + limYM[1] * .085,
-                    f'{slope:.{0}f} ± {slope_err:.{0}f} Pa',
-                    va='center', ha='center', rotation=90,
+                    f'{slope:.{0}f} ± {slope_err:.{0}f} Pa    {significance_list[sample][0]}',
+                    va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
                 axes2.bar(
@@ -2392,8 +2398,8 @@ class BreakageCompression:
                 axes2.text(
                     space_samples * x[sample],
                     peak + peak_err + limPeak[1] * .085,
-                    f'{peak:.{0}f} ± {peak_err:.{0}f} Pa',
-                    va='center', ha='center', rotation=90,
+                    f'{peak:.{0}f} ± {peak_err:.{0}f} Pa    {significance_list[sample][1]}',
+                    va='bottom', ha='center', rotation=90,
                     color='#383838', fontsize=textSize)
 
                 posList.append(space_samples * x[sample] - bin_width / 2), labelsList.append(f'{sampleName[sample]}')
@@ -2441,6 +2447,6 @@ class BreakageCompression:
         if save:
             dirSave = Path(*Path(self.dataPath[0]).parts[:Path(self.dataPath[0]).parts.index('data') + 1])
             self.figGraphs.savefig(
-                f'{dirSave}' + f'\\{self.fileName}' + ' - Dynamic compression' + '.png',
+                f'{dirSave}' + f'\\{self.fileName}' + ' - compression' + '.png',
                 facecolor='w', dpi=150)
             print(f'\n\n· Compression chart saved at:\n{dirSave}.')

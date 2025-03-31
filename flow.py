@@ -189,10 +189,10 @@ def starch(folderPath):
     starches.plotFits(
         [
             [
-                ['A', 'AA', 'Aa'], ['B', 'BB', 'Bb'], ['C', 'CC', 'Cc'], ['D', 'DD', 'Dd'],
+                ['A', 'A', 'A'], ['B', 'B', 'B'], ['C', 'C', 'C'], ['D', 'C', 'C'],
             ],
             [
-                ['a', 'aa', 'aA'], ['b', 'bb', 'bB'], ['c', 'cc', 'cC'], ['d', 'dd', 'dD'],
+                ['A', 'A', 'A'], ['B', 'B', 'B'], ['C', 'C', 'A'], ['C', 'D', 'A'],
             ],
         ],
         show=False, save=True
@@ -262,9 +262,17 @@ def starch_kappa(folderPath):
     starches_kappas.plotShearFlow(
         f'Shear stress (Pa)', (0, 1000),
         f'Shear stress (Pa)', (0, 350),
-        show=False, save=True
+        show=False, save=False
     )
     starches_kappas.plotFits(
+        [
+            [
+                ['A', 'A', 'A'], ['B', 'B', 'B'], ['C', 'C', 'C'], ['A', 'D', 'D'],
+            ],
+            [
+                ['A', 'A', 'A'], ['B', 'A', 'A'], ['C', 'B', 'B'], ['D', 'C', 'B'],
+            ],
+        ],
         show=False, save=True
     )
 
@@ -336,6 +344,14 @@ def starch_iota(folderPath):
         show=False, save=True
     )
     starches_iotas.plotFits(
+        [
+            [
+                ['A', 'A', 'A'], ['A', 'B', 'B'], ['B', 'C', 'A'], ['C', 'D', 'C'],
+            ],
+            [
+                ['A', 'A', 'A'], ['A', 'A', 'B'], ['B', 'B', 'C'], ['C', 'C', 'D'],
+            ],
+        ],
         show=False, save=True
     )
 
@@ -444,8 +460,8 @@ if __name__ == '__main__':
     # blends(path)
     # kappa(path)
     # iota(path)
-    starch(path)
+    # starch(path)
     # starch_kappa(path)
-    # starch_iota(path)
+    starch_iota(path)
 
     plt.show()
