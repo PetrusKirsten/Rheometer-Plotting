@@ -278,6 +278,7 @@ class Recovery:
     ):
 
         def getData():
+
             def getSegments(dataframe):
                 freq = dataframe['f in Hz'].to_numpy()
                 elastic = dataframe["G' in Pa"].to_numpy()
