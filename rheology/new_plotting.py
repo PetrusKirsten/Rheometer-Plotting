@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
+
 from matplotlib import pyplot as plt
+from matplotlib.font_manager import FontProperties
+from matplotlib.gridspec import GridSpec
+
 
 class OORecovery:
     qntsMisc = ['SegIndex', 't in s', 'h in mm', 'T in °C', 't_seg in s']
@@ -33,28 +37,95 @@ class OORecovery:
 
         return pd.concat(dfs, ignore_index=True)
 
+def fonts(folder_path, s=12, m=14):
 
-if __name__ == '__main__':
+    font_path = folder_path + 'HelveticaNeueThin.otf'
+    helvetica_thin = FontProperties(fname=font_path)
 
-    def plot_errorbar(dfs):
-        colors = plt.cm.viridis(np.linspace(0, 1, len(dfs)))
-        plt.figure(figsize=(10, 6))
+    font_path = folder_path + 'HelveticaNeueLight.otf'
+    helvetica_light = FontProperties(fname=font_path)
 
-        for i, df in enumerate(dfs):
-            x, y, yerr = df['f in Hz'], df[("G' in Pa", 'mean')], df[("G' in Pa", 'std')]
+    font_path = folder_path + 'HelveticaNeueMedium.otf'
+    helvetica_medium = FontProperties(fname=font_path)
 
-            plt.errorbar(x, y, yerr=yerr, fmt='o', capsize=3, label=f'St CL {i * 7}', color=colors[i])
+    font_path = folder_path + 'HelveticaNeueBold.otf'
+    helvetica_bold = FontProperties(fname=font_path)
 
-        plt.xscale('log')
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel("G' (Pa)")
-        plt.title("G' vs Frequency with Error Bars")
-        plt.legend()
-        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+    plt.rc('font', size=s)  # controls default text sizes
+    plt.rc('axes', titlesize=s)  # fontsize of the axes title
+    plt.rc('axes', labelsize=s)  # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=s)  # fontsize of the tick labels
+    plt.rc('ytick', labelsize=s)  # fontsize of the tick labels
+    plt.rc('legend', fontsize=s)  # legend fontsize
+    plt.rc('figure', titlesize=m)  # fontsize of the figure title
 
-        plt.show()
+def plot_errorbar(dfs):
 
-    pd.set_option('display.max_rows', None), pd.set_option('display.max_columns', None), pd.set_option('display.width', None)
+    def configPlot(ax, yLabel, axisColor='#303030'):
+
+        ax.spines[['top', 'bottom', 'left', 'right']].set_linewidth(0.75)
+        ax.spines[['top', 'bottom', 'left', 'right']].set_color(axisColor)
+        ax.tick_params(axis='both', which='both', colors=axisColor)
+
+        ax.grid(True, which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=0.5)
+        ax.grid(True, which='minor', axis='y', linestyle='-', linewidth=.5, color='lightgray', alpha=0.5)
+
+        ax.set_xscale('log')
+        # ax.set_xlim(xLim)
+
+        ax.set_ylabel(f'{yLabel}', color=axisColor)
+        ax.set_yscale('log')
+        # ax.set_ylim(yLim)
+
+    colors = plt.cm.viridis(np.linspace(0, 1, len(dfs)))
+
+    dpi = 300
+    heigth, width = 1920*2 / dpi, 1080*2 / dpi
+    fig = plt.figure(figsize=(heigth, width), facecolor='snow')
+
+    fig.canvas.manager.set_window_title('Elastic modulus')
+
+    gs = GridSpec(2, 2, width_ratios=[1, 1], height_ratios=[1, 1])
+    axPreTop, axPostTop = fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])
+    axPreBottom, axPostBottom = fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])
+
+    configPlot(axPreTop, 'Elastic modulus')
+    configPlot(axPreBottom, 'Viscous modulus')
+
+    for i, df in enumerate(dfs):
+        x, y, yerr = df['f in Hz'], df[("G' in Pa", 'mean')], df[("G' in Pa", 'std')]
+
+        axPreTop.errorbar(x, y, yerr=yerr, fmt='o', capsize=3, label=f'St CL {i * 7}', color=colors[i])
+        axPreBottom.errorbar(x, y, yerr=yerr, fmt='o', capsize=3, label=f'St CL {i * 7}', color=colors[i])
+
+    plt.xscale('log')
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel("G' (Pa)")
+    plt.title("G' vs Frequency with Error Bars")
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+
+    plt.subplots_adjust(
+        wspace=0.015, hspace=0.060,
+        top=0.970, bottom=0.070,
+        left=0.060, right=0.985)
+
+    fig.savefig(
+        f'Elastic and viscous moduli' + '.png',
+        facecolor='w', dpi=300)
+    # print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
+
+    plt.show()
+
+
+def main():
+    fonts('C:/Users/petrus.kirsten/AppData/Local/Microsoft/Windows/Fonts/')
+
+    plt.style.use('seaborn-v0_8-ticks')
+
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', None)
 
     folderPath = "D:/Documents/GitHub/Rheometer-Plotting/data/by sample"
     filePath = [
@@ -88,3 +159,7 @@ if __name__ == '__main__':
     ]
 
     plot_errorbar(stCL)
+
+
+if __name__ == '__main__':
+    main()
