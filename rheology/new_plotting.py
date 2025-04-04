@@ -4,6 +4,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.font_manager import FontProperties
 from matplotlib.gridspec import GridSpec
+from scipy.optimize import curve_fit
 
 
 def fonts(folder_path, s=12, m=14):
@@ -29,6 +30,10 @@ def fonts(folder_path, s=12, m=14):
     plt.rc('figure', titlesize=m)  # fontsize of the figure title
 
 
+def powerLaw(x, k, n):
+    return k * (x ** n)
+
+
 class OORecovery:
     qntsMisc = ['SegIndex', 't in s', 'h in mm', 'T in °C', 't_seg in s']
     qntsOFS = ['f in Hz', "G' in Pa", 'G" in Pa',]  # '|G*| in Pa', 'tan(δ) in -', '|η*| in mPas']
@@ -47,6 +52,7 @@ class OORecovery:
         dfs = []
 
         for i, file in enumerate(self.paths, start=1):
+
             df = pd.read_excel(file)[self.qntsOFS].dropna().reset_index(drop=True)
 
             breakIndex = len(df) // 2
@@ -60,6 +66,23 @@ class OORecovery:
 
         return pd.concat(dfs, ignore_index=True)
 
+    def _powerLaw(self, modulus):
+        """
+        :type modulus: str
+        :rtype: object
+        """
+
+        x, y = self.dataMean['f in Hz'][:16], None
+
+        if modulus == "G'":
+            y = self.dataMean["G' in Pa", 'mean'][:16]
+
+        elif modulus == 'G"':
+            y = self.dataMean['G" in Pa', 'mean'][:16]
+
+        self.fitting = curve_fit(powerLaw, x, y)
+
+        return self.fitting[0], self.fitting[1], np.sqrt(np.diag(self.fitting[1]))
 
 def plotOFS(samples):
 
@@ -192,7 +215,6 @@ def plotOFS(samples):
     fig.savefig(
         f'{windowTitle} ' + f'{l.split('CL')[0].strip()}' + ' CL' + '.svg',
         facecolor='w', dpi=resolution)
-    # print(f'\n\n· Elastic and viscous moduli chart saved at:\n{dirSave}.')
 
 def main():
 
