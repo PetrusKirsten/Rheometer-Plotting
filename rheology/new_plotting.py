@@ -30,7 +30,7 @@ def fonts(folder_path, s=12, m=14):
     plt.rc('figure', titlesize=m)  # fontsize of the figure title
 
 
-def powerLaw(x, k, n):
+def function_powerLaw(x, k, n):
     return k * (x ** n)
 
 
@@ -80,7 +80,7 @@ class OORecovery:
         elif modulus == 'G"':
             y = self.dataMean['G" in Pa', 'mean'][:16]
 
-        self.fitting = curve_fit(powerLaw, x, y)
+        self.fitting = curve_fit(function_powerLaw, x, y)
 
         return self.fitting[0], self.fitting[1], np.sqrt(np.diag(self.fitting[1]))
 
