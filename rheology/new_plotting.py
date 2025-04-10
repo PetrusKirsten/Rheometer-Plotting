@@ -85,8 +85,8 @@ class OoRecovery:
         return self.fitting[0], self.fitting[1], np.sqrt(np.diag(self.fitting[1]))
 
 
-class OoFlow:
-    qntsFlow = ['SegIndex', 't in s', 't_seg in s', 'τ in Pa', 'ɣ̇ in 1/s', 'η in mPas']
+class OoThixo:
+    qntsFlow = ['SegIndex', 't in s', 't_seg in s', 'τ in Pa', 'η in mPas']
 
     def __init__(self, paths, label, color):
         self.paths, self.label, self.color = paths, label, color
@@ -94,25 +94,95 @@ class OoFlow:
         self.dataRaw = self._get_data()
         self.nReplicates = self.dataRaw['Sample'].nunique()
 
-        self.dataMean = self.dataRaw.groupby('f in Hz')[self.qntsFlow].agg(['mean', 'std']).reset_index()
+        self.dataMean = self.dataRaw.groupby('SegIndex')[self.qntsFlow[1:]].agg(['mean', 'std']).reset_index()
+        # self.dataMean = self.dataMean.sort_values(by=(['t in s', 'mean']), inplace=True)
+
 
     def _get_data(self):
+
+        def trim(dataframes):
+            """
+            :type dataframes: list
+            :rtype: list
+            """
+            min_size = min(dataframe.shape[0] for dataframe in dataframes)
+
+            return [dataframe.iloc[:min_size].reset_index(drop=True) for dataframe in dataframes]
+
         dfs = []
 
         for i, file in enumerate(self.paths, start=1):
 
-            df = pd.read_excel(file)[self.qntsFlow].dropna().reset_index(drop=True)
-
-            breakIndex = len(df) // 2
-            df_1, df_2 = df.iloc[:breakIndex].reset_index(drop=True), df.iloc[breakIndex:].reset_index(drop=True)
-            df_2.rename(columns={col: f"{col} | broken" for col in df_2.columns if col != 'f in Hz'}, inplace=True)
-
-            df = df_1.merge(df_2, on='f in Hz', how='inner')
-            df['Sample'] = str(i)
-
+            df = (
+                pd.read_excel(file)[self.qntsFlow]
+                .dropna()
+                .query("`τ in Pa` != 0")
+                .pipe(lambda d: d[d['SegIndex'].str.startswith('3|')])
+                # .drop(columns='SegIndex')
+                .pipe(lambda d: d.assign(**{"t in s": d["t in s"] - d["t in s"].min()}))
+                .reset_index(drop=True)
+            )
+            df['Sample'] = int(i)
             dfs.append(df)
 
-        return pd.concat(dfs, ignore_index=True)
+        return pd.concat(trim(dfs), ignore_index=True)
+
+    def _powerLaw(self, modulus):
+        """
+        :type modulus: str
+        :rtype: object
+        """
+
+        x, y = self.dataMean['f in Hz'][:16], None
+
+        if modulus == "G'":
+            y = self.dataMean["G' in Pa", 'mean'][:16]
+
+        elif modulus == 'G"':
+            y = self.dataMean['G" in Pa', 'mean'][:16]
+
+        self.fitting = curve_fit(function_powerLaw, x, y)
+
+        return self.fitting[0], self.fitting[1], np.sqrt(np.diag(self.fitting[1]))
+
+class OoFlow:
+    qntsFlow = ['SegIndex', 't in s', 't_seg in s', 'τ in Pa', 'η in mPas']
+
+    def __init__(self, paths, label, color):
+        self.paths, self.label, self.color = paths, label, color
+
+        self.dataRaw = self._get_data()
+        self.nReplicates = self.dataRaw['Sample'].nunique()
+
+        self.dataMean = self.dataRaw.groupby('t in s').agg(['mean', 'std']).reset_index()
+
+    def _get_data(self):
+
+        def trim(dataframes):
+            """
+            :type dataframes: list
+            :rtype: list
+            """
+            min_size = min(dataframe.shape[0] for dataframe in dataframes)
+
+            return [dataframe.iloc[:min_size].reset_index(drop=True) for dataframe in dataframes]
+
+        dfs = []
+
+        for i, file in enumerate(self.paths, start=1):
+            df = (
+                pd.read_excel(file)[self.qntsFlow]
+                .dropna()
+                .query("`τ in Pa` != 0")
+                .pipe(lambda d: d[d['SegIndex'].str.startswith('3|')])
+                # .drop(columns='SegIndex')
+                .pipe(lambda d: d.assign(**{"t in s": d["t in s"] - d["t in s"].min()}))
+                .reset_index(drop=True)
+            )
+            df['Sample'] = str(i)
+            dfs.append(df)
+
+        return pd.concat(trim(dfs), ignore_index=True)
 
     def _powerLaw(self, modulus):
         """
@@ -303,13 +373,19 @@ def main():
     ]
 
     # plotOFS(stCL_recovery)
-    # plt.show()
+
+    # stCL_thixo = [
+    #     OoThixo(filePath[:2], 'St CL 0', '#E1C96B'),
+    #     OoThixo(filePath[2:4], 'St CL 7', '#FFE138'),
+    #     OoThixo(filePath[4:8], 'St CL 14', '#F1A836'),
+    #     OoThixo(filePath[8:], 'St CL 21', '#E36E34'),
+    # ]
 
     stCL_flow = [
-        OoFlow(filePath[:2], 'St CL 0', '#E1C96B'),
-        OoFlow(filePath[2:4], 'St CL 7', '#FFE138'),
-        OoFlow(filePath[4:8], 'St CL 14', '#F1A836'),
-        OoFlow(filePath[8:], 'St CL 21', '#E36E34'),
+        OoThixo(filePath[:2], 'St CL 0', '#E1C96B'),
+        OoThixo(filePath[2:4], 'St CL 7', '#FFE138'),
+        OoThixo(filePath[4:8], 'St CL 14', '#F1A836'),
+        OoThixo(filePath[8:], 'St CL 21', '#E36E34'),
     ]
 
     print(sample.dataRaw for sample in stCL_flow)
