@@ -7,6 +7,9 @@ from matplotlib.gridspec import GridSpec
 from scipy.optimize import curve_fit
 
 
+qntsMisc = ['SegIndex', 't in s', 'h in mm', 'T in °C', 't_seg in s']
+
+
 def fonts(folder_path, s=12, m=14):
 
     font_path = folder_path + 'HelveticaNeueThin.otf'
@@ -33,12 +36,9 @@ def fonts(folder_path, s=12, m=14):
 def function_powerLaw(x, k, n):
     return k * (x ** n)
 
-
-class OORecovery:
-    qntsMisc = ['SegIndex', 't in s', 'h in mm', 'T in °C', 't_seg in s']
+class OoRecovery:
     qntsOFS = ['f in Hz', "G' in Pa", 'G" in Pa',]  # '|G*| in Pa', 'tan(δ) in -', '|η*| in mPas']
     qntsOFSbroken = qntsOFS[1:] + [param + ' | broken' for param in qntsOFS[1:]]
-    qntsFlow = ['t in s', 't_seg in s', 'τ in Pa', 'ɣ̇ in 1/s', 'η in mPas']
 
     def __init__(self, paths, label, color):
         self.paths, self.label, self.color = paths, label, color
@@ -54,6 +54,54 @@ class OORecovery:
         for i, file in enumerate(self.paths, start=1):
 
             df = pd.read_excel(file)[self.qntsOFS].dropna().reset_index(drop=True)
+
+            breakIndex = len(df) // 2
+            df_1, df_2 = df.iloc[:breakIndex].reset_index(drop=True), df.iloc[breakIndex:].reset_index(drop=True)
+            df_2.rename(columns={col: f"{col} | broken" for col in df_2.columns if col != 'f in Hz'}, inplace=True)
+
+            df = df_1.merge(df_2, on='f in Hz', how='inner')
+            df['Sample'] = str(i)
+
+            dfs.append(df)
+
+        return pd.concat(dfs, ignore_index=True)
+
+    def _powerLaw(self, modulus):
+        """
+        :type modulus: str
+        :rtype: object
+        """
+
+        x, y = self.dataMean['f in Hz'][:16], None
+
+        if modulus == "G'":
+            y = self.dataMean["G' in Pa", 'mean'][:16]
+
+        elif modulus == 'G"':
+            y = self.dataMean['G" in Pa', 'mean'][:16]
+
+        self.fitting = curve_fit(function_powerLaw, x, y)
+
+        return self.fitting[0], self.fitting[1], np.sqrt(np.diag(self.fitting[1]))
+
+
+class OoFlow:
+    qntsFlow = ['SegIndex', 't in s', 't_seg in s', 'τ in Pa', 'ɣ̇ in 1/s', 'η in mPas']
+
+    def __init__(self, paths, label, color):
+        self.paths, self.label, self.color = paths, label, color
+
+        self.dataRaw = self._get_data()
+        self.nReplicates = self.dataRaw['Sample'].nunique()
+
+        self.dataMean = self.dataRaw.groupby('f in Hz')[self.qntsFlow].agg(['mean', 'std']).reset_index()
+
+    def _get_data(self):
+        dfs = []
+
+        for i, file in enumerate(self.paths, start=1):
+
+            df = pd.read_excel(file)[self.qntsFlow].dropna().reset_index(drop=True)
 
             breakIndex = len(df) // 2
             df_1, df_2 = df.iloc[:breakIndex].reset_index(drop=True), df.iloc[breakIndex:].reset_index(drop=True)
@@ -247,16 +295,24 @@ def main():
         folderPath + "/10St_CL_28/St_CL_28-viscoelasticRecovery-4.xlsx",
     ]
 
-    stCL = [
-        OORecovery(filePath[:2], 'St CL 0', '#E1C96B'),
-        OORecovery(filePath[2:4], 'St CL 7', '#FFE138'),
-        OORecovery(filePath[4:8], 'St CL 14', '#F1A836'),
-        OORecovery(filePath[8:], 'St CL 21', '#E36E34'),
+    stCL_recovery = [
+        OoRecovery(filePath[:2], 'St CL 0', '#E1C96B'),
+        OoRecovery(filePath[2:4], 'St CL 7', '#FFE138'),
+        OoRecovery(filePath[4:8], 'St CL 14', '#F1A836'),
+        OoRecovery(filePath[8:], 'St CL 21', '#E36E34'),
     ]
 
-    plotOFS(stCL)
+    # plotOFS(stCL_recovery)
+    # plt.show()
 
-    plt.show()
+    stCL_flow = [
+        OoFlow(filePath[:2], 'St CL 0', '#E1C96B'),
+        OoFlow(filePath[2:4], 'St CL 7', '#FFE138'),
+        OoFlow(filePath[4:8], 'St CL 14', '#F1A836'),
+        OoFlow(filePath[8:], 'St CL 21', '#E36E34'),
+    ]
+
+    print(sample.dataRaw for sample in stCL_flow)
 
 
 if __name__ == '__main__':
