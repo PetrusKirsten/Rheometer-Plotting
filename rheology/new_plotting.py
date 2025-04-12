@@ -1,3 +1,5 @@
+import string
+
 import numpy as np
 import pandas as pd
 
@@ -7,6 +9,8 @@ from scipy.optimize import curve_fit
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import MultipleLocator
 from matplotlib.font_manager import FontProperties
+from scipy.stats import f_oneway
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 qntsMisc = ['SegIndex', 't in s', 'h in mm', 'T in °C', 't_seg in s']
 
@@ -39,8 +43,95 @@ def roundUp(value, mult=100.):
     return round(result, ndigits=4)
 
 
-def function_powerLaw(x, k, n):
-    return k * (x ** n)
+def statisticalAnalysis(samples, which='pre', modulus="G'", param='k'):
+    """
+    Realiza o ANOVA sobre o parâmetro especificado ('k' ou 'n') da power law,
+    e realiza o teste de Tukey para comparar as formulações.
+
+    :param samples: lista de objetos com .formulation e .powerLaw()
+    :param which: 'pre' ou 'post'
+    :param modulus: "G'" ou 'G"'
+    :param param: 'k' ou 'n' — parâmetro a ser extraído
+    :return: DataFrame dos parâmetros, resultado do ANOVA e resultados do Tukey
+    """
+
+    index_map = {'k': 0, 'n': 1}
+    param_index = index_map[param]
+
+    registros = []
+
+    for sample in samples:
+        formulation = sample.label
+        fitResults = sample.powerLaw(which, modulus, raw_data=True)
+
+        for rep, (params, errors) in fitResults.items():
+            if params is not None:
+                valor = params[param_index]
+                registros.append({'formulation': formulation, 'value': valor, 'replicate': rep})
+
+    df_params = pd.DataFrame(registros)
+
+    # ANOVA
+    groups = df_params.groupby('formulation')['value'].apply(list)
+    anova = f_oneway(*groups)
+
+    print(f"\n⚖️ ANOVA for '{param}':")
+    print(f"F = {anova.statistic:.3f}, p = {anova.pvalue:.5f}")
+
+    # Teste de Tukey
+    tukey = pairwise_tukeyhsd(df_params['value'], df_params['formulation'], alpha=0.05)
+
+    print("\n🔮 Tukey test results:")
+    print(tukey.summary())
+
+    return df_params, anova, tukey
+
+
+def lettersTukey(tukey_result):
+
+    def sortByNumber(group_dict):
+
+        def extractNumber(key):
+            try:
+                return int(key.split('CL')[-1].strip())
+            except (IndexError, ValueError):
+                return float('inf')  # Coloca no final se não seguir o padrão
+
+        return dict(sorted(group_dict.items(), key=lambda item: extractNumber(item[0])))
+
+    # Extract the Tukey HSD result table
+    results = pd.DataFrame(tukey_result._results_table.data[1:], columns=tukey_result._results_table.data[0])
+
+    # Create a quick-access lookup for p-values using unordered group pair keys
+    reject_dict = {
+        frozenset([row['group1'], row['group2']]): row['reject']
+        for _, row in results.iterrows()
+    }
+
+    # Get all unique groups
+    groups = sorted(set(results['group1']) | set(results['group2']))
+
+    letter_groups = []
+
+    for group in groups:
+        placed = False
+        for letter_group in letter_groups:
+            # Check for conflict with existing letter group
+            if all(not reject_dict.get(frozenset([group, other]), False) for other in letter_group):
+                letter_group.append(group)
+                placed = True
+                break
+        if not placed:
+            letter_groups.append([group])
+
+    # Assign letters
+    group_to_letter = {}
+    for i, group_set in enumerate(letter_groups):
+        letter = string.ascii_uppercase[i]
+        for group in group_set:
+            group_to_letter[group] = letter
+
+    return sortByNumber(group_to_letter)
 
 
 class OoRecovery:
@@ -69,26 +160,53 @@ class OoRecovery:
 
         return pd.concat(dfs_pre, ignore_index=True), pd.concat(dfs_post, ignore_index=True)
 
-    def powerLaw(self, which, modulus):
+    def powerLaw(self, which, modulus, raw_data=False, n_points=16):
         """
-        :type which: str
-        :type modulus: str
-        :rtype: object
+        :param which: 'pre' ou 'post'
+        :param modulus: "G'" ou 'G"'
+        :param raw_data: Se True, aplica o ajuste para cada replicata dos dados brutos
+        :param n_points: Quantos pontos usar para o ajuste (tipicamente os de baixa frequência)
+        :return:
+            - Se use_raw=False: (params, errors) tuple para dados médios
+            - Se use_raw=True: dict {replicate: (params, errors)}
         """
 
-        n_p = 16
-        data = self.meanPre if which == 'pre' else self.meanPost
-        x, y = data['f in Hz'][:n_p]['mean'], None
+        def function_powerLaw(frequency, k, n):
+            return k * frequency ** n
 
-        if modulus == "G'":
-            y = data["G' in Pa", 'mean'][:16]
+        data = self.rawPre if (which == 'pre' and raw_data) else \
+            self.rawPost if (which == 'post' and raw_data) else \
+                self.meanPre if which == 'pre' else self.meanPost
 
-        elif modulus == 'G"':
-            y = data['G" in Pa', 'mean'][:16]
+        results = {}
 
-        fitting = curve_fit(function_powerLaw, x, y)
+        if raw_data:
+            replicates = data['Sample'].unique()
+            for rep in replicates:
+                df_rep = data[data['Sample'] == rep].iloc[:n_points]
 
-        return fitting[0], np.sqrt(np.diag(fitting[1]))
+                x = df_rep['f in Hz'].values
+                y = df_rep[f"{modulus} in Pa"].values
+
+                try:
+                    params = curve_fit(function_powerLaw, x, y)
+                    stdev = np.sqrt(np.diag(params[1]))
+                    results[rep] = (params[0], stdev)
+
+                except Exception as e:
+                    print(f"[!] Ajuste falhou para replicata {rep}: {e}")
+                    results[rep] = (None, None)
+
+            return results
+
+        else:
+            x = data['f in Hz']['mean'][:n_points]
+            y = data[f"{modulus} in Pa", 'mean'][:n_points]
+
+            params = curve_fit(function_powerLaw, x, y)
+            stdev = np.sqrt(np.diag(params[1]))
+
+            return params[0], stdev
 
 
 class OoThixo:
@@ -378,7 +496,7 @@ def plotBars(samples, param, lim, save=False):
             # ax.grid(True, which='major', axis='y', linestyle='-', linewidth=.75, color='lightgray', alpha=.5)
             # ax.grid(True, which='minor', axis='y', linestyle='-', linewidth=.5, color='lightgray', alpha=.5)
 
-            xLim, yLim = (min(xData) - 1, max(xData) + 1), lim
+            xLim, yLim = (min(xData) - 2, max(xData) + 2), lim
 
             ax.set_xlabel(f'{xLabel}', color=axisColor), ax.set_ylabel(f'{yLabel}', color=axisColor)
             ax.set_xscale('linear'), ax.set_yscale('linear')
@@ -402,6 +520,7 @@ def plotBars(samples, param, lim, save=False):
 
         figure = plt.figure(figsize=(width / dpi, heigth / dpi), facecolor='snow')
         figure.canvas.manager.set_window_title(windowTitle)
+        figure.suptitle(f'')
 
         rows, columns = 1, 1
         gs = GridSpec(rows, columns, width_ratios=[1], height_ratios=[1])
